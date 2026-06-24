@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vault": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:/Users/Klizs/Documents/Code/Arbora/resources/vault"
+      ]
+    }
+  }
+}
