@@ -1,0 +1,40 @@
+[project]
+name = "arbora-ai"
+version = "0.1.0"
+description = "Arbora AI sidecar — ingest, transcribe, RAG, LLM generation, FSRS, export."
+readme = "../README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+
+# Direct runtime dependencies. The full transitive closure is pinned in
+# requirements.lock — install with `pip install -r requirements.lock`.
+dependencies = [
+    "fastapi==0.138.0",
+    "uvicorn==0.49.0",
+    "pydantic==2.13.4",
+    "numpy==2.5.0",
+    "httpx==0.28.1",
+    "ollama==0.6.2",
+    "faster-whisper==1.2.1",
+    "faiss-cpu==1.14.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.15.19",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["arbora_ai*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,172 @@
+//! Python AI sidecar lifecycle: spawn, discover its loopback port, health-check,
+//! and tear it down on app exit.
+//!
+//! Contract (see resources/Phase1_IPC_Contract.md §5): the sidecar prints
+//! `ARBORA_SIDECAR_PORT=<port>` on stdout, then serves `GET /health`.
+
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
+use std::time::Duration;
+
+use serde::Serialize;
+use serde_json::json;
+use tauri::{AppHandle, Emitter, Manager};
+
+const PORT_MARKER: &str = "ARBORA_SIDECAR_PORT=";
+const HEALTH_RETRIES: u32 = 40;
+const HEALTH_INTERVAL: Duration = Duration::from_millis(250);
+
+/// Managed Tauri state holding the running sidecar.
+#[derive(Default)]
+pub struct Sidecar {
+    child: Mutex<Option<Child>>,
+    base_url: Mutex<Option<String>>,
+    ready: AtomicBool,
+}
+
+impl Sidecar {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn base_url(&self) -> Option<String> {
+        self.base_url.lock().unwrap().clone()
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.ready.load(Ordering::SeqCst)
+    }
+
+    /// Kill the child process. Called on app exit to avoid a zombie sidecar.
+    pub fn kill(&self) {
+        if let Some(mut child) = self.child.lock().unwrap().take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct SidecarStatus {
+    pub ready: bool,
+    pub base_url: Option<String>,
+}
+
+/// Spawn the sidecar and drive it to `ready`, emitting `sidecar:status` events.
+/// Intended to run on a dedicated thread.
+pub fn run_lifecycle(app: AppHandle) {
+    let _ = app.emit("sidecar:status", json!({ "state": "starting" }));
+
+    let (child, base_url) = match spawn_process() {
+        Ok(pair) => pair,
+        Err(err) => {
+            eprintln!("[arbora] sidecar failed to start: {err}");
+            let _ = app.emit("sidecar:status", json!({ "state": "crashed", "error": err }));
+            return;
+        }
+    };
+
+    let state = app.state::<Sidecar>();
+    *state.child.lock().unwrap() = Some(child);
+    *state.base_url.lock().unwrap() = Some(base_url.clone());
+
+    if wait_healthy(&base_url) {
+        state.ready.store(true, Ordering::SeqCst);
+        eprintln!("[arbora] sidecar ready @ {base_url}");
+        let _ = app.emit("sidecar:status", json!({ "state": "ready" }));
+    } else {
+        eprintln!("[arbora] sidecar health check timed out @ {base_url}");
+        let _ = app.emit(
+            "sidecar:status",
+            json!({ "state": "crashed", "error": "health check timed out" }),
+        );
+    }
+}
+
+fn spawn_process() -> Result<(Child, String), String> {
+    let dir = sidecar_dir();
+    let python = python_exe(&dir);
+
+    let mut child = Command::new(&python)
+        .args(["-m", "arbora_ai.server"])
+        .current_dir(&dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|e| format!("failed to spawn sidecar ({python:?}): {e}"))?;
+
+    let stdout = child.stdout.take().ok_or("sidecar stdout unavailable")?;
+    let mut reader = BufReader::new(stdout);
+    let mut line = String::new();
+
+    let base_url = loop {
+        line.clear();
+        let n = reader
+            .read_line(&mut line)
+            .map_err(|e| format!("reading sidecar stdout: {e}"))?;
+        if n == 0 {
+            return Err("sidecar exited before announcing its port".into());
+        }
+        if let Some(rest) = line.trim().strip_prefix(PORT_MARKER) {
+            let port: u16 = rest
+                .trim()
+                .parse()
+                .map_err(|_| format!("invalid sidecar port: {rest:?}"))?;
+            break format!("http://127.0.0.1:{port}");
+        }
+    };
+
+    // Keep draining stdout so the pipe buffer never blocks the child.
+    std::thread::spawn(move || {
+        let mut sink = String::new();
+        while reader.read_line(&mut sink).unwrap_or(0) > 0 {
+            sink.clear();
+        }
+    });
+
+    Ok((child, base_url))
+}
+
+fn wait_healthy(base_url: &str) -> bool {
+    let client = reqwest::blocking::Client::new();
+    let url = format!("{base_url}/health");
+    for _ in 0..HEALTH_RETRIES {
+        if let Ok(resp) = client.get(&url).send() {
+            if resp.status().is_success() {
+                return true;
+            }
+        }
+        std::thread::sleep(HEALTH_INTERVAL);
+    }
+    false
+}
+
+/// Locate the sidecar source directory. Dev default is the sibling `sidecar/`
+/// crate of this Rust core; bundling (Phase 5) will resolve a packaged path.
+fn sidecar_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("ARBORA_SIDECAR_DIR") {
+        return PathBuf::from(dir);
+    }
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../sidecar")
+}
+
+/// Choose the Python interpreter: explicit override, then the sidecar venv,
+/// then a bare `python` on PATH.
+fn python_exe(sidecar_dir: &Path) -> PathBuf {
+    if let Ok(p) = std::env::var("ARBORA_PYTHON") {
+        return PathBuf::from(p);
+    }
+    let venv = if cfg!(windows) {
+        sidecar_dir.join(".venv/Scripts/python.exe")
+    } else {
+        sidecar_dir.join(".venv/bin/python")
+    };
+    if venv.exists() {
+        venv
+    } else {
+        PathBuf::from("python")
+    }
+}

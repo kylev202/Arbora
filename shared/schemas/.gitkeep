@@ -1,0 +1,2 @@
+# shared/schemas — JSON Schema source of truth for cross-layer contracts (UI ↔ Rust ↔ Python).
+# Populated in Phase 3+ when output schemas are formalized; see resources/Phase1_Output_Schemas.md.
