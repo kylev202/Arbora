@@ -1,11 +1,15 @@
 # Arbora — Technical Docs
 
-Implementation-level documentation lives here as the codebase grows
-(architecture notes, data model, the React ↔ Rust ↔ sidecar IPC contract,
-and AI output schemas).
+| Doc | What's in it |
+| --- | ------------ |
+| [architecture.md](./architecture.md) | The three-process design, how the layers talk, where AI safety is enforced. |
+| [adr/](./adr/) | Architecture Decision Records — what we decided and why. |
 
-For now the code is the source of truth:
+The code stays the source of truth for the moving parts:
 
 - Database schema — [`src-tauri/migrations/0001_initial.sql`](../src-tauri/migrations/0001_initial.sql)
-- IPC commands — [`src-tauri/src/commands.rs`](../src-tauri/src/commands.rs)
+- IPC commands — [`src-tauri/src/commands.rs`](../src-tauri/src/commands.rs) (TS side: [`src/lib/ipc.ts`](../src/lib/ipc.ts))
 - Sidecar API — [`sidecar/arbora_ai/server.py`](../sidecar/arbora_ai/server.py)
+
+For how to *work* in this repo (conventions, the skill library, the verify loop), see
+[CLAUDE.md](../CLAUDE.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).

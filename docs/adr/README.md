@@ -1,0 +1,26 @@
+# Architecture Decision Records
+
+An ADR captures **one decision** that shapes the codebase, the rejected
+alternatives, and why — so a future contributor (or agent) inherits the reasoning
+instead of re-deriving it or quietly undoing it.
+
+## When to write one
+
+Add an ADR when a change would make someone later ask *"why is it done this way?"*:
+a structural choice, a hard constraint, a library you'll be stuck with, a boundary
+between layers. Routine work does not need one.
+
+## How
+
+1. Copy [`template.md`](./template.md) to `NNNN-short-title.md` (next number, zero-padded).
+2. Fill it in. Keep it short — context, the decision, the consequences.
+3. A new decision that overturns an old one gets its **own** ADR and flips the old
+   one's status to `Superseded by ADR-NNNN`. ADRs are append-only history; don't
+   rewrite a decided one.
+
+## Index
+
+| ADR | Title | Status |
+| --- | ----- | ------ |
+| [0001](./0001-three-layer-architecture.md) | Three-process architecture (React · Rust · Python) | Accepted |
+| [0002](./0002-immutable-ai-laws.md) | Three immutable AI-safety laws | Accepted |

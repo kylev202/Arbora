@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import "./App.css";
-
-type SidecarStatus = { ready: boolean; base_url: string | null };
-type SidecarEvent = { state: "starting" | "ready" | "crashed"; error?: string };
+import {
+  dbHealth,
+  greet,
+  onSidecarStatus,
+  sidecarStatus,
+} from "../lib/ipc";
 
 function App() {
   const [coreMsg, setCoreMsg] = useState("");
@@ -12,24 +12,21 @@ function App() {
   const [sidecar, setSidecar] = useState<string>("starting…");
 
   useEffect(() => {
-    invoke<number>("db_health")
-      .then((n) => setDbRows(n))
+    dbHealth()
+      .then(setDbRows)
       .catch((e) => {
         console.error(e);
         setDbRows(-1);
       });
 
-    invoke<SidecarStatus>("sidecar_status").then((s) =>
+    sidecarStatus().then((s) =>
       setSidecar(s.ready ? `ready @ ${s.base_url}` : "starting…"),
     );
 
-    const unlisten = listen<SidecarEvent>("sidecar:status", (e) => {
-      const p = e.payload;
+    const unlisten = onSidecarStatus((p) => {
       setSidecar(p.state === "crashed" ? `crashed: ${p.error ?? "unknown"}` : p.state);
       if (p.state === "ready") {
-        invoke<SidecarStatus>("sidecar_status").then((s) =>
-          setSidecar(`ready @ ${s.base_url}`),
-        );
+        sidecarStatus().then((s) => setSidecar(`ready @ ${s.base_url}`));
       }
     });
     return () => {
@@ -38,7 +35,7 @@ function App() {
   }, []);
 
   async function pingCore() {
-    setCoreMsg(await invoke<string>("greet", { name: "Arbora" }));
+    setCoreMsg(await greet("Arbora"));
   }
 
   return (

@@ -44,13 +44,22 @@ React UI  ──invoke/event──►  Rust core (Tauri 2)  ──HTTP loopback�
 
 ```
 arbora/
-├── src/          React frontend (Vite)
-├── src-tauri/    Rust core — Tauri commands, SQLite, sidecar lifecycle
-├── sidecar/      Python AI sidecar (FastAPI loopback)
-├── shared/       Cross-layer contracts (JSON Schema → TS / Rust / Pydantic)
-├── scripts/      setup, model download, build helpers
-└── docs/         technical documentation
+├── src/             React frontend (Vite) — feature-sliced
+│   ├── app/         app shell + entry (App.tsx, main.tsx)
+│   ├── lib/         non-visual logic; ipc.ts is the only door to the Rust core
+│   ├── features/    one folder per user capability (review, study, ingest…)
+│   ├── components/  shared presentational primitives
+│   └── styles/      global styles
+├── src-tauri/       Rust core — Tauri commands, SQLite, sidecar lifecycle
+├── sidecar/         Python AI sidecar (FastAPI loopback)
+├── shared/          Cross-layer contracts (JSON Schema → TS / Rust / Pydantic)
+├── scripts/         setup, model download, build helpers
+└── docs/            architecture, decision records (ADRs)
 ```
+
+For how to work in this repo (conventions + the engineering-skill workflow), see
+[`CLAUDE.md`](./CLAUDE.md). For the design and decisions, see
+[`docs/architecture.md`](./docs/architecture.md) and [`docs/adr/`](./docs/adr/).
 
 ## Development setup
 

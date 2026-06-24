@@ -16,6 +16,8 @@ Arbora has three non-negotiable principles. Any change that touches AI generatio
 
 See [README](./README.md#repository-layout). In short: `src/` (React), `src-tauri/` (Rust core),
 `sidecar/` (Python AI). Cross-layer data contracts live in `shared/` and are the source of truth.
+The architecture and its rationale are in [`docs/architecture.md`](./docs/architecture.md) and
+[`docs/adr/`](./docs/adr/); [`CLAUDE.md`](./CLAUDE.md) is the agent/contributor operating guide.
 
 ## Development setup
 
@@ -29,6 +31,7 @@ Follow [README → Development setup](./README.md#development-setup).
 - **Citations are first-class:** an AI item that cannot be traced to a source is a bug, not a warning.
 - **Pin versions:** lockfiles (`Cargo.lock`, `package-lock.json`, `requirements.lock`) are committed. Update deliberately.
 - **Test on weak hardware:** AI features must be verified on the low preset (Qwen3 4B / Whisper base).
+- **Record decisions:** a choice someone will later question gets an [ADR](./docs/adr/) — don't silently undo a recorded one, supersede it.
 
 ## Before opening a PR
 
