@@ -13,7 +13,7 @@ Tauri 2 · React · Python AI sidecar · SQLite + FAISS · Ollama (local) or BYO
 ---
 
 > **Status:** 🌱 Phase 2 — Skeleton. The app shell, database, and AI sidecar are being wired up.
-> Planning docs live in [`resources/`](./resources). This README tracks the buildable state.
+> This README tracks the buildable state.
 
 ## What it does
 
@@ -40,8 +40,6 @@ React UI  ──invoke/event──►  Rust core (Tauri 2)  ──HTTP loopback�
 - **Rust core** (`src-tauri/`) — orchestration: sidecar lifecycle, SQLite, Tauri commands.
 - **Python sidecar** (`sidecar/`) — all AI: ingest, transcribe, RAG, LLM, FSRS, export.
 
-See [`resources/Developer_Guide.md`](./resources/Developer_Guide.md) for the full design.
-
 ## Repository layout
 
 ```
@@ -51,8 +49,7 @@ arbora/
 ├── sidecar/      Python AI sidecar (FastAPI loopback)
 ├── shared/       Cross-layer contracts (JSON Schema → TS / Rust / Pydantic)
 ├── scripts/      setup, model download, build helpers
-├── docs/         technical documentation
-└── resources/    planning docs (overview, proposal, checklist, phase designs)
+└── docs/         technical documentation
 ```
 
 ## Development setup
