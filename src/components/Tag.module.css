@@ -1,0 +1,43 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.icon {
+  display: inline-flex;
+  font-size: 0.95em;
+}
+
+.neutral {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+}
+
+/* due/overdue — neutral information, NOT alarm. Gold, never red. */
+.due {
+  background: color-mix(in srgb, var(--color-accent-warm) 16%, transparent);
+  color: var(--color-warning);
+}
+
+.learning {
+  background: color-mix(in srgb, var(--color-accent-warm) 16%, transparent);
+  color: var(--color-warning);
+}
+
+.mastered {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.info {
+  background: var(--color-citation-bg);
+  color: var(--color-citation-text);
+}

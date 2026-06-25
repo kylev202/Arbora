@@ -1,0 +1,44 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+/* Reading area stays comfortable on wide monitors; screens opt in via .page. */
+:global(.page) {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+:global(.page-wide) {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* Shared screen header used across tabs. */
+:global(.screen-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 720px) {
+  .content {
+    padding: var(--space-6) var(--space-4);
+  }
+}

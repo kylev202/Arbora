@@ -1,0 +1,27 @@
+.disclaimer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  /* Warm gold, never red — a calm reminder, not an alarm. */
+  color: var(--color-warning);
+}
+
+.icon {
+  flex: none;
+  font-size: 1.1rem;
+}
+
+.banner {
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
+  background: color-mix(in srgb, var(--color-accent-warm) 12%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+}
+
+.note {
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--color-accent-warm) 10%, transparent);
+  border-radius: var(--radius-md);
+}

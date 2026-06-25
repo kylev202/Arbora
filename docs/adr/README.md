@@ -24,3 +24,5 @@ between layers. Routine work does not need one.
 | --- | ----- | ------ |
 | [0001](./0001-three-layer-architecture.md) | Three-process architecture (React · Rust · Python) | Accepted |
 | [0002](./0002-immutable-ai-laws.md) | Three immutable AI-safety laws | Accepted |
+| [0003](./0003-a11y-tuned-design-tokens.md) | Design tokens tuned for WCAG AA | Accepted |
+| [0004](./0004-grounding-by-anchored-citation.md) | Grounding by anchored citation + verbatim excerpt | Accepted |

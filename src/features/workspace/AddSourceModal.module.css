@@ -1,0 +1,54 @@
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+
+.dropIcon {
+  font-size: 2.5rem;
+  color: var(--color-text-muted);
+}
+
+.dropText {
+  font-weight: var(--weight-medium);
+}
+
+.dropHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fileName {
+  font-weight: var(--weight-medium);
+}
+
+.done {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.doneIcon {
+  font-size: 2rem;
+  color: var(--color-primary);
+  flex: none;
+}
+
+.doneText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}

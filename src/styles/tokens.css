@@ -1,0 +1,178 @@
+/**
+ * Arbora design tokens — single source of truth for color, type, space, motion.
+ * Mirrors resources/vault "Design System". Calm, low-overwhelm, ADHD-aware.
+ *
+ * Hard rules encoded here:
+ *  - No red for learning states. --color-danger is for destructive actions ONLY.
+ *  - Every text/surface pair targets WCAG AA (>= 4.5:1).
+ *  - Motion animates transform/opacity only; reduced-motion kills it.
+ *
+ * Theming is attribute-driven on <html>:
+ *   data-theme="light|dark"   data-contrast="normal|high"
+ * Font size is driven by --font-base (set from Settings: 14/16/18/20px).
+ */
+
+:root {
+  /* ── A1 · Color (light) ───────────────────────────────────────────── */
+  --color-primary: #457155; /* forest green — primary action, branches (AA-tuned) */
+  --color-primary-hover: #3d6849;
+  --color-primary-soft: #e8f0ea;
+  --color-on-primary: #ffffff;
+
+  --color-accent: #6ba368; /* fresh green — mastery / progress (fills, not text) */
+  --color-accent-text: #41803e; /* darker green for green TEXT (AA on surface) */
+  --color-accent-warm: #c9a227; /* earth gold — "learning", unripe fruit (fills) */
+
+  --color-bg: #faf8f4; /* warm off-white */
+  --color-surface: #ffffff;
+  --color-surface-alt: #f2eee7;
+  --color-border: #e0dad0; /* soft — dividers, card edges (decorative) */
+  --color-border-strong: #888475; /* >=3:1 on all surfaces — control edges (WCAG 1.4.11) */
+  --color-text: #2b2b28;
+  --color-text-muted: #6b665e;
+
+  --color-success: #4a7c59;
+  --color-info: #5a7d9a; /* muted blue — neutral */
+  --color-warning: #7d5e0a; /* deep earth gold — AA as text on light (not red) */
+  --color-danger: #b5524a; /* earth red — destructive ONLY */
+
+  --color-citation-bg: #f0f4f8;
+  --color-citation-text: #3f6076; /* darkened from spec for AA on its bg */
+
+  --color-fruit: #c46a4f; /* warm terracotta — decorative tree fruit (NOT danger) */
+
+  --color-focus: #4a7c59; /* focus ring */
+  --color-overlay: rgba(43, 43, 40, 0.32);
+
+  /* ── A2 · Typography ──────────────────────────────────────────────── */
+  --font-sans: "Inter", "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --font-base: 16px; /* overridden by Settings (A5): 14/16/18/20 */
+
+  --text-xs: 0.8rem; /* label */
+  --text-sm: 0.9rem;
+  --text-base: 1rem; /* body */
+  --text-lg: 1.25rem; /* card title */
+  --text-xl: 1.563rem; /* screen title */
+  --text-2xl: 1.953rem; /* large heading */
+
+  --leading-tight: 1.3;
+  --leading-normal: 1.6; /* roomy for ESL/ADHD */
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* ── A3 · Spacing / radius / shadow ───────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* diffuse, opacity < 0.1 — minimalist, near-flat */
+  --shadow-sm: 0 1px 2px rgba(43, 43, 40, 0.06);
+  --shadow-md: 0 2px 8px rgba(43, 43, 40, 0.08);
+  --shadow-lg: 0 8px 24px rgba(43, 43, 40, 0.1);
+
+  /* ── A4 · Layout ──────────────────────────────────────────────────── */
+  --sidebar-width: 220px;
+  --sidebar-width-collapsed: 64px;
+  --content-max-width: 760px;
+  --modal-width: 520px;
+  --modal-width-sm: 440px;
+
+  /* ── A7 · Motion ──────────────────────────────────────────────────── */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-tree: 600ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── A6 · Dark theme ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-primary: #6ba368; /* brighter on dark */
+  --color-primary-hover: #7cb479;
+  --color-primary-soft: #243029;
+  --color-on-primary: #14160f;
+
+  --color-accent: #7cb479;
+  --color-accent-text: #7cb479; /* accent already AA on dark surface */
+  --color-accent-warm: #d8b94a;
+
+  --color-bg: #1c1b19;
+  --color-surface: #262521;
+  --color-surface-alt: #2e2c28;
+  --color-border: #3a3833;
+  --color-border-strong: #7c776d; /* >=3:1 control edges on dark */
+  --color-text: #ede9e1;
+  --color-text-muted: #a39e94;
+
+  --color-success: #7cb479;
+  --color-info: #8fb0c9;
+  --color-warning: #d8b94a;
+  --color-danger: #d9837b;
+
+  --color-citation-bg: #232c33;
+  --color-citation-text: #a7c4d6;
+
+  --color-fruit: #d98b6f;
+
+  --color-focus: #7cb479;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── High-contrast variant (a11y) ───────────────────────────────────── */
+[data-contrast="high"] {
+  --color-text: #000000;
+  --color-text-muted: #3a3631;
+  --color-border: #6b665e;
+  --color-border-strong: #6b665e;
+  --color-primary: #2f5d3a;
+  --color-primary-hover: #244a2d;
+  --color-citation-text: #1f3d52;
+}
+
+[data-theme="dark"][data-contrast="high"] {
+  --color-text: #ffffff;
+  --color-text-muted: #d6d1c7;
+  --color-border: #8a857b;
+  --color-border-strong: #8a857b;
+  --color-primary: #8fce8b;
+  --color-primary-hover: #a0d99c;
+}
+
+/* ── Reduced motion: kill all animation/transition (A7 / a11y baseline) ─ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* User-forced reduced motion (Settings toggle, independent of OS setting). */
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

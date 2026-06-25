@@ -1,0 +1,41 @@
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+.iconButton:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+.iconButton:active {
+  transform: scale(0.96);
+}
+
+.md {
+  width: 40px;
+  height: 40px;
+}
+.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.ghost {
+  background: transparent;
+}
+.surface {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.glyph {
+  display: inline-flex;
+  font-size: 1.25rem;
+}
