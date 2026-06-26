@@ -10,6 +10,7 @@ counted.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ValidationError
@@ -76,14 +77,18 @@ def generate_from_chunks(
     chunks: list[Chunk],
     types: list[str],
     base_temp: float = 0.1,
+    progress_cb: Callable[[int, int, int], None] | None = None,
 ) -> tuple[GenerationResult, dict[str, GenStats]]:
     """Generate the requested item types from every chunk. Returns the kept
-    items plus per-type stats (for the quality report)."""
+    items plus per-type stats (for the quality report). `progress_cb`, if given,
+    is called after each chunk with (chunks_done, chunks_total, accepted_so_far)
+    so a long run can stream progress."""
     result = GenerationResult()
     stats = {t: GenStats() for t in types}
     seen_fronts: set[str] = set()
+    total = len(chunks)
 
-    for chunk in chunks:
+    for done, chunk in enumerate(chunks, start=1):
         if "cards" in types:
             st = stats["cards"]
             st.attempts += 1
@@ -147,5 +152,8 @@ def generate_from_chunks(
                 else:
                     result.notes.append(note)
                     st.accepted += 1
+
+        if progress_cb is not None:
+            progress_cb(done, total, sum(s.accepted for s in stats.values()))
 
     return result, stats
