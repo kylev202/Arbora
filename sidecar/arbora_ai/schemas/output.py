@@ -89,3 +89,32 @@ class NoteGen(BaseModel):
     content: str = Field(min_length=20)
     format: Literal["cornell", "outline"]
     excerpt: str = Field(min_length=1, max_length=200)
+
+
+# ── Syllabus outline extraction (slice 4) ───────────────────────────────────
+# Structured extraction from the user's *own* syllabus, confirmed before commit
+# (ADR-0006). This is editable schedule metadata, not a study claim, so per-item
+# citations aren't required — but the model must extract only what's in the
+# document (law #1 in spirit), and nothing is written until the user accepts it
+# (law #2). Constraints stay loose so a small local model (Qwen3 4B) fills the
+# schema reliably under constrained decoding; the user reviews/edits every row.
+
+
+class WeekExtraction(BaseModel):
+    week_number: int = Field(ge=1, le=53)
+    title: str = Field(default="", max_length=200)
+    summary: str = Field(default="", max_length=1000)
+
+
+class DeadlineExtraction(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    # ISO date (YYYY-MM-DD) when the syllabus gives one, else "" — the user sets
+    # it in a date picker during review. Kept a plain string: small models don't
+    # reliably emit valid dates, and an over-strict schema would force retries.
+    due_date: str = Field(default="", max_length=40)
+    type: Literal["exam", "assignment", "other"] = "other"
+
+
+class OutlineExtraction(BaseModel):
+    weeks: list[WeekExtraction] = Field(default_factory=list)
+    deadlines: list[DeadlineExtraction] = Field(default_factory=list)

@@ -30,7 +30,9 @@ from .export import export_apkg
 from .generate.job import run_generate
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
-from .schemas.output import CardOut
+from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
+from .outline import extract_outline, syllabus_to_text
+from .schemas.output import CardOut, OutlineExtraction
 from .srs import compute_next
 
 # Marker line Rust scans stdout for to learn the chosen port.
@@ -112,6 +114,13 @@ class GenerateStatus(BaseModel):
     progress: float
     items_generated: int | None = None
     error: str | None = None
+
+
+class ParseOutlineRequest(BaseModel):
+    subject_id: str
+    file_path: str
+    llm_config: dict = {}
+    preset: str = "medium"  # resolves the local model when llm_config has none
 
 
 class ScheduleRequest(BaseModel):
@@ -232,6 +241,29 @@ def create_app() -> FastAPI:
         if job.state != "done":
             raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
         return job.result  # {notes, cards, quiz_items}
+
+    # ── Syllabus outline extraction ────────────────────────────────────────
+
+    @app.post("/parse-outline", response_model=OutlineExtraction, dependencies=guarded)
+    def parse_outline(req: ParseOutlineRequest) -> OutlineExtraction:
+        # Synchronous (one LLM call, unlike the per-chunk /generate job). Returns
+        # the structured-but-uncommitted result; the core writes nothing until
+        # the user confirms it (review-before-trust). The user's own file never
+        # leaves the device on the default local provider.
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        try:
+            text = syllabus_to_text(req.file_path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        try:
+            return extract_outline(get_provider(cfg), text)
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except LLMSchemaError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # ── FSRS scheduling ────────────────────────────────────────────────────
 
