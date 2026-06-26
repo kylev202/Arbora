@@ -17,7 +17,7 @@ export function SubjectCard({ subject }: { subject: Subject }) {
 
   return (
     <Link
-      to={`/subject/${subject.id}/sources`}
+      to={`/subject/${subject.id}/timeline`}
       className={styles.card}
       style={{ ["--subject-color" as string]: subject.color }}
     >

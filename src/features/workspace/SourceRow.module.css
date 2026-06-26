@@ -47,6 +47,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+.weekAssign {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.weekAssignLabel {
+  font-weight: var(--weight-medium);
+}
+
+.weekSelect {
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  max-width: 14rem;
+}
+
 .progress {
   margin-top: var(--space-1);
 }

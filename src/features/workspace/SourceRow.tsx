@@ -8,7 +8,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { Button, ProgressBar, Tag } from "../../components";
-import type { Source, SourceType } from "../../lib/types";
+import type { Source, SourceType, Week } from "../../lib/types";
 import styles from "./SourceRow.module.css";
 
 const TYPE_ICON: Record<SourceType, Icon> = {
@@ -28,7 +28,18 @@ const STEP_LABEL: Record<string, string> = {
  * One document in the Sources list (S-02). Renders its ingest state:
  * queued · processing (live progress) · processed · error (with retry).
  */
-export function SourceRow({ source, onRetry }: { source: Source; onRetry?: (s: Source) => void }) {
+export function SourceRow({
+  source,
+  onRetry,
+  weeks,
+  onAssignWeek,
+}: {
+  source: Source;
+  onRetry?: (s: Source) => void;
+  /** Weeks of the unit outline; pass to show the "assign to week" selector. */
+  weeks?: Week[];
+  onAssignWeek?: (source: Source, weekId: string | null) => void;
+}) {
   const TypeIcon = TYPE_ICON[source.type];
 
   const subtitle =
@@ -61,6 +72,25 @@ export function SourceRow({ source, onRetry }: { source: Source; onRetry?: (s: S
         </div>
 
         {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
+
+        {weeks && weeks.length > 0 && onAssignWeek && (
+          <label className={styles.weekAssign}>
+            <span className={styles.weekAssignLabel}>Week</span>
+            <select
+              className={styles.weekSelect}
+              value={source.week_id ?? ""}
+              onChange={(e) => onAssignWeek(source, e.target.value || null)}
+            >
+              <option value="">Unassigned</option>
+              {weeks.map((w) => (
+                <option key={w.id} value={w.id}>
+                  Week {w.week_number}
+                  {w.title ? ` · ${w.title}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {source.ingest_state === "processing" && (
           <div className={styles.progress} aria-live="polite">

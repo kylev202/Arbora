@@ -20,6 +20,11 @@ import type {
   Grade,
   GradeSummary,
   Note,
+  Outline,
+  ParsedDeadline,
+  ParsedOutline,
+  ParsedWeek,
+  PriorityItem,
   QuizItem,
   ReviewItem,
   Settings,
@@ -27,6 +32,7 @@ import type {
   StudyStats,
   Subject,
   SubjectDashboard,
+  Week,
 } from "./types";
 
 /** Snapshot of the Python AI sidecar, as reported by the Rust core. */
@@ -287,6 +293,75 @@ export function deleteGrade(id: string): Promise<void> {
 /** Weighted current average + what-if projections for the grade book. */
 export function getGradeSummary(subjectId: string): Promise<GradeSummary> {
   return invoke<GradeSummary>("get_grade_summary", { subjectId });
+}
+
+// ── Unit outline / weeks (semester planning) ───────────────────────────────
+
+/** The subject's outline: term start, week count, and its weeks (ordered). */
+export function getOutline(subjectId: string): Promise<Outline> {
+  return invoke<Outline>("get_outline", { subjectId });
+}
+
+/** Create/update the outline. Reconciles week rows to `weekCount` (keeping any
+ * titles/summaries already entered) and recomputes each week's start date. */
+export function setOutline(
+  subjectId: string,
+  termStart: string | null,
+  weekCount: number,
+): Promise<Outline> {
+  return invoke<Outline>("set_outline", { subjectId, termStart, weekCount });
+}
+
+/** Patch a week's topic/summary/start date; returns the updated row. */
+export function updateWeek(
+  weekId: string,
+  patch: { title?: string; summary?: string; start_date?: string },
+): Promise<Week> {
+  return invoke<Week>("update_week", {
+    weekId,
+    title: patch.title,
+    summary: patch.summary,
+    startDate: patch.start_date,
+  });
+}
+
+/** Assign a source to a week, or pass null to unassign it. */
+export function assignSourceWeek(sourceId: string, weekId: string | null): Promise<void> {
+  return invoke<void>("assign_source_week", { sourceId, weekId });
+}
+
+/** Replace which weeks an assignment (deadline) draws on. */
+export function setAssignmentCoverage(deadlineId: string, weekIds: string[]): Promise<void> {
+  return invoke<void>("set_assignment_coverage", { deadlineId, weekIds });
+}
+
+/** Week ids an assignment covers, ordered by week number. */
+export function getAssignmentCoverage(deadlineId: string): Promise<string[]> {
+  return invoke<string[]>("get_assignment_coverage", { deadlineId });
+}
+
+/** Ranked "focus next" suggestions per week (deadline proximity + unstudied
+ * volume). Weeks with nothing left to study are omitted. */
+export function getPriorityQueue(subjectId: string): Promise<PriorityItem[]> {
+  return invoke<PriorityItem[]>("get_priority_queue", { subjectId });
+}
+
+/** AI-parse a syllabus file into editable weeks + deadlines. Writes nothing —
+ * the result is staged for review; `commitParsedOutline` persists it. Rejects
+ * with `SIDECAR_UNAVAILABLE` if the sidecar isn't ready, or `PARSE_FAILED: …`. */
+export function parseOutlineFile(subjectId: string, filePath: string): Promise<ParsedOutline> {
+  return invoke<ParsedOutline>("parse_outline_file", { subjectId, filePath });
+}
+
+/** Persist a user-confirmed parsed outline in one transaction (weeks + dated
+ * deadlines). Returns the resulting outline. */
+export function commitParsedOutline(
+  subjectId: string,
+  termStart: string | null,
+  weeks: ParsedWeek[],
+  deadlines: ParsedDeadline[],
+): Promise<Outline> {
+  return invoke<Outline>("commit_parsed_outline", { subjectId, termStart, weeks, deadlines });
 }
 
 // ── Settings singleton (Slice 4) ───────────────────────────────────────────

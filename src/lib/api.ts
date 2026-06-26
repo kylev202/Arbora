@@ -51,6 +51,17 @@ export const api = {
   deleteGrade: ipc.deleteGrade,
   getGradeSummary: ipc.getGradeSummary,
 
+  // ── Unit outline / weeks (semester planning) ──
+  getOutline: ipc.getOutline,
+  setOutline: ipc.setOutline,
+  updateWeek: ipc.updateWeek,
+  assignSourceWeek: ipc.assignSourceWeek,
+  setAssignmentCoverage: ipc.setAssignmentCoverage,
+  getAssignmentCoverage: ipc.getAssignmentCoverage,
+  getPriorityQueue: ipc.getPriorityQueue,
+  parseOutlineFile: ipc.parseOutlineFile,
+  commitParsedOutline: ipc.commitParsedOutline,
+
   // ── Slice 4c — Settings (live) ──
   getSettings: ipc.getSettings,
   updateSettings: ipc.updateSettings,

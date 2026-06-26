@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import {
+  CalendarBlank,
   ChartLineUp,
   Files,
   GraduationCap,
@@ -33,6 +34,7 @@ export type SidebarBadges = {
 export function Sidebar({ subjectId, badges }: { subjectId: string; badges: SidebarBadges }) {
   const base = `/subject/${subjectId}`;
   const items: NavItem[] = [
+    { to: `${base}/timeline`, label: "Timeline", icon: CalendarBlank },
     { to: `${base}/sources`, label: "Sources", icon: Files },
     {
       to: `${base}/content`,

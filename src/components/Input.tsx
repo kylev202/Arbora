@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={inputId}
         className={`${styles.control} ${error ? styles.invalid : ""} ${className ?? ""}`}
-        aria-invalid={error ? true : undefined}
+        aria-invalid={error ? "true" : "false"}
         aria-describedby={describedBy}
         {...rest}
       />

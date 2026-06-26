@@ -18,13 +18,25 @@ export function SourcesTab() {
   const { subjectId = "" } = useParams();
   const navigate = useNavigate();
   const remote = useAsync(() => api.listSources(subjectId), [subjectId]);
+  const outline = useAsync(() => api.getOutline(subjectId), [subjectId]);
   const [sources, setSources] = useState<Source[]>([]);
   const [adding, setAdding] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  const weeks = outline.data?.weeks ?? [];
+
   useEffect(() => {
     if (remote.status === "loaded") setSources(remote.data);
   }, [remote.status, remote.data]);
+
+  // Optimistically assign a source to a week (or unassign); revert on failure.
+  function assignWeek(source: Source, weekId: string | null) {
+    const prev = source.week_id ?? null;
+    setSources((cur) => cur.map((s) => (s.id === source.id ? { ...s, week_id: weekId } : s)));
+    api.assignSourceWeek(source.id, weekId).catch(() =>
+      setSources((cur) => cur.map((s) => (s.id === source.id ? { ...s, week_id: prev } : s))),
+    );
+  }
 
   // Keep rows live as their ingest jobs progress (also after the modal closes).
   useEffect(() => {
@@ -85,7 +97,7 @@ export function SourcesTab() {
         <>
           <ul className={shared.card}>
             {sources.map((s) => (
-              <SourceRow key={s.id} source={s} onRetry={retry} />
+              <SourceRow key={s.id} source={s} onRetry={retry} weeks={weeks} onAssignWeek={assignWeek} />
             ))}
           </ul>
 

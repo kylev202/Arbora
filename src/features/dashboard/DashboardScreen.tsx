@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import { CalendarBlank, CheckCircle, Circle, Flame } from "@phosphor-icons/react";
+import { Link, useParams } from "react-router-dom";
+import { CalendarBlank, CheckCircle, Circle, Flame, Target } from "@phosphor-icons/react";
 import { StatTile, Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
@@ -14,6 +14,7 @@ import styles from "./DashboardScreen.module.css";
 export function DashboardScreen() {
   const { subjectId = "" } = useParams();
   const dash = useAsync(() => api.getSubjectDashboard(subjectId), [subjectId]);
+  const focus = useAsync(() => api.getPriorityQueue(subjectId), [subjectId]);
 
   if (dash.status === "loading") {
     return <div className="page-wide">{<div className={styles.skeleton} aria-hidden="true" />}</div>;
@@ -23,12 +24,37 @@ export function DashboardScreen() {
   }
 
   const { tree, stats, next_deadline } = dash.data;
+  const focusItems = (focus.data ?? []).slice(0, 3);
 
   return (
     <div className="page-wide">
       <div className="screen-header">
         <h1>Welcome back</h1>
       </div>
+
+      {focusItems.length > 0 && (
+        <section className={styles.focus} aria-label="What to focus on next">
+          <h2 className={styles.focusTitle}>Focus next</h2>
+          <ul className={styles.focusList}>
+            {focusItems.map((p) => (
+              <li key={p.week_id}>
+                <Link to={`/subject/${subjectId}/timeline`} className={styles.focusItem}>
+                  <span className={styles.focusIcon} aria-hidden="true">
+                    <Target weight="bold" />
+                  </span>
+                  <span className={styles.focusText}>
+                    <span className={styles.focusWeek}>
+                      Week {p.week_number}
+                      {p.title ? ` · ${p.title}` : ""}
+                    </span>
+                    <span className={styles.focusReason}>{p.reason}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.grid}>
         <section className={styles.treePane} aria-label="Your progress tree">

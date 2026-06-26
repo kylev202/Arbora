@@ -8,6 +8,7 @@ import { Sidebar } from "./Sidebar";
 import styles from "./WorkspaceLayout.module.css";
 
 const SECTION_LABELS: Record<string, string> = {
+  timeline: "Timeline",
   sources: "Sources",
   content: "Content",
   study: "Study",
@@ -31,12 +32,12 @@ export function WorkspaceLayout() {
   const reviewQueue = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
 
   const subjectName = subject.data?.name ?? "…";
-  const section = location.pathname.split("/")[3] ?? "sources";
-  const sectionLabel = SECTION_LABELS[section] ?? "Sources";
+  const section = location.pathname.split("/")[3] ?? "timeline";
+  const sectionLabel = SECTION_LABELS[section] ?? "Timeline";
 
   const crumbs: Crumb[] = [
     { label: "Home", to: "/" },
-    { label: subjectName, to: `/subject/${subjectId}/sources` },
+    { label: subjectName, to: `/subject/${subjectId}/timeline` },
     { label: sectionLabel },
   ];
 

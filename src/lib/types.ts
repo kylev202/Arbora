@@ -57,6 +57,8 @@ export type Source = {
   page_count?: number;
   chunk_count?: number;
   error?: string;
+  /** Week this material is assigned to, or null/undefined if unassigned. */
+  week_id?: string | null;
   added_at: string;
 };
 
@@ -116,6 +118,57 @@ export type StudyStats = {
   due_this_week: number;
   mastered: number;
   streak: number;
+};
+
+// ── Unit outline / semester structure ─────────────────────────────────────
+/** One week of the unit. `start_date` is derived from the term start but stored
+ * per row so a single week can be nudged. */
+export type Week = {
+  id: string;
+  subject_id: string;
+  week_number: number;
+  title: string;
+  summary: string;
+  start_date: string | null;
+};
+
+/** The subject's semester structure. `week_count` is null until an outline is set. */
+export type Outline = {
+  term_start: string | null;
+  week_count: number | null;
+  weeks: Week[];
+};
+
+/** A "focus next" suggestion for one week, ranked by the priority engine from
+ * deadline proximity + unstudied volume. `reason` is a calm, pre-built phrase.
+ * Weeks with nothing left to study are omitted, never shown as "behind". */
+export type PriorityItem = {
+  week_id: string;
+  week_number: number;
+  title: string;
+  reason: string;
+  days_until_deadline: number | null;
+  unstudied_count: number;
+};
+
+/** A syllabus parsed by the AI sidecar but **not yet committed** — the user
+ * reviews and edits these rows, then commits. Nothing is written until then. */
+export type ParsedWeek = {
+  week_number: number;
+  title: string;
+  summary: string;
+};
+
+export type ParsedDeadline = {
+  title: string;
+  /** ISO date (YYYY-MM-DD) or "" — the user sets blank ones during review. */
+  due_date: string;
+  type: DeadlineType;
+};
+
+export type ParsedOutline = {
+  weeks: ParsedWeek[];
+  deadlines: ParsedDeadline[];
 };
 
 // ── Planning ─────────────────────────────────────────────────────────────

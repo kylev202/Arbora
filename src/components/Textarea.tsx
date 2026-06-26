@@ -27,7 +27,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         id={fieldId}
         rows={rows}
         className={`${styles.control} ${styles.textarea} ${error ? styles.invalid : ""} ${className ?? ""}`}
-        aria-invalid={error ? true : undefined}
+        aria-invalid={error ? "true" : "false"}
         aria-describedby={describedBy}
         {...rest}
       />
