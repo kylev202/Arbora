@@ -7,6 +7,7 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // ── SQLite: open + migrate, then share the pool with commands. ──
             let db_path = app
@@ -29,6 +30,40 @@ pub fn run() {
             commands::greet,
             commands::db_health,
             commands::sidecar_status,
+            commands::subjects::list_subjects,
+            commands::subjects::get_subject,
+            commands::subjects::create_subject,
+            commands::subjects::update_subject,
+            commands::subjects::delete_subject,
+            commands::sources::list_sources,
+            commands::sources::add_source,
+            commands::sources::delete_source,
+            commands::sources::ingest_source,
+            commands::generate::generate_content,
+            commands::review::get_review_queue,
+            commands::review::approve_card,
+            commands::review::reject_card,
+            commands::review::approve_quiz_item,
+            commands::review::reject_quiz_item,
+            commands::review::approve_note,
+            commands::review::reject_note,
+            commands::study::get_due_cards,
+            commands::study::submit_card_review,
+            commands::study::get_study_stats,
+            commands::content::list_cards,
+            commands::content::list_quiz,
+            commands::content::list_notes,
+            commands::dashboard::get_subject_dashboard,
+            commands::plan::list_deadlines,
+            commands::plan::create_deadline,
+            commands::plan::delete_deadline,
+            commands::plan::list_grades,
+            commands::plan::create_grade,
+            commands::plan::delete_grade,
+            commands::plan::get_grade_summary,
+            commands::settings::get_settings,
+            commands::settings::update_settings,
+            commands::export::export_apkg,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

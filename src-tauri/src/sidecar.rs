@@ -20,20 +20,31 @@ const HEALTH_RETRIES: u32 = 40;
 const HEALTH_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Managed Tauri state holding the running sidecar.
-#[derive(Default)]
 pub struct Sidecar {
     child: Mutex<Option<Child>>,
     base_url: Mutex<Option<String>>,
     ready: AtomicBool,
+    /// Per-launch shared secret required on every sidecar request (loopback auth).
+    token: String,
 }
 
 impl Sidecar {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            child: Mutex::new(None),
+            base_url: Mutex::new(None),
+            ready: AtomicBool::new(false),
+            token: uuid::Uuid::new_v4().to_string(),
+        }
     }
 
     pub fn base_url(&self) -> Option<String> {
         self.base_url.lock().unwrap().clone()
+    }
+
+    /// The per-launch auth token to send as `X-Arbora-Token` on every request.
+    pub fn token(&self) -> &str {
+        &self.token
     }
 
     pub fn is_ready(&self) -> bool {
@@ -60,16 +71,22 @@ pub struct SidecarStatus {
 pub fn run_lifecycle(app: AppHandle) {
     let _ = app.emit("sidecar:status", json!({ "state": "starting" }));
 
-    let (child, base_url) = match spawn_process() {
+    let state = app.state::<Sidecar>();
+    let token = state.token().to_string();
+    let data_dir = app.path().app_data_dir().ok();
+
+    let (child, base_url) = match spawn_process(&token, data_dir.as_deref()) {
         Ok(pair) => pair,
         Err(err) => {
             eprintln!("[arbora] sidecar failed to start: {err}");
-            let _ = app.emit("sidecar:status", json!({ "state": "crashed", "error": err }));
+            let _ = app.emit(
+                "sidecar:status",
+                json!({ "state": "crashed", "error": err }),
+            );
             return;
         }
     };
 
-    let state = app.state::<Sidecar>();
     *state.child.lock().unwrap() = Some(child);
     *state.base_url.lock().unwrap() = Some(base_url.clone());
 
@@ -86,15 +103,22 @@ pub fn run_lifecycle(app: AppHandle) {
     }
 }
 
-fn spawn_process() -> Result<(Child, String), String> {
+fn spawn_process(token: &str, data_dir: Option<&Path>) -> Result<(Child, String), String> {
     let dir = sidecar_dir();
     let python = python_exe(&dir);
 
-    let mut child = Command::new(&python)
-        .args(["-m", "arbora_ai.server"])
+    let mut cmd = Command::new(&python);
+    cmd.args(["-m", "arbora_ai.server"])
         .current_dir(&dir)
+        .env("ARBORA_SIDECAR_TOKEN", token)
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    // FAISS indexes live under the app data dir; the sidecar writes them there.
+    if let Some(dir) = data_dir {
+        cmd.env("ARBORA_DATA_DIR", dir);
+    }
+
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn sidecar ({python:?}): {e}"))?;
 

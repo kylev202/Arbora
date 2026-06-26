@@ -1,9 +1,32 @@
-//! Tauri commands exposed to the React UI.
+//! Tauri commands exposed to the React UI, grouped by domain.
+//!
+//! Each domain lives in its own submodule (`subjects`, …); this file holds the
+//! cross-cutting dev/liveness pings. The single typed seam on the UI side is
+//! `src/lib/ipc.ts` — keep the two in sync.
 
+pub mod content;
+pub mod dashboard;
+pub mod export;
+pub mod generate;
+pub mod plan;
+pub mod review;
+pub mod settings;
+pub mod sources;
+pub mod study;
+pub mod subjects;
+
+use serde::Serialize;
 use sqlx::SqlitePool;
 use tauri::State;
 
 use crate::sidecar::{Sidecar, SidecarStatus};
+
+/// Returned by commands that kick off a long-running sidecar job; progress and
+/// completion then arrive as Tauri events (`ingest:*`, `generate:*`).
+#[derive(Serialize)]
+pub struct JobHandle {
+    pub job_id: String,
+}
 
 /// Liveness ping for the React → Rust IPC bridge.
 #[tauri::command]
