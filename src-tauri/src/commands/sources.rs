@@ -29,11 +29,12 @@ pub struct Source {
     pub page_count: Option<i64>,
     pub chunk_count: Option<i64>,
     pub error: Option<String>,
+    pub week_id: Option<String>,
     pub added_at: String,
 }
 
 const COLS: &str = "SELECT id, subject_id, type AS kind, title, file_path, ingest_state, \
-    page_count, chunk_count, ingest_error AS error, created_at AS added_at FROM sources";
+    page_count, chunk_count, ingest_error AS error, week_id, created_at AS added_at FROM sources";
 
 /// Map a file extension to a source type, mirroring the sidecar's `detect_type`.
 fn detect_type(file_path: &str) -> Result<&'static str, String> {
