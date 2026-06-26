@@ -1,15 +1,23 @@
 /**
  * Shared domain types — the data shapes the UI renders.
  *
- * Mirror of the "IPC Contract" + "Output Schemas" (resources/vault). Phase 3 is
- * UI-first with mock data, so these are consumed by src/mocks/* today; when the
- * backend lands, src/lib/ipc.ts returns exactly these shapes and nothing in the
- * components changes.
+ * Mirror of the "IPC Contract" + "Output Schemas" (resources/vault). The Rust
+ * core returns exactly these shapes over `src/lib/ipc.ts`, so components render
+ * them directly.
  */
 
 export type AIPreset = "low" | "medium" | "high"; // 🌱 🌿 🌳
+export type WhisperModel = "tiny" | "base" | "small";
 export type FSRSRating = "again" | "hard" | "good" | "easy";
 export type JobState = "pending" | "running" | "done" | "error";
+
+/** Device/AI prefs persisted in the DB settings singleton. Display & a11y prefs
+ * live client-side (see app/settings.tsx), not here. */
+export type Settings = {
+  ai_preset: AIPreset;
+  whisper_model: WhisperModel;
+  onboarded: boolean;
+};
 
 // ── Citations ────────────────────────────────────────────────────────────
 export type SourceLocation =

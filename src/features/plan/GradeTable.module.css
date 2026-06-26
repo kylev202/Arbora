@@ -31,6 +31,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.actions {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
 .summary {
   display: flex;
   flex-wrap: wrap;

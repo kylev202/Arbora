@@ -3,7 +3,7 @@ import { Plus, Tree as TreeIcon } from "@phosphor-icons/react";
 import { Button, EmptyState, Input, Modal } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import type { Subject } from "../../lib/types";
 import { SubjectCard } from "./SubjectCard";
 import styles from "./HomeScreen.module.css";
@@ -12,21 +12,20 @@ const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "
 
 /** S-01 — Home / subject list. The entry point; one primary: + New subject. */
 export function HomeScreen() {
-  const remote = useAsync(() => mockApi.listSubjects(), []);
+  const remote = useAsync(() => api.listSubjects(), []);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [creating, setCreating] = useState(false);
 
-  // Mock-only local store so "create" shows up immediately (no backend).
+  // Local mirror of the loaded list so a fresh create shows up immediately
+  // without re-fetching.
   useEffect(() => {
     if (remote.status === "loaded") setSubjects(remote.data);
   }, [remote.status, remote.data]);
 
-  function handleCreate(name: string) {
-    const id = `sub-${crypto.randomUUID().slice(0, 8)}`;
-    setSubjects((prev) => [
-      ...prev,
-      { id, name, color: SUBJECT_COLORS[prev.length % SUBJECT_COLORS.length], created_at: new Date().toISOString() },
-    ]);
+  async function handleCreate(name: string) {
+    const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
+    const created = await api.createSubject(name, color);
+    setSubjects((prev) => [...prev, created]);
     setCreating(false);
   }
 

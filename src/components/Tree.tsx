@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { TreeData } from "../lib/types";
-import { seededRng } from "../mocks/rng";
+import { seededRng } from "../lib/rng";
 import styles from "./Tree.module.css";
 
 /**

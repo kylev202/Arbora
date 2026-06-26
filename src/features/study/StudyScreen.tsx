@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { X } from "@phosphor-icons/react";
 import { Button, EmptyState, IconButton, Kbd } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import type { FSRSRating } from "../../lib/types";
 import { StudyCard } from "./StudyCard";
 import styles from "./StudyScreen.module.css";
@@ -23,7 +23,7 @@ const KEY_TO_RATING: Record<string, FSRSRating> = {
 export function StudyScreen() {
   const { subjectId = "" } = useParams();
   const navigate = useNavigate();
-  const due = useAsync(() => mockApi.getDueCards(subjectId), [subjectId]);
+  const due = useAsync(() => api.getDueCards(subjectId), [subjectId]);
 
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -36,8 +36,13 @@ export function StudyScreen() {
   const exit = useCallback(() => navigate(`/subject/${subjectId}/study`), [navigate, subjectId]);
 
   const rate = useCallback(
-    (_rating: FSRSRating) => {
-      // Phase 3: rating is mocked; just advance. (Real FSRS lands later.)
+    (rating: FSRSRating) => {
+      if (current) {
+        // Fire-and-forget: UI advances immediately; FSRS state persists async.
+        api.submitCardReview(current.card.id, rating).catch(() => {
+          // Rating failed to persist (e.g. sidecar unavailable); UI still advances.
+        });
+      }
       setFlipped(false);
       setIndex((i) => {
         if (i + 1 >= total) {
@@ -47,7 +52,7 @@ export function StudyScreen() {
         return i + 1;
       });
     },
-    [total],
+    [total, current],
   );
 
   useEffect(() => {

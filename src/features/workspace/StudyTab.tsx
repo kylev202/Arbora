@@ -1,17 +1,43 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { GraduationCap, Play, Timer } from "@phosphor-icons/react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { Export, GraduationCap, Play, Timer } from "@phosphor-icons/react";
 import { Button, EmptyState, StatTile } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import styles from "./StudyTab.module.css";
 
 /** S-02 Study tab — calm start screen. Starting a session is a single click. */
 export function StudyTab() {
   const { subjectId = "" } = useParams();
   const navigate = useNavigate();
-  const stats = useAsync(() => mockApi.getStudyStats(subjectId), [subjectId]);
+  const stats = useAsync(() => api.getStudyStats(subjectId), [subjectId]);
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const start = () => navigate(`/subject/${subjectId}/study/session`);
+
+  async function exportDeck() {
+    setExportMsg(null);
+    const path = await save({
+      defaultPath: "arbora-deck.apkg",
+      filters: [{ name: "Anki deck", extensions: ["apkg"] }],
+    });
+    if (!path) return; // cancelled
+    setExporting(true);
+    try {
+      const result = await api.exportApkg(subjectId, path);
+      setExportMsg(`Exported ${result.card_count} approved card${result.card_count === 1 ? "" : "s"} to Anki.`);
+    } catch (e) {
+      setExportMsg(
+        String(e).includes("NO_CARDS_TO_EXPORT")
+          ? "No approved cards to export yet — approve some in the review gate first."
+          : "Export failed. Make sure the AI sidecar is running and try again.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
 
   if (stats.status === "loading") {
     return (
@@ -30,7 +56,16 @@ export function StudyTab() {
     <div className="page">
       <div className="screen-header">
         <h1>Study</h1>
+        <Button variant="ghost" size="sm" icon={<Export />} onClick={exportDeck} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export to Anki"}
+        </Button>
       </div>
+
+      {exportMsg && (
+        <p className={styles.exportMsg} role="status">
+          {exportMsg}
+        </p>
+      )}
 
       {dueToday === 0 ? (
         <EmptyState

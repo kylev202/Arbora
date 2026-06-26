@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   CaretLeft,
@@ -10,12 +10,33 @@ import {
 } from "@phosphor-icons/react";
 import { Button, Disclaimer, EmptyState, Kbd } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import type { ReviewItem } from "../../lib/types";
 import { ReviewCard } from "./ReviewCard";
 import styles from "./ReviewScreen.module.css";
 
 type Status = "pending" | "kept" | "discarded";
+
+/** Commit one final decision to the core. Keep = approve (trusted, edits applied,
+ * cards enrol into FSRS); discard = reject (the staged row is deleted). */
+async function persistDecision(item: ReviewItem, status: Status): Promise<void> {
+  if (status === "kept") {
+    if (item.kind === "card")
+      await api.approveCard(item.id, { front: item.front, back: item.back, explanation: item.explanation });
+    else if (item.kind === "quiz")
+      await api.approveQuizItem(item.id, {
+        question: item.question,
+        options: [...item.options],
+        answer_index: item.answer_index,
+        explanation: item.explanation,
+      });
+    else await api.approveNote(item.id, { content: item.content });
+  } else if (status === "discarded") {
+    if (item.kind === "card") await api.rejectCard(item.id);
+    else if (item.kind === "quiz") await api.rejectQuizItem(item.id);
+    else await api.rejectNote(item.id);
+  }
+}
 
 /**
  * S-05 — Review queue: the MANDATORY gate (Law #2). No AI item is trusted until
@@ -25,12 +46,13 @@ type Status = "pending" | "kept" | "discarded";
 export function ReviewScreen() {
   const { subjectId = "" } = useParams();
   const navigate = useNavigate();
-  const queue = useAsync(() => mockApi.getReviewQueue(subjectId), [subjectId]);
+  const queue = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
 
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
   const [index, setIndex] = useState(0);
   const [editing, setEditing] = useState(false);
+  const committedRef = useRef(false);
 
   // Seed local state once loaded.
   useEffect(() => {
@@ -38,6 +60,7 @@ export function ReviewScreen() {
       setItems(queue.data);
       setStatuses(Object.fromEntries(queue.data.map((i) => [i.id, "pending" as Status])));
       setIndex(0);
+      committedRef.current = false;
     }
   }, [queue.status, queue.data]);
 
@@ -48,6 +71,19 @@ export function ReviewScreen() {
   );
   const current = items[index];
   const allDone = total > 0 && decided === total;
+
+  // Commit every final decision once the whole queue is reviewed. Doing it at the
+  // end (not per click) means changing your mind before finishing is free — only
+  // the final keep/discard is persisted.
+  useEffect(() => {
+    if (!allDone || committedRef.current) return;
+    committedRef.current = true;
+    for (const it of items) {
+      void persistDecision(it, statuses[it.id]).catch((e) =>
+        console.error("review commit failed", it.id, e),
+      );
+    }
+  }, [allDone, items, statuses]);
 
   const go = useCallback(
     (delta: number) => {

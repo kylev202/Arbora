@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { CalendarBlank, CheckCircle, Circle, Flame } from "@phosphor-icons/react";
 import { StatTile, Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import { relativeDays } from "../../lib/date";
 import styles from "./DashboardScreen.module.css";
 
@@ -13,7 +13,7 @@ import styles from "./DashboardScreen.module.css";
  */
 export function DashboardScreen() {
   const { subjectId = "" } = useParams();
-  const dash = useAsync(() => mockApi.getSubjectDashboard(subjectId), [subjectId]);
+  const dash = useAsync(() => api.getSubjectDashboard(subjectId), [subjectId]);
 
   if (dash.status === "loading") {
     return <div className="page-wide">{<div className={styles.skeleton} aria-hidden="true" />}</div>;

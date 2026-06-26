@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowRight, Cards, Notebook, Question } from "@phosphor-icons/react";
 import { CitationChip, EmptyState, Tabs, type TabItem } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import shared from "./Workspace.module.css";
 import styles from "./ContentTab.module.css";
 
@@ -14,10 +14,10 @@ export function ContentTab() {
   const { subjectId = "" } = useParams();
   const [tab, setTab] = useState<SubTab>("notes");
 
-  const notes = useAsync(() => mockApi.listNotes(subjectId), [subjectId]);
-  const cards = useAsync(() => mockApi.listCards(subjectId), [subjectId]);
-  const quiz = useAsync(() => mockApi.listQuiz(subjectId), [subjectId]);
-  const review = useAsync(() => mockApi.getReviewQueue(subjectId), [subjectId]);
+  const notes = useAsync(() => api.listNotes(subjectId), [subjectId]);
+  const cards = useAsync(() => api.listCards(subjectId), [subjectId]);
+  const quiz = useAsync(() => api.listQuiz(subjectId), [subjectId]);
+  const review = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
 
   const reviewCount = review.data?.length ?? 0;
 

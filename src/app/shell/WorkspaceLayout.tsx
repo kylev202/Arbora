@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import { useSettings } from "../settings";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import { TopBar } from "./TopBar";
 import { Breadcrumb, type Crumb } from "./Breadcrumb";
 import { Sidebar } from "./Sidebar";
@@ -26,9 +26,9 @@ export function WorkspaceLayout() {
   const location = useLocation();
   const { focusMode } = useSettings();
 
-  const subject = useAsync(() => mockApi.getSubject(subjectId), [subjectId]);
-  const dashboard = useAsync(() => mockApi.getSubjectDashboard(subjectId), [subjectId]);
-  const reviewQueue = useAsync(() => mockApi.getReviewQueue(subjectId), [subjectId]);
+  const subject = useAsync(() => api.getSubject(subjectId), [subjectId]);
+  const dashboard = useAsync(() => api.getSubjectDashboard(subjectId), [subjectId]);
+  const reviewQueue = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
 
   const subjectName = subject.data?.name ?? "…";
   const section = location.pathname.split("/")[3] ?? "sources";

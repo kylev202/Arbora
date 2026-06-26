@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { CalendarBlank, Cards } from "@phosphor-icons/react";
 import { Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
 import { relativeDays } from "../../lib/date";
 import type { Subject } from "../../lib/types";
 import styles from "./SubjectCard.module.css";
@@ -13,7 +13,7 @@ import styles from "./SubjectCard.module.css";
  * whole card is one link → the subject workspace.
  */
 export function SubjectCard({ subject }: { subject: Subject }) {
-  const dash = useAsync(() => mockApi.getSubjectDashboard(subject.id), [subject.id]);
+  const dash = useAsync(() => api.getSubjectDashboard(subject.id), [subject.id]);
 
   return (
     <Link

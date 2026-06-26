@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { Checkbox, RadioGroup } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useSettings, type FontScale, type Theme } from "../../app/settings";
+import { useAsync } from "../../lib/useAsync";
+import { api } from "../../lib/api";
 import type { AIPreset } from "../../lib/types";
 import { PRESET_OPTIONS, recommendedPreset } from "./presets";
 import { useNavigate } from "react-router-dom";
@@ -11,12 +13,24 @@ import styles from "./SettingsScreen.module.css";
 const FONT_SIZES: FontScale[] = [14, 16, 18, 20];
 const MOCK_RAM_GB = 16;
 
-/** S-09 — Settings. Local-only; display & a11y toggles apply live. */
+/** S-09 — Settings. Display & a11y toggles apply live (client-side); the AI
+ * preset persists to the DB settings singleton. */
 export function SettingsScreen() {
   const navigate = useNavigate();
   const settings = useSettings();
+  const persisted = useAsync(() => api.getSettings(), []);
   const [preset, setPreset] = useState<AIPreset>("medium");
   const recommended = recommendedPreset(MOCK_RAM_GB);
+
+  // Adopt the persisted preset once it loads.
+  useEffect(() => {
+    if (persisted.status === "loaded") setPreset(persisted.data.ai_preset);
+  }, [persisted.status, persisted.data]);
+
+  function changePreset(value: AIPreset) {
+    setPreset(value);
+    void api.updateSettings({ ai_preset: value });
+  }
 
   return (
     <div className={styles.screen}>
@@ -36,7 +50,7 @@ export function SettingsScreen() {
               hideLegend
               options={PRESET_OPTIONS.map((o) => (o.value === recommended ? { ...o, badge: "Recommended" } : o))}
               value={preset}
-              onChange={setPreset}
+              onChange={changePreset}
             />
             <p className={styles.hint}>Your machine has ~{MOCK_RAM_GB} GB RAM → {PRESET_OPTIONS.find((o) => o.value === recommended)?.label} suits it best.</p>
           </section>

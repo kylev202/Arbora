@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 import { FilePlus, Sparkle, Stack } from "@phosphor-icons/react";
 import { Button, EmptyState } from "../../components";
 import { useAsync } from "../../lib/useAsync";
-import { mockApi } from "../../mocks/api";
+import { api } from "../../lib/api";
+import { onIngestDone, onIngestError, onIngestProgress } from "../../lib/ipc";
+import type { Source } from "../../lib/types";
 import { SourceRow } from "./SourceRow";
 import { AddSourceModal } from "./AddSourceModal";
 import { GenerateModal } from "./GenerateModal";
@@ -14,11 +17,44 @@ import styles from "./SourcesTab.module.css";
 export function SourcesTab() {
   const { subjectId = "" } = useParams();
   const navigate = useNavigate();
-  const sources = useAsync(() => mockApi.listSources(subjectId), [subjectId]);
+  const remote = useAsync(() => api.listSources(subjectId), [subjectId]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [adding, setAdding] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  const processed = sources.data?.filter((s) => s.ingest_state === "processed") ?? [];
+  useEffect(() => {
+    if (remote.status === "loaded") setSources(remote.data);
+  }, [remote.status, remote.data]);
+
+  // Keep rows live as their ingest jobs progress (also after the modal closes).
+  useEffect(() => {
+    const patch = (id: string, next: Partial<Source>) =>
+      setSources((prev) => prev.map((s) => (s.id === id ? { ...s, ...next } : s)));
+    const unsubs: UnlistenFn[] = [];
+    onIngestProgress((e) =>
+      patch(e.source_id, { ingest_state: "processing", progress: e.progress, step: e.step }),
+    ).then((u) => unsubs.push(u));
+    onIngestDone((e) =>
+      patch(e.source_id, { ingest_state: "processed", chunk_count: e.chunk_count, progress: undefined }),
+    ).then((u) => unsubs.push(u));
+    onIngestError((e) => patch(e.source_id, { ingest_state: "error", error: e.error })).then((u) =>
+      unsubs.push(u),
+    );
+    return () => unsubs.forEach((u) => u());
+  }, []);
+
+  function retry(s: Source) {
+    setSources((prev) =>
+      prev.map((x) => (x.id === s.id ? { ...x, ingest_state: "processing", error: undefined, progress: 0 } : x)),
+    );
+    api.ingestSource(s.id).catch((e) =>
+      setSources((prev) =>
+        prev.map((x) => (x.id === s.id ? { ...x, ingest_state: "error", error: String(e) } : x)),
+      ),
+    );
+  }
+
+  const processed = sources.filter((s) => s.ingest_state === "processed");
   const canGenerate = processed.length > 0;
 
   return (
@@ -30,9 +66,9 @@ export function SourcesTab() {
         </Button>
       </div>
 
-      {sources.status === "loading" && <div className={shared.skeletonList} aria-hidden="true" />}
+      {remote.status === "loading" && <div className={shared.skeletonList} aria-hidden="true" />}
 
-      {sources.status === "loaded" && sources.data.length === 0 && (
+      {remote.status === "loaded" && sources.length === 0 && (
         <EmptyState
           icon={<Stack />}
           title="No sources yet"
@@ -45,11 +81,11 @@ export function SourcesTab() {
         />
       )}
 
-      {sources.status === "loaded" && sources.data.length > 0 && (
+      {sources.length > 0 && (
         <>
           <ul className={shared.card}>
-            {sources.data.map((s) => (
-              <SourceRow key={s.id} source={s} onRetry={() => setAdding(true)} />
+            {sources.map((s) => (
+              <SourceRow key={s.id} source={s} onRetry={retry} />
             ))}
           </ul>
 
@@ -69,10 +105,17 @@ export function SourcesTab() {
         </>
       )}
 
-      <AddSourceModal open={adding} onClose={() => setAdding(false)} />
+      <AddSourceModal
+        open={adding}
+        onClose={() => setAdding(false)}
+        subjectId={subjectId}
+        onAdded={(s) => setSources((prev) => [...prev, s])}
+      />
       <GenerateModal
         open={generating}
         onClose={() => setGenerating(false)}
+        subjectId={subjectId}
+        sourceIds={processed.map((s) => s.id)}
         sourceTitles={processed.map((s) => s.title)}
         onGenerated={() => {
           setGenerating(false);
