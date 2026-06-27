@@ -9,10 +9,11 @@ const KIND_LABEL: Record<ReviewItem["kind"], string> = {
   card: "Flashcard",
   quiz: "Quiz question",
   note: "Note",
+  brief: "Study brief",
 };
 
 function citationsOf(item: ReviewItem): SourceRef[] {
-  return item.kind === "note" ? item.source_refs : [item.source_ref];
+  return item.kind === "note" || item.kind === "brief" ? item.source_refs : [item.source_ref];
 }
 
 function speakText(item: ReviewItem): string {
@@ -107,6 +108,15 @@ function DisplayFields({ item }: { item: ReviewItem }) {
       </div>
     );
   }
+  if (item.kind === "brief") {
+    return (
+      <div className={styles.fields}>
+        <Field label={`Study brief — ${item.deadline_title}`}>
+          <span className={styles.note}>{item.content}</span>
+        </Field>
+      </div>
+    );
+  }
   return (
     <div className={styles.fields}>
       <Field label="Note">
@@ -137,6 +147,13 @@ function EditFields({
       <div className={styles.fields}>
         <Textarea label="Question" rows={2} value={draft.question} onChange={(e) => setDraft({ ...draft, question: e.target.value })} />
         <Textarea label="Explanation" rows={3} value={draft.explanation} onChange={(e) => setDraft({ ...draft, explanation: e.target.value })} />
+      </div>
+    );
+  }
+  if (draft.kind === "brief") {
+    return (
+      <div className={styles.fields}>
+        <Textarea label="Study brief" rows={8} value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} />
       </div>
     );
   }

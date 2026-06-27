@@ -30,11 +30,13 @@ async function persistDecision(item: ReviewItem, status: Status): Promise<void> 
         answer_index: item.answer_index,
         explanation: item.explanation,
       });
-    else await api.approveNote(item.id, { content: item.content });
+    else if (item.kind === "note") await api.approveNote(item.id, { content: item.content });
+    else await api.approveBrief(item.id, { content: item.content });
   } else if (status === "discarded") {
     if (item.kind === "card") await api.rejectCard(item.id);
     else if (item.kind === "quiz") await api.rejectQuizItem(item.id);
-    else await api.rejectNote(item.id);
+    else if (item.kind === "note") await api.rejectNote(item.id);
+    else await api.rejectBrief(item.id);
   }
 }
 

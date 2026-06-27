@@ -12,6 +12,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  AssignmentBrief,
   Card,
   Deadline,
   DeadlineType,
@@ -165,6 +166,31 @@ export function onGenerateError(handler: (e: GenerateError) => void): Promise<Un
   return listen<GenerateError>("generate:error", (e) => handler(e.payload));
 }
 
+/** Generate a grounded, cited study brief for one assignment from the material
+ * in the weeks it covers. Returns the job id; the brief lands staged (reviewed=0)
+ * and progress arrives as `brief:*`. Rejects if the covered weeks have no
+ * processed material, or `SIDECAR_UNAVAILABLE`. */
+export function generateAssignmentBrief(
+  subjectId: string,
+  deadlineId: string,
+): Promise<{ job_id: string }> {
+  return invoke<{ job_id: string }>("generate_assignment_brief", { subjectId, deadlineId });
+}
+
+export type BriefProgress = { job_id: string; progress: number; items_generated: number | null };
+export type BriefDone = { job_id: string; items_generated: number };
+export type BriefError = { job_id: string; error: string };
+
+export function onBriefProgress(handler: (e: BriefProgress) => void): Promise<UnlistenFn> {
+  return listen<BriefProgress>("brief:progress", (e) => handler(e.payload));
+}
+export function onBriefDone(handler: (e: BriefDone) => void): Promise<UnlistenFn> {
+  return listen<BriefDone>("brief:done", (e) => handler(e.payload));
+}
+export function onBriefError(handler: (e: BriefError) => void): Promise<UnlistenFn> {
+  return listen<BriefError>("brief:error", (e) => handler(e.payload));
+}
+
 /** Items staged for the mandatory review gate (reviewed=0), with citations. */
 export function getReviewQueue(subjectId: string): Promise<ReviewItem[]> {
   return invoke<ReviewItem[]>("get_review_queue", { subjectId });
@@ -198,6 +224,13 @@ export function approveNote(noteId: string, edits?: NoteEdits): Promise<void> {
 }
 export function rejectNote(noteId: string): Promise<void> {
   return invoke<void>("reject_note", { noteId });
+}
+export type BriefEdits = { content?: string };
+export function approveBrief(briefId: string, edits?: BriefEdits): Promise<void> {
+  return invoke<void>("approve_brief", { briefId, edits });
+}
+export function rejectBrief(briefId: string): Promise<void> {
+  return invoke<void>("reject_brief", { briefId });
 }
 
 // ── Study / FSRS (Slice 3) ─────────────────────────────────────────────────
@@ -236,6 +269,11 @@ export function listQuiz(subjectId: string): Promise<QuizItem[]> {
 /** Approved notes (with citations) for a subject, oldest first. */
 export function listNotes(subjectId: string): Promise<Note[]> {
   return invoke<Note[]>("list_notes", { subjectId });
+}
+
+/** Approved assignment study briefs (with citations) for a subject. */
+export function listAssignmentBriefs(subjectId: string): Promise<AssignmentBrief[]> {
+  return invoke<AssignmentBrief[]>("list_assignment_briefs", { subjectId });
 }
 
 /** Tree + stats + next deadline for the subject dashboard. */

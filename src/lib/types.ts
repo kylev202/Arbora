@@ -94,11 +94,26 @@ export type Note = {
   reviewed: boolean;
 };
 
+/** A grounded, cited study brief for one assignment (slice 5). Same citation
+ * model as a note; staged for the review gate, then shown on the Plan screen. */
+export type AssignmentBrief = {
+  id: string;
+  subject_id: string;
+  deadline_id: string;
+  content: string; // Markdown focus list
+  source_refs: SourceRef[];
+  reviewed: boolean;
+};
+
+/** A brief as it appears in the review queue (carries its assignment's title). */
+export type AssignmentBriefReview = AssignmentBrief & { deadline_title: string };
+
 /** An item awaiting review in the mandatory gate (S-05). */
 export type ReviewItem =
   | ({ kind: "card" } & Card)
   | ({ kind: "quiz" } & QuizItem)
-  | ({ kind: "note" } & Note);
+  | ({ kind: "note" } & Note)
+  | ({ kind: "brief" } & AssignmentBriefReview);
 
 // ── Study / FSRS ─────────────────────────────────────────────────────────
 export type CardState = "new" | "learning" | "review" | "relearning";

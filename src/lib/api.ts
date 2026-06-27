@@ -23,6 +23,7 @@ export const api = {
 
   // ── Slice 2 — Generate + review gate (live) ──
   generateContent: ipc.generateContent,
+  generateAssignmentBrief: ipc.generateAssignmentBrief,
   getReviewQueue: ipc.getReviewQueue,
   approveCard: ipc.approveCard,
   rejectCard: ipc.rejectCard,
@@ -30,6 +31,8 @@ export const api = {
   rejectQuizItem: ipc.rejectQuizItem,
   approveNote: ipc.approveNote,
   rejectNote: ipc.rejectNote,
+  approveBrief: ipc.approveBrief,
+  rejectBrief: ipc.rejectBrief,
 
   // ── Slice 3 — FSRS study loop (live) ──
   getDueCards: ipc.getDueCards,
@@ -40,6 +43,7 @@ export const api = {
   listCards: ipc.listCards,
   listQuiz: ipc.listQuiz,
   listNotes: ipc.listNotes,
+  listAssignmentBriefs: ipc.listAssignmentBriefs,
   getSubjectDashboard: ipc.getSubjectDashboard,
 
   // ── Slice 4b — Plan: deadlines + grade book (live) ──

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CalendarBlank, Exam, FileText, Plus, X } from "@phosphor-icons/react";
-import { Button, EmptyState, IconButton, Input, Modal, RadioGroup } from "../../components";
+import { CalendarBlank, Exam, FileText, Plus, Sparkle, X } from "@phosphor-icons/react";
+import { Button, EmptyState, IconButton, Input, Modal, RadioGroup, Tag } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { formatDate, relativeDays } from "../../lib/date";
-import type { DeadlineType } from "../../lib/types";
+import type { Deadline, DeadlineType } from "../../lib/types";
+import { AssignmentBriefModal } from "./AssignmentBriefModal";
 import { GradeTable } from "./GradeTable";
 import styles from "./PlanScreen.module.css";
 
@@ -23,11 +24,17 @@ export function PlanScreen() {
   const deadlines = useAsync(() => api.listDeadlines(subjectId), [subjectId, reload]);
   const grades = useAsync(() => api.listGrades(subjectId), [subjectId, reload]);
   const summary = useAsync(() => api.getGradeSummary(subjectId), [subjectId, reload]);
+  const outline = useAsync(() => api.getOutline(subjectId), [subjectId, reload]);
+  const briefs = useAsync(() => api.listAssignmentBriefs(subjectId), [subjectId, reload]);
 
   const [addingDeadline, setAddingDeadline] = useState(false);
   const [addingGrade, setAddingGrade] = useState(false);
+  const [briefFor, setBriefFor] = useState<Deadline | null>(null);
 
   const refresh = () => setReload((r) => r + 1);
+
+  const weeks = outline.data?.weeks ?? [];
+  const briefByDeadline = new Map((briefs.data ?? []).map((b) => [b.deadline_id, b]));
 
   async function addDeadline(title: string, dueAt: string, type: DeadlineType) {
     await api.createDeadline(subjectId, title, dueAt, type);
@@ -67,15 +74,30 @@ export function PlanScreen() {
                 <span className={styles.dlIcon} aria-hidden="true">
                   {d.type === "assignment" ? <FileText /> : <Exam />}
                 </span>
-                <span className={styles.dlTitle}>{d.title}</span>
+                <span className={styles.dlTitle}>
+                  {d.title}
+                  {briefByDeadline.has(d.id) && (
+                    <Tag tone="mastered">Brief ready</Tag>
+                  )}
+                </span>
                 <span className={styles.dlDate}>{formatDate(d.due_at)}</span>
                 <span className={styles.dlRel}>{relativeDays(d.due_at)}</span>
-                <IconButton
-                  size="sm"
-                  label={`Delete ${d.title}`}
-                  icon={<X />}
-                  onClick={() => api.deleteDeadline(d.id).then(refresh)}
-                />
+                <div className={styles.dlActions}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={<Sparkle weight={briefByDeadline.has(d.id) ? "fill" : "regular"} />}
+                    onClick={() => setBriefFor(d)}
+                  >
+                    Brief
+                  </Button>
+                  <IconButton
+                    size="sm"
+                    label={`Delete ${d.title}`}
+                    icon={<X />}
+                    onClick={() => api.deleteDeadline(d.id).then(refresh)}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -104,6 +126,17 @@ export function PlanScreen() {
 
       <AddDeadlineModal open={addingDeadline} onClose={() => setAddingDeadline(false)} onAdd={addDeadline} />
       <AddGradeModal open={addingGrade} onClose={() => setAddingGrade(false)} onAdd={addGrade} />
+      <AssignmentBriefModal
+        open={!!briefFor}
+        onClose={() => {
+          setBriefFor(null);
+          refresh();
+        }}
+        subjectId={subjectId}
+        deadline={briefFor}
+        weeks={weeks}
+        brief={briefFor ? (briefByDeadline.get(briefFor.id) ?? null) : null}
+      />
     </div>
   );
 }
