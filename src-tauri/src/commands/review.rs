@@ -67,11 +67,23 @@ pub struct NoteWire {
 }
 
 #[derive(Serialize)]
+pub struct BriefWire {
+    id: String,
+    subject_id: String,
+    deadline_id: String,
+    deadline_title: String,
+    content: String,
+    source_refs: Vec<SourceRefOut>,
+    reviewed: bool,
+}
+
+#[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum ReviewItem {
     Card(CardWire),
     Quiz(QuizWire),
     Note(NoteWire),
+    Brief(BriefWire),
 }
 
 // ── Flat query rows ────────────────────────────────────────────────────────
@@ -111,6 +123,15 @@ struct NoteRow {
     subject_id: String,
     content: String,
     format: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct BriefRow {
+    id: String,
+    subject_id: String,
+    deadline_id: String,
+    deadline_title: String,
+    content: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -207,6 +228,44 @@ async fn queue(pool: &SqlitePool, subject_id: &str) -> Result<Vec<ReviewItem>, S
             subject_id: n.subject_id,
             content: n.content,
             format: n.format,
+            source_refs: refs
+                .into_iter()
+                .map(|r| SourceRefOut {
+                    source_id: r.source_id,
+                    source_title: r.source_title,
+                    location: loc_out(r.page, r.timestamp_ms),
+                    excerpt: r.excerpt,
+                })
+                .collect(),
+            reviewed: false,
+        }));
+    }
+
+    let briefs = sqlx::query_as::<_, BriefRow>(
+        "SELECT b.id, b.subject_id, b.deadline_id, d.title AS deadline_title, b.content
+         FROM assignment_briefs b JOIN deadlines d ON d.id = b.deadline_id
+         WHERE b.subject_id = ?1 AND b.reviewed = 0 ORDER BY b.created_at",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    for b in briefs {
+        let refs = sqlx::query_as::<_, RefRow>(
+            "SELECT r.source_id, r.page, r.timestamp_ms, r.excerpt, s.title AS source_title
+             FROM assignment_brief_refs r JOIN sources s ON s.id = r.source_id
+             WHERE r.brief_id = ?1",
+        )
+        .bind(&b.id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        out.push(ReviewItem::Brief(BriefWire {
+            id: b.id,
+            subject_id: b.subject_id,
+            deadline_id: b.deadline_id,
+            deadline_title: b.deadline_title,
+            content: b.content,
             source_refs: refs
                 .into_iter()
                 .map(|r| SourceRefOut {
@@ -363,6 +422,29 @@ pub async fn reject_note(pool: State<'_, SqlitePool>, note_id: String) -> Result
     delete_row(pool.inner(), "notes", &note_id).await
 }
 
+#[tauri::command]
+pub async fn approve_brief(
+    pool: State<'_, SqlitePool>,
+    brief_id: String,
+    edits: Option<NoteEdits>,
+) -> Result<(), String> {
+    let edits = edits.unwrap_or_default();
+    sqlx::query(
+        "UPDATE assignment_briefs SET content = COALESCE(?2, content), reviewed = 1 WHERE id = ?1",
+    )
+    .bind(&brief_id)
+    .bind(edits.content)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reject_brief(pool: State<'_, SqlitePool>, brief_id: String) -> Result<(), String> {
+    delete_row(pool.inner(), "assignment_briefs", &brief_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -445,5 +527,39 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(n, 0);
+    }
+
+    #[tokio::test]
+    async fn brief_appears_in_queue_with_citation_then_leaves_on_approve() {
+        let pool = pool_with_staged().await;
+        sqlx::query("INSERT INTO deadlines (id,subject_id,title,due_at,type,created_at) VALUES ('d','s','Essay','2026-03-20T09:00:00Z','assignment','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO assignment_briefs (id,deadline_id,subject_id,content,reviewed,created_at) VALUES ('b','d','s','- Focus on cells',0,'t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO assignment_brief_refs (id,brief_id,source_id,page,excerpt) VALUES ('br','b','src',4,'cited')")
+            .execute(&pool).await.unwrap();
+
+        let items = queue(&pool, "s").await.unwrap();
+        let brief = items
+            .iter()
+            .find(|i| matches!(i, ReviewItem::Brief(_)))
+            .expect("brief is queued");
+        let json = serde_json::to_value(brief).unwrap();
+        assert_eq!(json["kind"], "brief");
+        assert_eq!(json["deadline_title"], "Essay");
+        assert_eq!(json["content"], "- Focus on cells");
+        assert_eq!(json["source_refs"][0]["location"]["page"], 4);
+        assert_eq!(json["source_refs"][0]["source_title"], "Doc A");
+
+        // Approving (reviewed = 1) removes it from the gate.
+        sqlx::query("UPDATE assignment_briefs SET reviewed=1 WHERE id='b'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let after = queue(&pool, "s").await.unwrap();
+        assert!(
+            !after.iter().any(|i| matches!(i, ReviewItem::Brief(_))),
+            "approved brief leaves the queue"
+        );
     }
 }

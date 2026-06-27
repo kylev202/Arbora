@@ -65,6 +65,16 @@ pub struct NoteOut {
     reviewed: bool,
 }
 
+#[derive(Serialize)]
+pub struct BriefOut {
+    id: String,
+    subject_id: String,
+    deadline_id: String,
+    content: String,
+    source_refs: Vec<SourceRefOut>,
+    reviewed: bool,
+}
+
 // ── Flat query rows ────────────────────────────────────────────────────────
 
 #[derive(sqlx::FromRow)]
@@ -102,6 +112,14 @@ struct NoteRow {
     subject_id: String,
     content: String,
     format: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct BriefRow {
+    id: String,
+    subject_id: String,
+    deadline_id: String,
+    content: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -220,6 +238,47 @@ async fn list_notes_db(pool: &SqlitePool, subject_id: &str) -> Result<Vec<NoteOu
     Ok(out)
 }
 
+async fn list_briefs_db(pool: &SqlitePool, subject_id: &str) -> Result<Vec<BriefOut>, String> {
+    let briefs = sqlx::query_as::<_, BriefRow>(
+        "SELECT id, subject_id, deadline_id, content FROM assignment_briefs
+         WHERE subject_id = ?1 AND reviewed = 1 ORDER BY created_at",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::with_capacity(briefs.len());
+    for b in briefs {
+        let refs = sqlx::query_as::<_, RefRow>(
+            "SELECT r.source_id, r.page, r.timestamp_ms, r.excerpt, s.title AS source_title
+             FROM assignment_brief_refs r JOIN sources s ON s.id = r.source_id
+             WHERE r.brief_id = ?1",
+        )
+        .bind(&b.id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        out.push(BriefOut {
+            id: b.id,
+            subject_id: b.subject_id,
+            deadline_id: b.deadline_id,
+            content: b.content,
+            source_refs: refs
+                .into_iter()
+                .map(|r| SourceRefOut {
+                    source_id: r.source_id,
+                    source_title: r.source_title,
+                    location: loc(r.page, r.timestamp_ms),
+                    excerpt: r.excerpt,
+                })
+                .collect(),
+            reviewed: true,
+        });
+    }
+    Ok(out)
+}
+
 // ── Tauri commands (thin adapters) ─────────────────────────────────────────
 
 #[tauri::command]
@@ -244,6 +303,14 @@ pub async fn list_notes(
     subject_id: String,
 ) -> Result<Vec<NoteOut>, String> {
     list_notes_db(pool.inner(), &subject_id).await
+}
+
+#[tauri::command]
+pub async fn list_assignment_briefs(
+    pool: State<'_, SqlitePool>,
+    subject_id: String,
+) -> Result<Vec<BriefOut>, String> {
+    list_briefs_db(pool.inner(), &subject_id).await
 }
 
 #[cfg(test)]
@@ -308,5 +375,27 @@ mod tests {
         assert_eq!(notes[0].source_refs.len(), 1);
         let json = serde_json::to_value(&notes[0]).unwrap();
         assert_eq!(json["source_refs"][0]["excerpt"], "ref-excerpt");
+    }
+
+    #[tokio::test]
+    async fn lists_only_approved_briefs_with_refs() {
+        let pool = seeded_pool().await;
+        sqlx::query("INSERT INTO deadlines (id,subject_id,title,due_at,type,created_at) VALUES ('d','s','Essay','2026-03-20T09:00:00Z','assignment','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO assignment_briefs (id,deadline_id,subject_id,content,reviewed,created_at) VALUES ('b1','d','s','- approved',1,'t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO assignment_brief_refs (id,brief_id,source_id,page,excerpt) VALUES ('r1','b1','src',6,'ex')")
+            .execute(&pool).await.unwrap();
+        // A still-staged brief — must not list.
+        sqlx::query("INSERT INTO assignment_briefs (id,deadline_id,subject_id,content,reviewed,created_at) VALUES ('b2','d','s','- staged',0,'t')")
+            .execute(&pool).await.unwrap();
+
+        let briefs = list_briefs_db(&pool, "s").await.unwrap();
+        assert_eq!(briefs.len(), 1, "staged brief excluded");
+        assert_eq!(briefs[0].deadline_id, "d");
+        let json = serde_json::to_value(&briefs[0]).unwrap();
+        assert_eq!(json["content"], "- approved");
+        assert_eq!(json["source_refs"][0]["location"]["page"], 6);
+        assert_eq!(json["source_refs"][0]["source_title"], "Doc A");
     }
 }
