@@ -27,7 +27,7 @@ from pydantic import BaseModel
 from . import __version__
 from .config import HOST, default_model
 from .export import export_apkg
-from .generate.job import run_generate
+from .generate.job import run_assignment_brief, run_generate
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
@@ -114,6 +114,16 @@ class GenerateStatus(BaseModel):
     progress: float
     items_generated: int | None = None
     error: str | None = None
+
+
+class AssignmentBriefRequest(BaseModel):
+    subject_id: str
+    deadline_id: str
+    assignment_title: str
+    chunks: list[GenChunk]
+    llm_config: dict = {}
+    preset: str = "medium"
+    job_id: str | None = None
 
 
 class ParseOutlineRequest(BaseModel):
@@ -241,6 +251,48 @@ def create_app() -> FastAPI:
         if job.state != "done":
             raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
         return job.result  # {notes, cards, quiz_items}
+
+    # ── Assignment study brief (grounded, review-gated) ────────────────────
+
+    @app.post("/assignment-brief", status_code=202, dependencies=guarded)
+    def assignment_brief(req: AssignmentBriefRequest) -> dict[str, str]:
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        chunks = [c.model_dump() for c in req.chunks]
+        job = registry.create(req.job_id)
+        registry.submit(
+            job,
+            lambda j: run_assignment_brief(
+                j, chunks=chunks, assignment_title=req.assignment_title, llm_config=cfg
+            ),
+        )
+        return {"job_id": job.id}
+
+    @app.get(
+        "/assignment-brief/{job_id}/status", response_model=GenerateStatus, dependencies=guarded
+    )
+    def assignment_brief_status(job_id: str) -> GenerateStatus:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        return GenerateStatus(
+            job_id=job.id,
+            state=job.state,
+            progress=job.progress,
+            items_generated=job.meta.get("items_generated"),
+            error=job.error,
+        )
+
+    @app.get("/assignment-brief/{job_id}/result", dependencies=guarded)
+    def assignment_brief_result(job_id: str) -> dict:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        if job.state != "done":
+            raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
+        return job.result  # {content, source_refs}
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 

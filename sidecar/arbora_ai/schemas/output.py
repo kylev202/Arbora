@@ -91,6 +91,16 @@ class NoteGen(BaseModel):
     excerpt: str = Field(min_length=1, max_length=200)
 
 
+class BriefPointGen(BaseModel):
+    """One focus point of an assignment study brief (slice 5). Same grounded
+    shape as the others — content + a verbatim excerpt; the pipeline attaches the
+    authoritative citation. Points are assembled into one brief, staged for the
+    review gate."""
+
+    point: str = Field(min_length=10, max_length=400)
+    excerpt: str = Field(min_length=1, max_length=200)
+
+
 # ── Syllabus outline extraction (slice 4) ───────────────────────────────────
 # Structured extraction from the user's *own* syllabus, confirmed before commit
 # (ADR-0006). This is editable schedule metadata, not a study claim, so per-item

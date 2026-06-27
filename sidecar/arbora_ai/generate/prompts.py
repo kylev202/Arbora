@@ -58,3 +58,15 @@ def note_prompt(chunk: Chunk) -> str:
         "- excerpt: an exact phrase copied from the passage.\n"
         "Return only the JSON object."
     )
+
+
+def brief_point_prompt(chunk: Chunk, assignment_title: str) -> str:
+    return (
+        f"You are helping a student prepare for an assignment: {assignment_title}. {_RULES}\n\n"
+        f"{_ctx(chunk)}\n\n"
+        "Write ONE concrete thing the student should focus on for this assignment, "
+        "drawn only from the passage:\n"
+        "- point: one actionable sentence (what to review, understand, or practise).\n"
+        "- excerpt: the exact phrase from the passage that supports it.\n"
+        "Return only the JSON object."
+    )
