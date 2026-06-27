@@ -9,6 +9,10 @@ import { TimelineScreen } from "../features/timeline/TimelineScreen";
 import { PlanScreen } from "../features/plan/PlanScreen";
 import { DashboardScreen } from "../features/dashboard/DashboardScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { ChatScreen } from "../features/chat/ChatScreen";
+import { KnowledgeMapScreen } from "../features/map/KnowledgeMapScreen";
+import { InterleavedStudyScreen } from "../features/study/InterleavedStudyScreen";
+import { DiagramsScreen } from "../features/diagrams/DiagramsScreen";
 import { WorkspaceLayout } from "./shell/WorkspaceLayout";
 
 /**
@@ -19,6 +23,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomeScreen />} />
+      <Route path="/interleaved" element={<InterleavedStudyScreen />} />
       <Route path="/settings" element={<SettingsScreen />} />
 
       <Route path="/subject/:subjectId" element={<WorkspaceLayout />}>
@@ -31,6 +36,9 @@ export function AppRoutes() {
         <Route path="review" element={<ReviewScreen />} />
         <Route path="plan" element={<PlanScreen />} />
         <Route path="dashboard" element={<DashboardScreen />} />
+        <Route path="ask" element={<ChatScreen />} />
+        <Route path="map" element={<KnowledgeMapScreen />} />
+        <Route path="diagrams" element={<DiagramsScreen />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

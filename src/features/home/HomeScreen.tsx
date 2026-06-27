@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Plus, Tree as TreeIcon } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
+import { Lightning, Plus, Shuffle, Tree as TreeIcon } from "@phosphor-icons/react";
 import { Button, EmptyState, Input, Modal } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
@@ -12,6 +13,7 @@ const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "
 
 /** S-01 — Home / subject list. The entry point; one primary: + New subject. */
 export function HomeScreen() {
+  const navigate = useNavigate();
   const remote = useAsync(() => api.listSubjects(), []);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [creating, setCreating] = useState(false);
@@ -36,9 +38,30 @@ export function HomeScreen() {
         <div className="page-wide">
           <div className="screen-header">
             <h1>Your subjects</h1>
-            <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
-              New subject
-            </Button>
+            <div className={styles.headerActions}>
+              {subjects.length > 0 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    icon={<Lightning />}
+                    onClick={() => navigate("/interleaved?smart=1")}
+                    title="Study cards from subjects with upcoming deadlines first"
+                  >
+                    Study smart
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={<Shuffle />}
+                    onClick={() => navigate("/interleaved")}
+                  >
+                    Study all
+                  </Button>
+                </>
+              )}
+              <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
+                New subject
+              </Button>
+            </div>
           </div>
 
           {remote.status === "loading" && (

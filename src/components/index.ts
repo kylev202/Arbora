@@ -15,3 +15,4 @@ export { CitationChip, type CitationChipProps } from "./CitationChip";
 export { StatTile, type StatTileProps } from "./StatTile";
 export { Tabs, type TabItem, type TabsProps } from "./Tabs";
 export { Tree, stageFor, type TreeProps } from "./Tree";
+export { MermaidDiagram } from "./MermaidDiagram";

@@ -2,11 +2,14 @@ import { NavLink } from "react-router-dom";
 import {
   CalendarBlank,
   ChartLineUp,
+  ChatCircle,
   Files,
+  Graph,
   GraduationCap,
   ListChecks,
   type Icon,
   Notebook,
+  Shapes,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import styles from "./Sidebar.module.css";
@@ -50,6 +53,9 @@ export function Sidebar({ subjectId, badges }: { subjectId: string; badges: Side
     },
     { to: `${base}/plan`, label: "Plan", icon: ListChecks },
     { to: `${base}/dashboard`, label: "Dashboard", icon: ChartLineUp },
+    { to: `${base}/ask`, label: "Ask", icon: ChatCircle },
+    { to: `${base}/map`, label: "Map", icon: Graph },
+    { to: `${base}/diagrams`, label: "Diagrams", icon: Shapes },
   ];
 
   return (

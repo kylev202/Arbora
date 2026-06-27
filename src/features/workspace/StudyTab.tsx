@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Export, GraduationCap, Play, Timer } from "@phosphor-icons/react";
+import { Export, GraduationCap, Lightning, Play, Timer } from "@phosphor-icons/react";
 import { Button, EmptyState, StatTile } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
@@ -16,6 +16,8 @@ export function StudyTab() {
   const [exporting, setExporting] = useState(false);
 
   const start = () => navigate(`/subject/${subjectId}/study/session`);
+  const startQuick = () => navigate(`/subject/${subjectId}/study/session?limit=5`);
+  const startTimed = () => navigate(`/subject/${subjectId}/study/session?timer=10`);
 
   async function exportDeck() {
     setExportMsg(null);
@@ -86,8 +88,11 @@ export function StudyTab() {
             <Button variant="primary" size="md" icon={<Play weight="fill" />} onClick={start}>
               Start studying
             </Button>
-            <Button variant="secondary" icon={<Timer />} onClick={start}>
-              10 minutes (~8 cards)
+            <Button variant="secondary" icon={<Timer />} onClick={startTimed}>
+              10-minute focus
+            </Button>
+            <Button variant="secondary" icon={<Lightning />} onClick={startQuick}>
+              Quick 5
             </Button>
           </div>
 

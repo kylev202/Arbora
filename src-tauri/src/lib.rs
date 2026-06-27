@@ -51,6 +51,8 @@ pub fn run() {
             commands::review::approve_brief,
             commands::review::reject_brief,
             commands::study::get_due_cards,
+            commands::study::get_due_cards_interleaved,
+            commands::study::get_due_cards_prioritized,
             commands::study::submit_card_review,
             commands::study::get_study_stats,
             commands::content::list_cards,
@@ -77,6 +79,9 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::update_settings,
             commands::export::export_apkg,
+            commands::chat::chat_message,
+            commands::diagram::generate_diagram,
+            commands::map::get_knowledge_map,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

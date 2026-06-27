@@ -312,6 +312,70 @@ pub(crate) async fn fetch_stats(pool: &SqlitePool, subject_id: &str) -> Result<S
     })
 }
 
+// ── DB layer (all subjects, no filter) ────────────────────────────────────
+
+async fn fetch_due_all(pool: &SqlitePool, limit: i64) -> Result<Vec<DueCardOut>, String> {
+    sqlx::query_as::<_, DueRow>(
+        "SELECT c.id, c.subject_id, c.front, c.back, c.explanation,
+                c.source_id, c.page, c.timestamp_ms, c.excerpt,
+                s.title AS source_title,
+                cs.due, cs.stability, cs.difficulty, cs.state, cs.last_review
+         FROM cards c
+         JOIN card_schedule cs ON cs.card_id = c.id
+         JOIN sources s ON s.id = c.source_id
+         WHERE c.reviewed = 1
+           AND cs.due <= strftime('%Y-%m-%dT%H:%M:%SZ','now')
+         ORDER BY cs.due ASC
+         LIMIT ?1",
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+    .map(|rows| rows.into_iter().map(DueRow::into_due_card).collect())
+}
+
+// Deadline-priority variant: subjects with a deadline within `days_ahead` days
+// come first, ordered by nearest deadline, then by FSRS due date within each group.
+async fn fetch_due_prioritized(
+    pool: &SqlitePool,
+    limit: i64,
+    days_ahead: i64,
+) -> Result<Vec<DueCardOut>, String> {
+    sqlx::query_as::<_, DueRow>(
+        "WITH ranked AS (
+           SELECT c.id, c.subject_id, c.front, c.back, c.explanation,
+                  c.source_id, c.page, c.timestamp_ms, c.excerpt,
+                  s.title AS source_title,
+                  cs.due, cs.stability, cs.difficulty, cs.state, cs.last_review,
+                  COALESCE(
+                    (SELECT CAST(julianday(MIN(d.due_at)) - julianday('now') AS INTEGER)
+                     FROM deadlines d
+                     WHERE d.subject_id = c.subject_id
+                       AND d.due_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+                    999
+                  ) AS dd
+           FROM cards c
+           JOIN card_schedule cs ON cs.card_id = c.id
+           JOIN sources s ON s.id = c.source_id
+           WHERE c.reviewed = 1
+             AND cs.due <= strftime('%Y-%m-%dT%H:%M:%SZ','now')
+         )
+         SELECT id, subject_id, front, back, explanation,
+                source_id, page, timestamp_ms, excerpt,
+                source_title, due, stability, difficulty, state, last_review
+         FROM ranked
+         ORDER BY CASE WHEN dd <= ?2 THEN 0 ELSE 1 END ASC, dd ASC, due ASC
+         LIMIT ?1",
+    )
+    .bind(limit)
+    .bind(days_ahead)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+    .map(|rows| rows.into_iter().map(DueRow::into_due_card).collect())
+}
+
 // ── Tauri commands ─────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -321,6 +385,25 @@ pub async fn get_due_cards(
     limit: Option<i64>,
 ) -> Result<Vec<DueCardOut>, String> {
     fetch_due(pool.inner(), &subject_id, limit.unwrap_or(50)).await
+}
+
+#[tauri::command]
+pub async fn get_due_cards_interleaved(
+    pool: State<'_, SqlitePool>,
+    limit: Option<i64>,
+) -> Result<Vec<DueCardOut>, String> {
+    fetch_due_all(pool.inner(), limit.unwrap_or(100)).await
+}
+
+/// Deadline-priority interleaved study: cards from subjects with a deadline
+/// within `days_ahead` days (default 7) are shown first, ordered by proximity.
+#[tauri::command]
+pub async fn get_due_cards_prioritized(
+    pool: State<'_, SqlitePool>,
+    limit: Option<i64>,
+    days_ahead: Option<i64>,
+) -> Result<Vec<DueCardOut>, String> {
+    fetch_due_prioritized(pool.inner(), limit.unwrap_or(100), days_ahead.unwrap_or(7)).await
 }
 
 #[tauri::command]
@@ -440,6 +523,71 @@ mod tests {
         assert_eq!(row.state, "review");
         assert_eq!(row.step, None);
         assert!((row.stability - 5.0).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn interleaved_returns_cards_across_subjects() {
+        let pool = seeded_pool().await;
+        // Add a second subject + card also due
+        sqlx::query("INSERT INTO subjects (id,name,color,created_at,updated_at) VALUES ('s2','Math','#111','t','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,created_at) VALUES ('src2','s2','pdf','/b.pdf','Book','processed','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO cards (id,subject_id,front,back,explanation,source_id,page,excerpt,reviewed,created_at) VALUES ('c2','s2','Math Q','Math A','','src2',1,'x',1,'t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO card_schedule (card_id,due,stability,difficulty,state,step,reps,lapses) VALUES ('c2',strftime('%Y-%m-%dT%H:%M:%SZ',datetime('now','-30 minutes')),0,0,'learning',0,0,0)")
+            .execute(&pool).await.unwrap();
+
+        let cards = fetch_due_all(&pool, 100).await.unwrap();
+        assert_eq!(cards.len(), 2, "cards from both subjects appear");
+        let subjects: std::collections::HashSet<_> =
+            cards.iter().map(|c| c.card.subject_id.as_str()).collect();
+        assert!(subjects.contains("s1"));
+        assert!(subjects.contains("s2"));
+    }
+
+    #[tokio::test]
+    async fn interleaved_excludes_future_cards() {
+        let pool = seeded_pool().await;
+        sqlx::query("UPDATE card_schedule SET due = strftime('%Y-%m-%dT%H:%M:%SZ',datetime('now','+1 day'))")
+            .execute(&pool).await.unwrap();
+        assert!(fetch_due_all(&pool, 100).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn prioritized_boosts_subjects_with_near_deadlines() {
+        let pool = seeded_pool().await;
+        // Add second subject + card, also due
+        sqlx::query("INSERT INTO subjects (id,name,color,created_at,updated_at) VALUES ('s2','Math','#111','t','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,created_at) VALUES ('src2','s2','pdf','/b.pdf','Book','processed','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO cards (id,subject_id,front,back,explanation,source_id,page,excerpt,reviewed,created_at) VALUES ('c2','s2','Math Q','Math A','','src2',1,'x',1,'t')")
+            .execute(&pool).await.unwrap();
+        // c2 due 2h ago (newer than c1 at 1h ago in FSRS order)
+        sqlx::query("INSERT INTO card_schedule (card_id,due,stability,difficulty,state,step,reps,lapses) VALUES ('c2',strftime('%Y-%m-%dT%H:%M:%SZ',datetime('now','-2 hours')),0,0,'learning',0,0,0)")
+            .execute(&pool).await.unwrap();
+        // s2 has a deadline in 3 days → should be boosted ahead of s1
+        sqlx::query("INSERT INTO deadlines (id,subject_id,title,due_at,type,created_at) VALUES ('d1','s2','Exam',strftime('%Y-%m-%dT%H:%M:%SZ',datetime('now','+3 days')),'exam','t')")
+            .execute(&pool).await.unwrap();
+
+        let cards = fetch_due_prioritized(&pool, 100, 7).await.unwrap();
+        assert_eq!(cards.len(), 2);
+        assert_eq!(
+            cards[0].card.subject_id, "s2",
+            "s2 has near deadline → first"
+        );
+        assert_eq!(
+            cards[1].card.subject_id, "s1",
+            "s1 has no deadline → second"
+        );
+    }
+
+    #[tokio::test]
+    async fn prioritized_falls_back_to_due_order_without_deadlines() {
+        let pool = seeded_pool().await;
+        let cards = fetch_due_prioritized(&pool, 100, 7).await.unwrap();
+        assert_eq!(cards.len(), 1, "same as fetch_due_all when no deadlines");
     }
 
     #[tokio::test]

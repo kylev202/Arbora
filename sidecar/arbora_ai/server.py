@@ -25,6 +25,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 from . import __version__
+from .chat.session import answer_question
+from .diagram.session import generate_diagram
 from .config import HOST, default_model
 from .export import export_apkg
 from .generate.job import run_assignment_brief, run_generate
@@ -32,7 +34,7 @@ from .ingest.job import run_ingest
 from .jobs import JobRegistry
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
 from .outline import extract_outline, syllabus_to_text
-from .schemas.output import CardOut, OutlineExtraction
+from .schemas.output import CardOut, OutlineExtraction, SourceRef
 from .srs import compute_next
 
 # Marker line Rust scans stdout for to learn the chosen port.
@@ -161,6 +163,49 @@ class ExportRequest(BaseModel):
 class ExportResponse(BaseModel):
     path: str
     card_count: int
+
+
+class ChatChunk(BaseModel):
+    faiss_id: int
+    source_id: str
+    text: str
+    page: int | None = None
+    timestamp_ms: int | None = None
+
+
+class ChatRequest(BaseModel):
+    subject_id: str
+    question: str
+    chunks: list[ChatChunk]
+    preset: str = "medium"
+    k: int = 6
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    source_refs: list[SourceRef]
+
+
+class DiagramChunk(BaseModel):
+    faiss_id: int
+    source_id: str
+    text: str
+    page: int | None = None
+    timestamp_ms: int | None = None
+
+
+class DiagramRequest(BaseModel):
+    subject_id: str
+    topic: str
+    chunks: list[DiagramChunk]
+    preset: str = "medium"
+    k: int = 8
+
+
+class DiagramResponse(BaseModel):
+    title: str
+    mermaid_code: str
+    source_refs: list[SourceRef]
 
 
 def create_app() -> FastAPI:
@@ -331,6 +376,56 @@ def create_app() -> FastAPI:
             rating=req.rating,
         )
         return ScheduleResponse(**result)
+
+    # ── RAG Q&A ────────────────────────────────────────────────────────────
+
+    @app.post("/chat", response_model=ChatResponse, dependencies=guarded)
+    def chat(req: ChatRequest) -> ChatResponse:
+        # Synchronous: one embedding call + FAISS search + one LLM call.
+        # Q&A answers are ephemeral — not persisted, no review gate (law #2).
+        cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
+        chunks = [c.model_dump() for c in req.chunks]
+        try:
+            answer, source_refs = answer_question(
+                question=req.question,
+                subject_id=req.subject_id,
+                chunks=chunks,
+                provider=get_provider(cfg),
+                data_dir=_data_dir(),
+                k=req.k,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except LLMSchemaError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return ChatResponse(answer=answer, source_refs=source_refs)
+
+    # ── Mermaid diagrams ───────────────────────────────────────────────────
+
+    @app.post("/diagram", response_model=DiagramResponse, dependencies=guarded)
+    def diagram(req: DiagramRequest) -> DiagramResponse:
+        # Synchronous: one embedding + FAISS search + one LLM call.
+        # Diagrams are visual study aids, not deck items — no review gate (law #2).
+        cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
+        chunks = [c.model_dump() for c in req.chunks]
+        try:
+            title, mermaid_code, source_refs = generate_diagram(
+                topic=req.topic,
+                subject_id=req.subject_id,
+                chunks=chunks,
+                provider=get_provider(cfg),
+                data_dir=_data_dir(),
+                k=req.k,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except LLMSchemaError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return DiagramResponse(title=title, mermaid_code=mermaid_code, source_refs=source_refs)
 
     # ── Export ─────────────────────────────────────────────────────────────
 

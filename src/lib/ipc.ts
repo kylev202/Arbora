@@ -14,7 +14,10 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AssignmentBrief,
   Card,
+  ChatMessageResponse,
+  ConceptEntry,
   Deadline,
+  DiagramResponse,
   DeadlineType,
   DueCard,
   FSRSRating,
@@ -236,8 +239,16 @@ export function rejectBrief(briefId: string): Promise<void> {
 // ── Study / FSRS (Slice 3) ─────────────────────────────────────────────────
 
 /** Cards due right now for a subject, oldest-due first. */
-export function getDueCards(subjectId: string): Promise<DueCard[]> {
-  return invoke<DueCard[]>("get_due_cards", { subjectId });
+export function getDueCards(subjectId: string, limit?: number): Promise<DueCard[]> {
+  return invoke<DueCard[]>("get_due_cards", { subjectId, limit });
+}
+
+export function getDueCardsInterleaved(): Promise<DueCard[]> {
+  return invoke<DueCard[]>("get_due_cards_interleaved");
+}
+
+export function getDueCardsPrioritized(daysAhead?: number): Promise<DueCard[]> {
+  return invoke<DueCard[]>("get_due_cards_prioritized", { daysAhead });
 }
 
 /** Advance a card's FSRS state after a review. Fire-and-forget is fine; the
@@ -426,4 +437,22 @@ export type ExportResult = { path: string; card_count: number };
  *  Rejects with `NO_CARDS_TO_EXPORT` if nothing is approved yet. */
 export function exportApkg(subjectId: string, outPath: string): Promise<ExportResult> {
   return invoke<ExportResult>("export_apkg", { subjectId, outPath });
+}
+
+/** Ask a question grounded in the subject's indexed sources (RAG Q&A).
+ *  Rejects with `NO_CHUNKS` when no sources have been ingested yet, or
+ *  `SIDECAR_UNAVAILABLE` when Ollama is not reachable. */
+export function chatMessage(
+  subjectId: string,
+  question: string,
+): Promise<ChatMessageResponse> {
+  return invoke<ChatMessageResponse>("chat_message", { subjectId, question });
+}
+
+export function getKnowledgeMap(subjectId: string): Promise<ConceptEntry[]> {
+  return invoke<ConceptEntry[]>("get_knowledge_map", { subjectId });
+}
+
+export function generateDiagram(subjectId: string, topic: string): Promise<DiagramResponse> {
+  return invoke<DiagramResponse>("generate_diagram", { subjectId, topic });
 }

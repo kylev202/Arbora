@@ -36,6 +36,8 @@ export const api = {
 
   // ── Slice 3 — FSRS study loop (live) ──
   getDueCards: ipc.getDueCards,
+  getDueCardsInterleaved: ipc.getDueCardsInterleaved,
+  getDueCardsPrioritized: ipc.getDueCardsPrioritized,
   submitCardReview: ipc.submitCardReview,
   getStudyStats: ipc.getStudyStats,
 
@@ -72,4 +74,13 @@ export const api = {
 
   // ── Slice 4d — Anki export (live) ──
   exportApkg: ipc.exportApkg,
+
+  // ── Phase 6 — RAG Q&A ──
+  chatMessage: ipc.chatMessage,
+
+  // ── Phase 6 — Knowledge map ──
+  getKnowledgeMap: ipc.getKnowledgeMap,
+
+  // ── Phase 6 — Mermaid diagrams ──
+  generateDiagram: ipc.generateDiagram,
 };

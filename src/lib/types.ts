@@ -227,3 +227,29 @@ export type SubjectDashboard = {
   stats: StudyStats;
   next_deadline: Deadline | null;
 };
+
+// ── RAG Q&A ──────────────────────────────────────────────────────────────
+export type ChatMessageResponse = {
+  answer: string;
+  citations: SourceRef[];
+};
+
+// ── Mermaid diagrams ──────────────────────────────────────────────────────
+export type DiagramResponse = {
+  title: string;
+  mermaid_code: string;
+  citations: SourceRef[];
+};
+
+// ── Knowledge map ─────────────────────────────────────────────────────────
+export type ConceptMastery = "mastered" | "learning" | "unstarted";
+
+export type ConceptEntry = {
+  id: string;
+  concept: string;
+  back: string;
+  mastery: ConceptMastery;
+  source_title: string;
+  page: number | null;
+  timestamp_ms: number | null;
+};
