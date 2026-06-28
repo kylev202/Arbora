@@ -46,7 +46,11 @@ fn detect_type(file_path: &str) -> Result<&'static str, String> {
     match ext.as_str() {
         "pdf" => Ok("pdf"),
         "pptx" | "ppt" => Ok("slide"),
-        "mp3" | "m4a" | "wav" | "ogg" | "flac" | "aac" => Ok("audio"),
+        "mp3" | "m4a" | "wav" | "ogg" | "flac" | "aac" | "mp4" | "mkv" | "webm" | "avi" | "mov" => {
+            Ok("audio")
+        }
+        "docx" => Ok("doc"),
+        "txt" | "md" | "markdown" => Ok("text"),
         other => Err(format!("unsupported file type: .{other}")),
     }
 }
@@ -91,6 +95,20 @@ async fn insert(pool: &SqlitePool, subject_id: &str, file_path: &str) -> Result<
     .await
     .map_err(|e| e.to_string())?;
     fetch_source(pool, &id).await
+}
+
+async fn rename(pool: &SqlitePool, id: &str, title: &str) -> Result<Source, String> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("title cannot be empty".to_string());
+    }
+    sqlx::query("UPDATE sources SET title = ?2 WHERE id = ?1")
+        .bind(id)
+        .bind(title)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    fetch_source(pool, id).await
 }
 
 async fn set_state(
@@ -199,6 +217,16 @@ pub async fn add_source(
     file_path: String,
 ) -> Result<Source, String> {
     insert(pool.inner(), &subject_id, &file_path).await
+}
+
+/// Rename a source's display title. Pure SQLite; returns the updated row.
+#[tauri::command]
+pub async fn rename_source(
+    pool: State<'_, SqlitePool>,
+    id: String,
+    title: String,
+) -> Result<Source, String> {
+    rename(pool.inner(), &id, &title).await
 }
 
 /// Delete a source and its chunk rows (cascade). The source's vectors stay in the
@@ -385,7 +413,12 @@ mod tests {
         assert_eq!(detect_type("a/b.pdf").unwrap(), "pdf");
         assert_eq!(detect_type("DECK.PPTX").unwrap(), "slide");
         assert_eq!(detect_type("rec.m4a").unwrap(), "audio");
-        assert!(detect_type("notes.txt").is_err());
+        assert_eq!(detect_type("lecture.mp4").unwrap(), "audio");
+        assert_eq!(detect_type("lecture.mkv").unwrap(), "audio");
+        assert_eq!(detect_type("essay.docx").unwrap(), "doc");
+        assert_eq!(detect_type("notes.txt").unwrap(), "text");
+        assert_eq!(detect_type("README.md").unwrap(), "text");
+        assert!(detect_type("archive.zip").is_err());
     }
 
     #[tokio::test]
@@ -397,6 +430,15 @@ mod tests {
         assert_eq!(src.title, "Genetics");
         assert_eq!(src.ingest_state, "queued");
         assert_eq!(list(&pool, "subj1").await.unwrap().len(), 1);
+
+        let renamed = rename(&pool, &src.id, "  Molecular Genetics  ")
+            .await
+            .unwrap();
+        assert_eq!(renamed.title, "Molecular Genetics", "trimmed and persisted");
+        assert!(
+            rename(&pool, &src.id, "   ").await.is_err(),
+            "blank title rejected"
+        );
 
         set_state(&pool, &src.id, "error", Some("boom"))
             .await

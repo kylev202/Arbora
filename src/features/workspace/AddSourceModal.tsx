@@ -12,15 +12,18 @@ type Phase = "pick" | "processing" | "done" | "error";
 
 const STEP_LABEL: Record<string, string> = {
   parsing: "Parsing document…",
-  transcribing: "Transcribing audio…",
+  transcribing: "Transcribing…",
   chunking: "Chunking text…",
   embedding: "Indexing chunks…",
 };
 
 const FILE_FILTERS = [
   {
-    name: "Documents & audio",
-    extensions: ["pdf", "pptx", "ppt", "mp3", "m4a", "wav", "ogg", "flac", "aac"],
+    name: "Documents, audio & video",
+    extensions: [
+      "pdf", "docx", "pptx", "ppt", "txt", "md", "markdown",
+      "mp3", "m4a", "wav", "ogg", "flac", "aac", "mp4", "mkv", "webm", "avi", "mov",
+    ],
   },
 ];
 
@@ -122,7 +125,7 @@ export function AddSourceModal({
       {phase === "pick" && (
         <div className={styles.dropzone}>
           <FileArrowUp className={styles.dropIcon} aria-hidden="true" />
-          <p className={styles.dropText}>Choose a PDF, slide deck, or audio file</p>
+          <p className={styles.dropText}>Choose a PDF, Word doc, slides, text, audio, or video file</p>
           <p className={styles.dropHint}>Arbora indexes it so every generated item can cite it.</p>
           <Button variant="primary" icon={<FilePlus weight="bold" />} onClick={choose}>
             Choose file

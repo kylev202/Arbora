@@ -13,7 +13,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from ..ingest.parse import parse_pdf, parse_pptx
+from ..ingest.parse import parse_docx, parse_pdf, parse_pptx
 from ..llm.provider import LLMProvider, LLMSchemaError
 from ..schemas.output import OutlineExtraction
 
@@ -23,31 +23,38 @@ MAX_STRUCTURE_RETRIES = 3
 # it. Syllabi put the schedule up front, so the head is what matters.
 MAX_SYLLABUS_CHARS = 12000
 
-# Formats we can read with zero extra dependencies. `.docx` is deferred — it
-# would pull in python-docx + lxml (a cross-platform packaging risk); PDF is the
-# dominant syllabus format and is already supported.
 _PDF = {".pdf"}
 _SLIDE = {".pptx", ".ppt"}
+_WORD = {".docx"}
 _TEXT = {".txt", ".md", ".markdown"}
 
 
 def syllabus_to_text(file_path: str | Path) -> str:
     """Read a syllabus file into one plain-text blob (truncated to the model's
-    budget). Raises ValueError for an unsupported extension."""
+    budget). Raises ValueError for an unsupported extension or unreadable content."""
     ext = Path(file_path).suffix.lower()
-    if ext in _PDF:
-        text = "\n\n".join(u.text for u in parse_pdf(file_path))
-    elif ext in _SLIDE:
-        text = "\n\n".join(u.text for u in parse_pptx(file_path))
-    elif ext in _TEXT:
-        text = Path(file_path).read_text(encoding="utf-8", errors="replace")
-    else:
-        raise ValueError(
-            f"unsupported syllabus type: {ext!r} (use PDF, PowerPoint, or a text file)"
-        )
+    try:
+        if ext in _PDF:
+            text = "\n\n".join(u.text for u in parse_pdf(file_path))
+        elif ext in _SLIDE:
+            text = "\n\n".join(u.text for u in parse_pptx(file_path))
+        elif ext in _WORD:
+            text = "\n\n".join(u.text for u in parse_docx(file_path))
+        elif ext in _TEXT:
+            text = Path(file_path).read_text(encoding="utf-8", errors="replace")
+        else:
+            raise ValueError(
+                f"unsupported syllabus type: {ext!r} (use PDF, Word, PowerPoint, or a text file)"
+            )
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"could not read the file: {exc}") from exc
     text = text.strip()
     if not text:
-        raise ValueError("the file has no extractable text")
+        raise ValueError(
+            "no text could be extracted from this file — it may be a scanned image PDF"
+        )
     return text[:MAX_SYLLABUS_CHARS]
 
 

@@ -1,5 +1,6 @@
 import {
   Exam,
+  FileDoc,
   FilePdf,
   FileText,
   Headphones,
@@ -17,6 +18,8 @@ const TYPE_ICON: Record<SourceType, Icon> = {
   pdf: FilePdf,
   slide: Presentation,
   audio: Headphones,
+  doc: FileDoc,
+  text: FileText,
 };
 
 /** Calm word for a material still working through ingest (processed shows nothing). */

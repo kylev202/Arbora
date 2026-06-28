@@ -9,7 +9,7 @@ import styles from "./ImportSyllabusModal.module.css";
 type Phase = "pick" | "parsing" | "review" | "error";
 
 const FILE_FILTERS = [
-  { name: "Syllabus", extensions: ["pdf", "pptx", "ppt", "txt", "md", "markdown"] },
+  { name: "Syllabus", extensions: ["pdf", "docx", "pptx", "ppt", "txt", "md", "markdown"] },
 ];
 
 const DEADLINE_TYPES: DeadlineType[] = ["assignment", "exam", "other"];
@@ -128,7 +128,7 @@ export function ImportSyllabusModal({
           <FileArrowUp className={styles.dropIcon} aria-hidden="true" />
           <p className={styles.dropText}>Choose your unit syllabus</p>
           <p className={styles.dropHint}>
-            PDF, slides, or a text file. Arbora reads it on-device and pulls out the weeks and
+            PDF, Word doc, slides, or a text file. Arbora reads it on-device and pulls out the weeks and
             deadlines for you to check — nothing is saved until you confirm.
           </p>
           <Button variant="primary" icon={<FilePlus weight="bold" />} onClick={choose}>

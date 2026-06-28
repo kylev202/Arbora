@@ -54,8 +54,8 @@ def test_parse_outline_rejects_unsupported_file(monkeypatch, tmp_path):
     monkeypatch.setenv("ARBORA_SIDECAR_TOKEN", "secret")
     client = TestClient(app)
     auth = {"X-Arbora-Token": "secret"}
-    bad = tmp_path / "syllabus.docx"
-    bad.write_text("x", encoding="utf-8")
+    bad = tmp_path / "syllabus.csv"
+    bad.write_text("week,topic\n1,cells", encoding="utf-8")
 
     res = client.post(
         "/parse-outline",

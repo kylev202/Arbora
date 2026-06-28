@@ -6,6 +6,7 @@ audio segment — paired with the location that a citation will point back to.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -50,6 +51,36 @@ def parse_pptx(path: str | Path) -> list[SourceUnit]:
     return units
 
 
+def parse_docx(path: str | Path) -> list[SourceUnit]:
+    """One unit per non-empty paragraph, numbered sequentially (cited as pages)."""
+    from docx import Document
+
+    doc = Document(str(path))
+    units: list[SourceUnit] = []
+    page = 1
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if text:
+            units.append(SourceUnit(text=text, location={"type": "page", "page": page}))
+            page += 1
+    return units
+
+
+def parse_text(path: str | Path) -> list[SourceUnit]:
+    """One unit per non-empty paragraph (blank-line separated), numbered
+    sequentially. Plain text has no real pages, so paragraphs are cited as
+    pages — keeping every chunk traceable (law #1)."""
+    raw = Path(path).read_text(encoding="utf-8", errors="replace")
+    units: list[SourceUnit] = []
+    page = 1
+    for block in re.split(r"\n\s*\n", raw):
+        text = block.strip()
+        if text:
+            units.append(SourceUnit(text=text, location={"type": "page", "page": page}))
+            page += 1
+    return units
+
+
 def parse_audio(path: str | Path, transcriber=None) -> list[SourceUnit]:
     """One unit per transcript segment, located by start timestamp (ms)."""
     if transcriber is None:
@@ -66,11 +97,14 @@ def parse_audio(path: str | Path, transcriber=None) -> list[SourceUnit]:
 
 _PDF = {".pdf"}
 _SLIDE = {".pptx", ".ppt"}
-_AUDIO = {".mp3", ".m4a", ".wav", ".ogg", ".flac", ".aac"}
+_AUDIO = {".mp3", ".m4a", ".wav", ".ogg", ".flac", ".aac", ".mp4", ".mkv", ".webm", ".avi", ".mov"}
+_DOC = {".docx"}
+_TEXT = {".txt", ".md", ".markdown"}
 
 
 def detect_type(path: str | Path) -> str:
-    """Map a file extension to a source type ("pdf" | "slide" | "audio")."""
+    """Map a file extension to a source type
+    ("pdf" | "slide" | "audio" | "doc" | "text")."""
     ext = Path(path).suffix.lower()
     if ext in _PDF:
         return "pdf"
@@ -78,6 +112,10 @@ def detect_type(path: str | Path) -> str:
         return "slide"
     if ext in _AUDIO:
         return "audio"
+    if ext in _DOC:
+        return "doc"
+    if ext in _TEXT:
+        return "text"
     raise ValueError(f"unsupported file type: {ext!r}")
 
 
@@ -90,4 +128,8 @@ def parse_source(path: str | Path, source_type: str | None = None, transcriber=N
         return parse_pptx(path)
     if source_type == "audio":
         return parse_audio(path, transcriber=transcriber)
+    if source_type == "doc":
+        return parse_docx(path)
+    if source_type == "text":
+        return parse_text(path)
     raise ValueError(f"unknown source type: {source_type!r}")

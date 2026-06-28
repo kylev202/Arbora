@@ -26,3 +26,6 @@ between layers. Routine work does not need one.
 | [0002](./0002-immutable-ai-laws.md) | Three immutable AI-safety laws | Accepted |
 | [0003](./0003-a11y-tuned-design-tokens.md) | Design tokens tuned for WCAG AA | Accepted |
 | [0004](./0004-grounding-by-anchored-citation.md) | Grounding by anchored citation + verbatim excerpt | Accepted |
+| [0005](./0005-tree-from-card-schedule.md) | Dashboard tree derives mastery from card_schedule | Accepted |
+| [0006](./0006-semester-planning-and-priority.md) | Semester planning extends the subject; priority is computed | Accepted |
+| [0007](./0007-disable-webview-drag-drop.md) | Disable WebView2 drag-drop so the file picker can't crash | Accepted |

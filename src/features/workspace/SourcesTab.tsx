@@ -66,6 +66,21 @@ export function SourcesTab() {
     );
   }
 
+  // Optimistically rename; revert the title on failure.
+  function rename(source: Source, title: string) {
+    const prev = source.title;
+    setSources((cur) => cur.map((s) => (s.id === source.id ? { ...s, title } : s)));
+    api.renameSource(source.id, title).catch(() =>
+      setSources((cur) => cur.map((s) => (s.id === source.id ? { ...s, title: prev } : s))),
+    );
+  }
+
+  // Optimistically remove; restore the row on failure.
+  function remove(source: Source) {
+    setSources((cur) => cur.filter((s) => s.id !== source.id));
+    api.deleteSource(source.id).catch(() => setSources((cur) => [...cur, source]));
+  }
+
   const processed = sources.filter((s) => s.ingest_state === "processed");
   const canGenerate = processed.length > 0;
 
@@ -97,7 +112,15 @@ export function SourcesTab() {
         <>
           <ul className={shared.card}>
             {sources.map((s) => (
-              <SourceRow key={s.id} source={s} onRetry={retry} weeks={weeks} onAssignWeek={assignWeek} />
+              <SourceRow
+                key={s.id}
+                source={s}
+                onRetry={retry}
+                weeks={weeks}
+                onAssignWeek={assignWeek}
+                onRename={rename}
+                onDelete={remove}
+              />
             ))}
           </ul>
 

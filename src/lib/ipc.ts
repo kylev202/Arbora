@@ -118,6 +118,11 @@ export function addSource(subjectId: string, filePath: string): Promise<Source> 
   return invoke<Source>("add_source", { subjectId, filePath });
 }
 
+/** Rename a source's display title; returns the updated row. */
+export function renameSource(id: string, title: string): Promise<Source> {
+  return invoke<Source>("rename_source", { id, title });
+}
+
 /** Delete a source; its chunks cascade in SQLite. */
 export function deleteSource(id: string): Promise<void> {
   return invoke<void>("delete_source", { id });

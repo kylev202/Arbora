@@ -73,13 +73,29 @@ def test_syllabus_to_text_reads_text_file(tmp_path):
     assert "cell membrane" in syllabus_to_text(f)
 
 
-def test_syllabus_to_text_rejects_unsupported_and_empty(tmp_path):
-    bad = tmp_path / "syllabus.docx"
-    bad.write_text("x", encoding="utf-8")
+def test_syllabus_to_text_rejects_unsupported(tmp_path):
+    bad = tmp_path / "syllabus.csv"
+    bad.write_text("week,topic\n1,cells", encoding="utf-8")
     with pytest.raises(ValueError, match="unsupported"):
         syllabus_to_text(bad)
 
+
+def test_syllabus_to_text_empty_file(tmp_path):
     empty = tmp_path / "empty.txt"
     empty.write_text("   ", encoding="utf-8")
-    with pytest.raises(ValueError, match="no extractable text"):
+    with pytest.raises(ValueError, match="no text could be extracted"):
         syllabus_to_text(empty)
+
+
+def test_syllabus_to_text_reads_docx(tmp_path):
+    from docx import Document
+
+    path = tmp_path / "syllabus.docx"
+    doc = Document()
+    doc.add_paragraph("Week 1: Introduction to cells")
+    doc.add_paragraph("Week 2: The cell membrane")
+    doc.save(str(path))
+
+    text = syllabus_to_text(path)
+    assert "Introduction to cells" in text
+    assert "cell membrane" in text

@@ -39,7 +39,7 @@ export type Subject = {
   created_at: string;
 };
 
-export type SourceType = "pdf" | "slide" | "audio";
+export type SourceType = "pdf" | "slide" | "audio" | "doc" | "text";
 export type IngestState = "queued" | "processing" | "processed" | "error";
 
 export type Source = {
@@ -53,7 +53,7 @@ export type Source = {
   progress?: number;
   /** "parsing" | "transcribing" | "chunking" | "embedding" */
   step?: string;
-  /** Pages for pdf/slide, undefined for audio. */
+  /** Pages for pdf/slide (paragraphs for doc/text), undefined for audio. */
   page_count?: number;
   chunk_count?: number;
   error?: string;

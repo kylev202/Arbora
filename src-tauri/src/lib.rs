@@ -37,6 +37,7 @@ pub fn run() {
             commands::subjects::delete_subject,
             commands::sources::list_sources,
             commands::sources::add_source,
+            commands::sources::rename_source,
             commands::sources::delete_source,
             commands::sources::ingest_source,
             commands::generate::generate_content,

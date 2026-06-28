@@ -18,6 +18,7 @@ export const api = {
   // ── Slice 1 — Sources + ingest (live) ──
   listSources: ipc.listSources,
   addSource: ipc.addSource,
+  renameSource: ipc.renameSource,
   deleteSource: ipc.deleteSource,
   ingestSource: ipc.ingestSource,
 

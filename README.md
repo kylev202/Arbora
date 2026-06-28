@@ -12,7 +12,7 @@ Tauri 2 · React · Python AI sidecar · SQLite + FAISS · Ollama (local)
 
 ---
 
-> **Status:** 🌿 Phase 5 — Dogfooding. The full study loop is complete and wired end-to-end.
+> **Status:** 🌳 Phase 8 — Video ingestion. Full study loop wired end-to-end; multi-subject Q&A, knowledge map, interleaving, diagrams, ADHD focus mode, and video lecture support.
 
 ## What it does
 
@@ -28,7 +28,7 @@ study brief carries a citation back to a page or timestamp. Nothing leaves your 
 
 **Features:**
 
-- Ingest PDFs, slide decks (PPTX), and audio/video lecture files
+- Ingest PDFs, slide decks (PPTX), audio files, and video lecture files (MP4, MKV, WebM, AVI, MOV)
 - AI generates flashcards, multiple-choice quiz items, and outline notes — all grounded and cited
 - Review gate: approve or edit every AI item before it enters your deck
 - FSRS spaced-repetition study loop with a mastery dashboard ("the tree")
