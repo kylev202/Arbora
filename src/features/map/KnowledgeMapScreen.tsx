@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Graph } from "@phosphor-icons/react";
-import { EmptyState } from "../../components";
+import { Button, EmptyState, SproutLoader } from "../../components";
 import { api } from "../../lib/api";
+import { useAsync } from "../../lib/useAsync";
 import type { ConceptEntry, ConceptMastery } from "../../lib/types";
 import styles from "./KnowledgeMapScreen.module.css";
 
@@ -49,32 +50,34 @@ function ConceptTile({ entry }: { entry: ConceptEntry }) {
 /** S-Map — all approved concepts for a subject, coloured by mastery state. */
 export function KnowledgeMapScreen() {
   const { subjectId = "" } = useParams();
-  const [entries, setEntries] = useState<ConceptEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const map = useAsync(() => api.getKnowledgeMap(subjectId), [subjectId]);
 
-  useEffect(() => {
-    setEntries(null);
-    setError(null);
-    api.getKnowledgeMap(subjectId).then(setEntries).catch((e: unknown) => {
-      setError(String(e));
-    });
-  }, [subjectId]);
-
-  if (error) {
+  if (map.status === "error") {
     return (
       <div className={styles.screen}>
-        <EmptyState icon={<Graph />} title="Couldn't load map" description={error} />
+        <EmptyState
+          icon={<Graph />}
+          title="Couldn't load map"
+          description={map.error.message}
+          action={
+            <Button variant="secondary" onClick={map.retry}>
+              Try again
+            </Button>
+          }
+        />
       </div>
     );
   }
 
-  if (entries === null) {
+  if (map.status === "loading") {
     return (
       <div className={styles.screen}>
-        <EmptyState icon={<Graph />} title="Loading…" description="Fetching your concepts." />
+        <SproutLoader label="Fetching your concepts…" />
       </div>
     );
   }
+
+  const entries = map.data;
 
   if (entries.length === 0) {
     return (

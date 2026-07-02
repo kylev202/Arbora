@@ -177,6 +177,11 @@ export function HomeScreen() {
             <EmptyState
               title="Couldn't load your subjects"
               description="Something went wrong reading local data."
+              action={
+                <Button variant="secondary" onClick={remote.retry}>
+                  Try again
+                </Button>
+              }
             />
           )}
         </div>

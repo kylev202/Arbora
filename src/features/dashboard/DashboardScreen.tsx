@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { CalendarBlank, CheckCircle, Circle, Target } from "@phosphor-icons/react";
-import { GrowthRingsMotif, StatTile, Tree } from "../../components";
+import { Button, EmptyState, GrowthRingsMotif, StatTile, Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { relativeDays } from "../../lib/date";
@@ -24,7 +24,19 @@ export function DashboardScreen() {
     return <div className="page-wide">{<div className={styles.skeleton} aria-hidden="true" />}</div>;
   }
   if (dash.status === "error" || !dash.data) {
-    return <div className="page">Couldn't load the dashboard.</div>;
+    return (
+      <div className="page">
+        <EmptyState
+          title="Couldn't load the dashboard"
+          description="Something went wrong reading local data."
+          action={
+            <Button variant="secondary" onClick={dash.retry}>
+              Try again
+            </Button>
+          }
+        />
+      </div>
+    );
   }
 
   const { tree: liveTree, stats, next_deadline, week_progress } = dash.data;

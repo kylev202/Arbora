@@ -7,11 +7,16 @@ export type AsyncState<T> =
 
 /**
  * Run an async fetcher and track loading/loaded/error. Re-runs when `deps`
- * change. Screens render: loading → skeleton, error → retry, loaded → content
- * (and "empty" is loaded-with-empty-data, handled by the screen). This gives
- * every screen its four states (UI plan §4) with mock data today.
+ * change, or on demand via `retry` (error states always offer a way back —
+ * UI overhaul §5.9). Screens render: loading → skeleton, error → retry,
+ * loaded → content (and "empty" is loaded-with-empty-data, handled by the
+ * screen). This gives every screen its four states (UI plan §4).
  */
-export function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncState<T> {
+export function useAsync<T>(
+  fetcher: () => Promise<T>,
+  deps: unknown[],
+): AsyncState<T> & { retry: () => void } {
+  const [nonce, setNonce] = useState(0);
   const [state, setState] = useState<AsyncState<T>>({
     status: "loading",
     data: undefined,
@@ -37,7 +42,7 @@ export function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncSt
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, nonce]);
 
-  return state;
+  return { ...state, retry: () => setNonce((n) => n + 1) };
 }
