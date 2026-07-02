@@ -9,6 +9,7 @@ import { TimelineScreen } from "../features/timeline/TimelineScreen";
 import { PlanScreen } from "../features/plan/PlanScreen";
 import { DashboardScreen } from "../features/dashboard/DashboardScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { CalendarScreen } from "../features/calendar/CalendarScreen";
 import { ChatScreen } from "../features/chat/ChatScreen";
 import { KnowledgeMapScreen } from "../features/map/KnowledgeMapScreen";
 import { InterleavedStudyScreen } from "../features/study/InterleavedStudyScreen";
@@ -24,6 +25,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomeScreen />} />
       <Route path="/interleaved" element={<InterleavedStudyScreen />} />
+      <Route path="/calendar" element={<CalendarScreen />} />
       <Route path="/settings" element={<SettingsScreen />} />
 
       <Route path="/subject/:subjectId" element={<WorkspaceLayout />}>
