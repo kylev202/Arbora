@@ -79,6 +79,8 @@ export const api = {
   listStudyWindows: ipc.listStudyWindows,
   setStudyWindows: ipc.setStudyWindows,
   getSystemInfo: ipc.getSystemInfo,
+  modelReady: ipc.modelReady,
+  downloadModel: ipc.downloadModel,
 
   // ── Slice 4d — Anki export (live) ──
   exportApkg: ipc.exportApkg,

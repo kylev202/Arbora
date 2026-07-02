@@ -11,6 +11,7 @@ pub mod diagram;
 pub mod export;
 pub mod generate;
 pub mod map;
+pub mod model;
 pub mod outline;
 pub mod plan;
 pub mod priority;

@@ -84,6 +84,8 @@ pub fn run() {
             commands::profile::update_profile,
             commands::profile::list_study_windows,
             commands::profile::set_study_windows,
+            commands::model::model_ready,
+            commands::model::download_model,
             commands::export::export_apkg,
             commands::chat::chat_message,
             commands::diagram::generate_diagram,

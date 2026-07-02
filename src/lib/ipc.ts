@@ -474,6 +474,37 @@ export function getSystemInfo(): Promise<SystemInfo> {
   return invoke<SystemInfo>("get_system_info");
 }
 
+// ── AI model download (redesign slice A) ───────────────────────────────────
+
+/** Whether the preset's Ollama model is already downloaded. `ollama_running:
+ * false` means the local daemon was unreachable (a different problem). */
+export type ModelReady = { model: string; ready: boolean; ollama_running: boolean };
+
+export function modelReady(preset: string): Promise<ModelReady> {
+  return invoke<ModelReady>("model_ready", { preset });
+}
+
+/** Start downloading the preset's model. Returns the job id; progress and
+ * completion arrive as `model:*` events. Rejects with `SIDECAR_UNAVAILABLE`
+ * or `MODEL_PULL_FAILED: …`. */
+export function downloadModel(preset: string): Promise<{ job_id: string }> {
+  return invoke<{ job_id: string }>("download_model", { preset });
+}
+
+export type ModelProgress = { job_id: string; preset: string; progress: number; step: string };
+export type ModelDone = { job_id: string; preset: string };
+export type ModelError = { job_id: string; preset: string; error: string };
+
+export function onModelProgress(handler: (e: ModelProgress) => void): Promise<UnlistenFn> {
+  return listen<ModelProgress>("model:progress", (e) => handler(e.payload));
+}
+export function onModelDone(handler: (e: ModelDone) => void): Promise<UnlistenFn> {
+  return listen<ModelDone>("model:done", (e) => handler(e.payload));
+}
+export function onModelError(handler: (e: ModelError) => void): Promise<UnlistenFn> {
+  return listen<ModelError>("model:error", (e) => handler(e.payload));
+}
+
 // ── Anki export (Slice 4) ──────────────────────────────────────────────────
 
 export type ExportResult = { path: string; card_count: number };

@@ -32,6 +32,7 @@ from .export import export_apkg
 from .generate.job import run_assignment_brief, run_generate
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
+from .llm.models import model_ready, pull_model
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
 from .outline import extract_outline, syllabus_to_text
 from .schemas.output import CardOut, OutlineExtraction, SourceRef
@@ -126,6 +127,25 @@ class AssignmentBriefRequest(BaseModel):
     llm_config: dict = {}
     preset: str = "medium"
     job_id: str | None = None
+
+
+class ModelReadyResponse(BaseModel):
+    model: str
+    ready: bool
+    ollama_running: bool
+
+
+class ModelPullRequest(BaseModel):
+    preset: str = "medium"
+    job_id: str | None = None
+
+
+class ModelPullStatus(BaseModel):
+    job_id: str
+    state: str
+    progress: float
+    step: str
+    error: str | None = None
 
 
 class ParseOutlineRequest(BaseModel):
@@ -338,6 +358,27 @@ def create_app() -> FastAPI:
         if job.state != "done":
             raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
         return job.result  # {content, source_refs}
+
+    # ── Ollama model management (onboarding preset download) ───────────────
+
+    @app.get("/model/{preset}/ready", response_model=ModelReadyResponse, dependencies=guarded)
+    def model_ready_check(preset: str) -> ModelReadyResponse:
+        return ModelReadyResponse(**model_ready(preset))
+
+    @app.post("/model/pull", status_code=202, dependencies=guarded)
+    def model_pull(req: ModelPullRequest) -> dict[str, str]:
+        job = registry.create(req.job_id)
+        registry.submit(job, lambda j: pull_model(j, req.preset))
+        return {"job_id": job.id}
+
+    @app.get("/model/pull/{job_id}/status", response_model=ModelPullStatus, dependencies=guarded)
+    def model_pull_status(job_id: str) -> ModelPullStatus:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        return ModelPullStatus(
+            job_id=job.id, state=job.state, progress=job.progress, step=job.step, error=job.error
+        )
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 
