@@ -6,6 +6,7 @@ import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import type { FSRSRating } from "../../lib/types";
 import { StudyCard } from "./StudyCard";
+import { SessionRecap, type ReviewedCard } from "./SessionRecap";
 import styles from "./StudyScreen.module.css";
 
 const KEY_TO_RATING: Record<string, FSRSRating> = {
@@ -103,6 +104,9 @@ export function StudyScreen() {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [done, setDone] = useState(false);
+  // Session log for the end-of-session recap (grounded by construction, §4.4).
+  const reviewedRef = useRef<ReviewedCard[]>([]);
+  const nextDuesRef = useRef<string[]>([]);
 
   const cards = due.data ?? [];
   const total = cards.length;
@@ -113,7 +117,11 @@ export function StudyScreen() {
   const rate = useCallback(
     (rating: FSRSRating) => {
       if (current) {
-        api.submitCardReview(current.card.id, rating).catch(() => {});
+        reviewedRef.current.push({ card: current.card, rating });
+        api
+          .submitCardReview(current.card.id, rating)
+          .then((r) => nextDuesRef.current.push(r.due))
+          .catch(() => {});
       }
       setFlipped(false);
       setIndex((i) => {
@@ -174,6 +182,20 @@ export function StudyScreen() {
               </Button>
             </div>
           }
+        />
+      </div>
+    );
+  }
+
+  if (done && reviewedRef.current.length > 0) {
+    return (
+      <div className="page">
+        <SessionRecap
+          subjectId={subjectId}
+          reviewed={reviewedRef.current}
+          nextDues={nextDuesRef.current}
+          onExit={() => navigate(`/subject/${subjectId}/study`)}
+          onSeeTree={() => navigate(`/subject/${subjectId}/dashboard`)}
         />
       </div>
     );

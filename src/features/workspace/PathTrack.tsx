@@ -45,8 +45,32 @@ export function PathTrack({ subjectId }: { subjectId: string }) {
   const states = stageStates(stages);
   const todayPct = todos_total_today > 0 ? todos_done_today / todos_total_today : null;
 
+  // New stage started while the previous one has cards coming due → offer a
+  // gentle interleaving check first (§4.4). Informational, never blocking.
+  const currentIdx = states.indexOf("current");
+  const prevStage = currentIdx > 0 ? stages[currentIdx - 1] : null;
+  const showRecall = prevStage !== null && prevStage.due_cards > 0;
+
   return (
     <section className={styles.track} aria-label="Learning path">
+      {showRecall && prevStage && (
+        <div className={styles.recall}>
+          <span className={styles.recallText}>
+            Starting something new? A quick check of Week {prevStage.week_number} first helps it
+            stick.
+          </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() =>
+              navigate(`/subject/${subjectId}/study/session?week=${prevStage.week_id}&limit=10`)
+            }
+          >
+            Quick check Week {prevStage.week_number}
+          </Button>
+        </div>
+      )}
+
       {todayPct !== null && (
         <div className={styles.today}>
           <ProgressBar value={todayPct} label={`Today's plan · ${todos_done_today} / ${todos_total_today}`} />

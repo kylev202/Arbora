@@ -1,0 +1,72 @@
+.recap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-6) 0;
+}
+
+.title {
+  font-size: var(--text-xl);
+}
+
+.counts {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.covered {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.coveredTitle {
+  font-size: var(--text-base);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.front {
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+.more {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.proposal {
+  max-width: 420px;
+}
+
+.accepted {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-accent-text);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
