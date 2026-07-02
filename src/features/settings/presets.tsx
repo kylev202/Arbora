@@ -1,5 +1,5 @@
 import type { RadioOption } from "../../components";
-import type { AIPreset } from "../../lib/types";
+import type { AIPreset, StudyGoal } from "../../lib/types";
 
 /** AI machine presets (🌱/🌿/🌳) shared by Settings (S-09) and Onboarding (S-10). */
 export const PRESET_OPTIONS: RadioOption<AIPreset>[] = [
@@ -29,3 +29,17 @@ export function recommendedPreset(ramGb: number): AIPreset {
   if (ramGb < 32) return "medium";
   return "high";
 }
+
+/** Study-goal options (user_profile.goal), shared by Onboarding and Settings. */
+export const GOAL_OPTIONS: RadioOption<StudyGoal>[] = [
+  {
+    value: "pass",
+    label: "Pass my courses",
+    description: "A lighter plan: cover what matters, keep the load gentle.",
+  },
+  {
+    value: "high_gpa",
+    label: "Aim for a high GPA",
+    description: "A more thorough plan: start earlier before deadlines, review more.",
+  },
+];

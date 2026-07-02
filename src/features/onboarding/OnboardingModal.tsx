@@ -13,29 +13,14 @@ import {
 import { onModelDone, onModelError, onModelProgress } from "../../lib/ipc";
 import { api } from "../../lib/api";
 import type { AIPreset, StudyGoal, StudyWindowInput } from "../../lib/types";
-import { PRESET_OPTIONS, recommendedPreset } from "../settings/presets";
+import { GOAL_OPTIONS, PRESET_OPTIONS, recommendedPreset } from "../settings/presets";
+import { StudyWindowsEditor, validWindows } from "../settings/StudyWindowsEditor";
 import styles from "./OnboardingModal.module.css";
 
 const TOTAL_STEPS = 7;
 
 // Mirrors HomeScreen's palette so onboarding-created subjects match.
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
-
-/** weekday 0 = Monday … 6 = Sunday (matches the study_windows schema). */
-const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-const GOAL_OPTIONS = [
-  {
-    value: "pass" as StudyGoal,
-    label: "Pass my courses",
-    description: "A lighter plan: cover what matters, keep the load gentle.",
-  },
-  {
-    value: "high_gpa" as StudyGoal,
-    label: "Aim for a high GPA",
-    description: "A more thorough plan: start earlier before deadlines, review more.",
-  },
-];
 
 type DownloadPhase =
   | { phase: "checking" }
@@ -170,7 +155,7 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
         void api.updateProfile({ wake_time: orNull(wakeTime), sleep_time: orNull(sleepTime) });
         break;
       case 5:
-        if (windows.length > 0) void api.setStudyWindows(windows);
+        if (windows.length > 0 && validWindows(windows)) void api.setStudyWindows(windows);
         break;
       case 6:
         if (goal) void api.updateProfile({ goal });
@@ -202,10 +187,6 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
     if (value === "" || subjects.includes(value)) return;
     setSubjects((prev) => [...prev, value]);
     setSubjectDraft("");
-  }
-
-  function patchWindow(index: number, patch: Partial<StudyWindowInput>) {
-    setWindows((prev) => prev.map((w, i) => (i === index ? { ...w, ...patch } : w)));
   }
 
   const isLast = step === TOTAL_STEPS;
@@ -363,54 +344,7 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
             When are you usually free to study? These windows are where Arbora will suggest
             sessions, never outside them.
           </p>
-          {windows.map((w, i) => (
-            <div key={i} className={styles.windowRow}>
-              <select
-                className={styles.select}
-                aria-label="Day of week"
-                value={w.weekday}
-                onChange={(e) => patchWindow(i, { weekday: Number(e.target.value) })}
-              >
-                {WEEKDAYS.map((d, di) => (
-                  <option key={d} value={di}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-              <input
-                className={styles.select}
-                type="time"
-                aria-label="From"
-                value={w.start_time}
-                onChange={(e) => patchWindow(i, { start_time: e.target.value })}
-              />
-              <span aria-hidden="true">to</span>
-              <input
-                className={styles.select}
-                type="time"
-                aria-label="Until"
-                value={w.end_time}
-                onChange={(e) => patchWindow(i, { end_time: e.target.value })}
-              />
-              <IconButton
-                label="Remove this window"
-                icon={<X />}
-                size="sm"
-                onClick={() => setWindows((prev) => prev.filter((_, wi) => wi !== i))}
-              />
-            </div>
-          ))}
-          <div>
-            <Button
-              variant="secondary"
-              icon={<Plus />}
-              onClick={() =>
-                setWindows((prev) => [...prev, { weekday: 0, start_time: "18:00", end_time: "20:00" }])
-              }
-            >
-              Add a study window
-            </Button>
-          </div>
+          <StudyWindowsEditor windows={windows} onChange={setWindows} />
         </div>
       )}
 

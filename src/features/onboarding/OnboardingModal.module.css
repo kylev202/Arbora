@@ -80,31 +80,6 @@
   border-radius: var(--radius-md);
 }
 
-/* One weekly study window: day select + from/to times + remove. */
-.windowRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-/* Native select/time controls, matching the Input look (Field.module.css). */
-.select {
-  padding: var(--space-2) var(--space-3);
-  min-height: 40px;
-  font-family: inherit;
-  font-size: var(--text-base);
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-}
-.select:hover {
-  border-color: var(--color-text-muted);
-}
-.select:focus {
-  border-color: var(--color-primary);
-}
-
 .dlNote {
   font-size: var(--text-sm);
   color: var(--color-text-muted);

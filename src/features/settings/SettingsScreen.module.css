@@ -50,6 +50,20 @@
   color: var(--color-text-muted);
 }
 
+.subTitle {
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-base);
+}
+
+/* Related profile fields side by side. */
+.profileGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
 .row {
   display: flex;
   align-items: center;
