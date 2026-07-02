@@ -14,6 +14,7 @@ pub mod map;
 pub mod outline;
 pub mod plan;
 pub mod priority;
+pub mod profile;
 pub mod review;
 pub mod settings;
 pub mod sources;
