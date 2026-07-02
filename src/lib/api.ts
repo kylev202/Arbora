@@ -73,6 +73,13 @@ export const api = {
   getSettings: ipc.getSettings,
   updateSettings: ipc.updateSettings,
 
+  // ── Redesign slice A — profile + study windows + device info ──
+  getProfile: ipc.getProfile,
+  updateProfile: ipc.updateProfile,
+  listStudyWindows: ipc.listStudyWindows,
+  setStudyWindows: ipc.setStudyWindows,
+  getSystemInfo: ipc.getSystemInfo,
+
   // ── Slice 4d — Anki export (live) ──
   exportApkg: ipc.exportApkg,
 

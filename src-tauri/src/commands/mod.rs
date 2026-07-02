@@ -59,3 +59,20 @@ pub fn sidecar_status(state: State<'_, Sidecar>) -> SidecarStatus {
         base_url: state.base_url(),
     }
 }
+
+/// Device capability snapshot for the AI-preset recommendation. RAM only, by
+/// design: cross-platform VRAM detection would need a native dep per OS and the
+/// recommendation is a heuristic the user can always override.
+#[derive(Serialize)]
+pub struct SystemInfo {
+    pub total_ram_gb: f64,
+}
+
+#[tauri::command]
+pub fn get_system_info() -> SystemInfo {
+    let mut sys = sysinfo::System::new();
+    sys.refresh_memory();
+    SystemInfo {
+        total_ram_gb: sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0),
+    }
+}

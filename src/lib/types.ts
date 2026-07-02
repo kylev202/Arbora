@@ -19,6 +19,37 @@ export type Settings = {
   onboarded: boolean;
 };
 
+// ── User profile (redesign slice A) ───────────────────────────────────────
+export type StudyGoal = "pass" | "high_gpa";
+
+/** Onboarding interview answers (singleton row). Every field is nullable —
+ * each step can be skipped and the profile edited later in Settings. */
+export type UserProfile = {
+  name: string | null;
+  year: string | null;
+  major: string | null;
+  term_start: string | null; // ISO date
+  term_end: string | null; // ISO date
+  wake_time: string | null; // "HH:MM"
+  sleep_time: string | null; // "HH:MM"
+  goal: StudyGoal | null;
+};
+
+/** A weekly recurring free-to-study slot. weekday: 0=Monday … 6=Sunday. */
+export type StudyWindow = {
+  id: string;
+  weekday: number;
+  start_time: string; // "HH:MM"
+  end_time: string; // "HH:MM"
+};
+
+export type StudyWindowInput = Omit<StudyWindow, "id">;
+
+/** Device capability snapshot (RAM only) for the preset recommendation. */
+export type SystemInfo = {
+  total_ram_gb: number;
+};
+
 // ── Citations ────────────────────────────────────────────────────────────
 export type SourceLocation =
   | { type: "page"; page: number }

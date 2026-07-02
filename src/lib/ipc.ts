@@ -34,8 +34,12 @@ import type {
   Settings,
   Source,
   StudyStats,
+  StudyWindow,
+  StudyWindowInput,
   Subject,
   SubjectDashboard,
+  SystemInfo,
+  UserProfile,
   Week,
 } from "./types";
 
@@ -432,6 +436,42 @@ export function updateSettings(patch: Partial<Settings>): Promise<Settings> {
     whisperModel: patch.whisper_model,
     onboarded: patch.onboarded,
   });
+}
+
+// ── User profile + study windows (redesign slice A) ────────────────────────
+
+/** Read the profile singleton. All fields are null until onboarding sets them. */
+export function getProfile(): Promise<UserProfile> {
+  return invoke<UserProfile>("get_profile");
+}
+
+/** Patch any subset of the profile; omitted fields are left untouched. */
+export function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
+  return invoke<UserProfile>("update_profile", {
+    name: patch.name,
+    year: patch.year,
+    major: patch.major,
+    termStart: patch.term_start,
+    termEnd: patch.term_end,
+    wakeTime: patch.wake_time,
+    sleepTime: patch.sleep_time,
+    goal: patch.goal,
+  });
+}
+
+/** All weekly study windows, ordered by weekday then start time. */
+export function listStudyWindows(): Promise<StudyWindow[]> {
+  return invoke<StudyWindow[]>("list_study_windows");
+}
+
+/** Replace the whole study-window set (the UI edits it as one list). */
+export function setStudyWindows(windows: StudyWindowInput[]): Promise<StudyWindow[]> {
+  return invoke<StudyWindow[]>("set_study_windows", { windows });
+}
+
+/** Device RAM snapshot used to recommend an AI preset. */
+export function getSystemInfo(): Promise<SystemInfo> {
+  return invoke<SystemInfo>("get_system_info");
 }
 
 // ── Anki export (Slice 4) ──────────────────────────────────────────────────
