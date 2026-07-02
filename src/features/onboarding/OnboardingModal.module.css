@@ -6,6 +6,28 @@
   gap: var(--space-4);
 }
 
+/* Progress = leaves growing, one per step (§5.1) — gentle, never a countdown. */
+.stepMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.stepLeaves {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.stepLeaf {
+  color: var(--color-border-strong);
+  opacity: 0.5;
+}
+
+.stepLeafGrown {
+  color: var(--color-accent);
+  transition: color var(--motion-grow) var(--ease-growth);
+}
+
 .welcomeIcon {
   font-size: 3rem;
   color: var(--color-primary);

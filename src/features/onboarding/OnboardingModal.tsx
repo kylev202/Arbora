@@ -6,6 +6,7 @@ import {
   Disclaimer,
   IconButton,
   Input,
+  LeafMotif,
   Modal,
   ProgressBar,
   RadioGroup,
@@ -196,7 +197,20 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
       open={open}
       onClose={finish}
       title="Welcome to Arbora"
-      meta={`${step} / ${TOTAL_STEPS}`}
+      meta={
+        <span className={styles.stepMeta}>
+          <span className={styles.stepLeaves} aria-hidden="true">
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+              <LeafMotif
+                key={i}
+                size={13}
+                className={i < step ? styles.stepLeafGrown : styles.stepLeaf}
+              />
+            ))}
+          </span>
+          {step} / {TOTAL_STEPS}
+        </span>
+      }
       footer={
         <div className={styles.footer}>
           {step > 1 && !isLast ? (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, CitationChip } from "../../components";
+import { Button, CitationChip, LeafMotif } from "../../components";
 import { api } from "../../lib/api";
 import type { Card, FSRSRating } from "../../lib/types";
 import { ScheduleProposalCard } from "../calendar/ScheduleProposalCard";
@@ -81,7 +81,9 @@ export function SessionRecap({
 
   return (
     <div className={styles.recap}>
-      <h1 className={styles.title}>Nice session 🌱</h1>
+      <h1 className={styles.title}>
+        <LeafMotif size={26} className={styles.titleLeaf} /> Nice session
+      </h1>
       <p className={styles.counts}>
         {reviewed.length} card{reviewed.length === 1 ? "" : "s"} reviewed · {remembered} remembered
         {revisit > 0 && ` · ${revisit} to revisit soon`}

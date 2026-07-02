@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lightning, Plus, Shuffle, Tree as TreeIcon } from "@phosphor-icons/react";
+import { ArrowRight, Lightning, Plus, Shuffle, Tree as TreeIcon } from "@phosphor-icons/react";
 import { Button, EmptyState, ForestTree, Input, Modal, type ForestBranchData } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
@@ -28,6 +28,7 @@ export function HomeScreen() {
   const profile = useAsync(() => api.getProfile(), []);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [forest, setForest] = useState<ForestBranchData[] | null>(null);
+  const [suggested, setSuggested] = useState<{ subject: Subject; due: number } | null>(null);
   const [creating, setCreating] = useState(false);
 
   // Local mirror of the loaded list so a fresh create shows up immediately
@@ -47,11 +48,22 @@ export function HomeScreen() {
     Promise.all(
       subjects.map(async (subject) => {
         const dash = await api.getSubjectDashboard(subject.id);
-        return { subject, tree: getAchievementTree(subject.id, dash.tree) };
+        return {
+          subject,
+          tree: getAchievementTree(subject.id, dash.tree),
+          due: dash.stats.due_today,
+        };
       }),
     )
       .then((branches) => {
-        if (!cancelled) setForest(branches);
+        if (cancelled) return;
+        setForest(branches);
+        // One clear next step (§5.2): the subject with the most cards due.
+        const top = branches.reduce(
+          (best, b) => (b.due > (best?.due ?? 0) ? b : best),
+          null as (typeof branches)[number] | null,
+        );
+        setSuggested(top && top.due > 0 ? { subject: top.subject, due: top.due } : null);
       })
       .catch(() => {
         if (!cancelled) setForest([]);
@@ -93,10 +105,21 @@ export function HomeScreen() {
                   }
                 />
               ) : (
-                <ForestTree
-                  branches={forest ?? []}
-                  onOpenSubject={(id) => navigate(`/subject/${id}`)}
-                />
+                <>
+                  <ForestTree
+                    branches={forest ?? []}
+                    onOpenSubject={(id) => navigate(`/subject/${id}`)}
+                  />
+                  {suggested && (
+                    <Button
+                      variant="primary"
+                      icon={<ArrowRight weight="bold" />}
+                      onClick={() => navigate(`/subject/${suggested.subject.id}/study`)}
+                    >
+                      Continue studying · {suggested.subject.name} ({suggested.due} due)
+                    </Button>
+                  )}
+                </>
               )}
             </section>
             <aside className={styles.todoSide} aria-label="To do">
@@ -126,7 +149,9 @@ export function HomeScreen() {
                   </Button>
                 </>
               )}
-              <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
+              {/* Secondary here: the screen's ONE primary is "Continue studying"
+                  (the empty state carries its own primary when there's nothing). */}
+              <Button variant="secondary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
                 New subject
               </Button>
             </div>

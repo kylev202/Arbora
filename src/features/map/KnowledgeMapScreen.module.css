@@ -132,7 +132,7 @@
 
 .empty {
   grid-column: 1 / -1;
-  padding: var(--space-10) 0;
+  padding: var(--space-8) 0;
   text-align: center;
   color: var(--color-text-muted);
   font-size: var(--text-sm);

@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { CalendarBlank, CheckCircle, Circle, Flame, Target } from "@phosphor-icons/react";
-import { StatTile, Tree } from "../../components";
+import { CalendarBlank, CheckCircle, Circle, Target } from "@phosphor-icons/react";
+import { GrowthRingsMotif, StatTile, Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { relativeDays } from "../../lib/date";
@@ -101,7 +101,14 @@ export function DashboardScreen() {
             <StatTile icon={<CheckCircle weight="fill" />} value={stats.mastered} label="Cards mastered" tone="mastered" />
             <StatTile icon={<Circle />} value={tree.concepts_learning} label="Cards learning" tone="learning" />
             <StatTile icon={<CalendarBlank />} value={stats.due_today} label="Due today" tone="muted" />
-            <StatTile icon={<Flame weight="fill" />} value={`${stats.streak}d`} label="Streak" tone="muted" />
+            {/* No streak counters — ever (ADR-0007 / Design System). Neutral
+                planning info instead. */}
+            <StatTile
+              icon={<GrowthRingsMotif size={22} />}
+              value={stats.due_this_week}
+              label="Due this week"
+              tone="muted"
+            />
           </div>
 
           {/* Neutral week-over-week information, not judgement (§4.2). */}

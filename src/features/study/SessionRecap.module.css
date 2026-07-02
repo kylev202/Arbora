@@ -1,14 +1,33 @@
 .recap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-6);
   max-width: 640px;
   margin: 0 auto;
   padding: var(--space-6) 0;
 }
 
+/* Emotional heading — display serif; the leaf sprouts in once (§3). */
 .title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-xl);
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.titleLeaf {
+  flex: none;
+  color: var(--color-accent);
+  animation: leaf-in var(--motion-tree) var(--ease-growth) backwards;
+}
+
+@keyframes leaf-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 .counts {
