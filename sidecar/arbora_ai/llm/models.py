@@ -37,6 +37,16 @@ def model_ready(preset: str, endpoint: str = OLLAMA_ENDPOINT) -> dict:
     return {"model": model, "ready": model in names, "ollama_running": True}
 
 
+def warmup_model(preset: str, endpoint: str = OLLAMA_ENDPOINT) -> None:
+    """Load the preset's model into memory so the first real call isn't cold.
+
+    An empty-prompt generate makes Ollama load the model and return without
+    producing tokens. Raises on failure; callers treat warm-up as best-effort.
+    """
+    model = default_model(preset)
+    ollama.Client(host=endpoint).generate(model=model, prompt="")
+
+
 def pull_model(job: Job, preset: str, endpoint: str = OLLAMA_ENDPOINT) -> None:
     """Pull the preset's model, streaming layer progress into the job.
 

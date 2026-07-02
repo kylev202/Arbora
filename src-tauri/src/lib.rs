@@ -1,5 +1,6 @@
 mod commands;
 mod db;
+mod ollama;
 mod sidecar;
 
 use tauri::Manager;
@@ -23,6 +24,11 @@ pub fn run() {
             app.manage(sidecar::Sidecar::new());
             let handle = app.handle().clone();
             std::thread::spawn(move || sidecar::run_lifecycle(handle));
+
+            // ── Ollama daemon: ensure-running + warm-up, silently supervised. ──
+            app.manage(ollama::Ollama::new());
+            let handle = app.handle().clone();
+            std::thread::spawn(move || ollama::run_lifecycle(handle));
 
             Ok(())
         })
@@ -86,17 +92,21 @@ pub fn run() {
             commands::profile::set_study_windows,
             commands::model::model_ready,
             commands::model::download_model,
+            ollama::ollama_status,
             commands::export::export_apkg,
             commands::chat::chat_message,
+            commands::pet::pet_message,
             commands::diagram::generate_diagram,
             commands::map::get_knowledge_map,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
-            // Don't leave a zombie sidecar behind when the app exits.
+            // Don't leave zombies behind: kill the sidecar and any Ollama
+            // daemon we spawned (a user-run daemon is left alone).
             if let tauri::RunEvent::Exit = event {
                 app_handle.state::<sidecar::Sidecar>().kill();
+                app_handle.state::<ollama::Ollama>().kill();
             }
         });
 }

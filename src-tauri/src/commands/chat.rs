@@ -37,7 +37,7 @@ async fn fetch_subject_chunks(
     .map_err(|e| e.to_string())
 }
 
-async fn fetch_preset(pool: &SqlitePool) -> String {
+pub(crate) async fn fetch_preset(pool: &SqlitePool) -> String {
     sqlx::query_as::<_, (String,)>("SELECT ai_preset FROM settings WHERE id = 1")
         .fetch_one(pool)
         .await
@@ -114,7 +114,18 @@ pub async fn chat_message(
     subject_id: String,
     question: String,
 ) -> Result<ChatMessageResponse, String> {
-    let chunks = fetch_subject_chunks(pool.inner(), &subject_id).await?;
+    ask(pool.inner(), &sidecar, &subject_id, &question).await
+}
+
+/// Full RAG Q&A path (chunks → sidecar /chat → titled citations). Shared by the
+/// per-subject Ask tab and the pet companion (Domain A).
+pub(crate) async fn ask(
+    pool: &SqlitePool,
+    sidecar: &Sidecar,
+    subject_id: &str,
+    question: &str,
+) -> Result<ChatMessageResponse, String> {
+    let chunks = fetch_subject_chunks(pool, subject_id).await?;
     if chunks.is_empty() {
         return Err("NO_CHUNKS".to_string());
     }
@@ -123,7 +134,7 @@ pub async fn chat_message(
         .filter(|_| sidecar.is_ready())
         .ok_or("SIDECAR_UNAVAILABLE")?;
     let token = sidecar.token().to_string();
-    let preset = fetch_preset(pool.inner()).await;
+    let preset = fetch_preset(pool).await;
 
     let chunk_json: Vec<_> = chunks
         .iter()
@@ -158,7 +169,7 @@ pub async fn chat_message(
 
     let mut citations = Vec::new();
     for r in sidecar_resp.source_refs {
-        let title = source_title(pool.inner(), &r.source_id).await;
+        let title = source_title(pool, &r.source_id).await;
         let location = if r.location.kind == "timestamp" {
             LocationOut::Timestamp {
                 timestamp_ms: r.location.timestamp_ms.unwrap_or(0),

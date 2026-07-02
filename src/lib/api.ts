@@ -88,6 +88,10 @@ export const api = {
   // ── Phase 6 — RAG Q&A ──
   chatMessage: ipc.chatMessage,
 
+  // ── Redesign slice B — pet companion ──
+  petMessage: ipc.petMessage,
+  ollamaStatus: ipc.ollamaStatus,
+
   // ── Phase 6 — Knowledge map ──
   getKnowledgeMap: ipc.getKnowledgeMap,
 

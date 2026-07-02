@@ -32,8 +32,9 @@ from .export import export_apkg
 from .generate.job import run_assignment_brief, run_generate
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
-from .llm.models import model_ready, pull_model
+from .llm.models import model_ready, pull_model, warmup_model
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
+from .pet import route_question
 from .outline import extract_outline, syllabus_to_text
 from .schemas.output import CardOut, OutlineExtraction, SourceRef
 from .srs import compute_next
@@ -146,6 +147,19 @@ class ModelPullStatus(BaseModel):
     progress: float
     step: str
     error: str | None = None
+
+
+class ModelWarmupRequest(BaseModel):
+    preset: str = "medium"
+
+
+class PetRouteRequest(BaseModel):
+    question: str
+    preset: str = "medium"
+
+
+class PetRouteResponse(BaseModel):
+    domain: str  # "lesson" | "app_help" | "out_of_scope"
 
 
 class ParseOutlineRequest(BaseModel):
@@ -379,6 +393,28 @@ def create_app() -> FastAPI:
         return ModelPullStatus(
             job_id=job.id, state=job.state, progress=job.progress, step=job.step, error=job.error
         )
+
+    @app.post("/model/warmup", status_code=202, dependencies=guarded)
+    def model_warmup(req: ModelWarmupRequest) -> dict[str, str]:
+        # Best-effort background load so the first chat isn't cold; nobody polls.
+        job = registry.create()
+        registry.submit(job, lambda _j: warmup_model(req.preset))
+        return {"job_id": job.id}
+
+    # ── Pet companion ───────────────────────────────────────────────────────
+
+    @app.post("/pet/route", response_model=PetRouteResponse, dependencies=guarded)
+    def pet_route(req: PetRouteRequest) -> PetRouteResponse:
+        # Classify before answering: the pet only serves its two grounded
+        # domains (law #1); everything else is refused by the UI.
+        cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
+        try:
+            domain = route_question(req.question, get_provider(cfg))
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return PetRouteResponse(domain=domain)
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 

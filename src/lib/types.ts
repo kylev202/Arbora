@@ -265,6 +265,16 @@ export type ChatMessageResponse = {
   citations: SourceRef[];
 };
 
+// ── Pet companion (redesign slice B) ──────────────────────────────────────
+/** The pet's routed reply. `answer` carries authoritative citations (law #1);
+ * the other kinds are calm state messages the UI renders itself. */
+export type PetReply =
+  | { kind: "answer"; answer: string; citations: SourceRef[] }
+  | { kind: "needs_subject" }
+  | { kind: "no_material" }
+  | { kind: "app_help_pending" }
+  | { kind: "refusal" };
+
 // ── Mermaid diagrams ──────────────────────────────────────────────────────
 export type DiagramResponse = {
   title: string;

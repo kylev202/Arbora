@@ -1,0 +1,58 @@
+/* Floating pet avatar: fixed, draggable, above everything but modals. */
+.avatar {
+  position: fixed;
+  z-index: 900; /* below Modal overlays (portal), above screens */
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  touch-action: none; /* pointer-drag owns the gesture */
+  transition: box-shadow var(--motion-fast) var(--ease-standard);
+}
+.avatar:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* idle = gentle breathing; calm, and fully absent under reduced motion. */
+.idle {
+  animation: breathe 3.5s ease-in-out infinite;
+}
+
+.thinking {
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+.speaking {
+  animation: none;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idle,
+  .thinking {
+    animation: none;
+  }
+}
+:global(html[data-reduced-motion="true"]) .idle,
+:global(html[data-reduced-motion="true"]) .thinking {
+  animation: none;
+}

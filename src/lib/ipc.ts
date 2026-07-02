@@ -28,6 +28,7 @@ import type {
   ParsedDeadline,
   ParsedOutline,
   ParsedWeek,
+  PetReply,
   PriorityItem,
   QuizItem,
   ReviewItem,
@@ -527,6 +528,27 @@ export function chatMessage(
 
 export function getKnowledgeMap(subjectId: string): Promise<ConceptEntry[]> {
   return invoke<ConceptEntry[]>("get_knowledge_map", { subjectId });
+}
+
+// ── Pet companion + Ollama lifecycle (redesign slice B) ────────────────────
+
+/** One pet message: routed to lessons (RAG, cited) or app help; out-of-scope
+ * comes back as `refusal`. Rejects with `SIDECAR_UNAVAILABLE` or
+ * `OLLAMA_UNAVAILABLE` while the local AI is still starting. */
+export function petMessage(question: string, subjectId?: string | null): Promise<PetReply> {
+  return invoke<PetReply>("pet_message", { question, subjectId });
+}
+
+/** Whether the local Ollama daemon is reachable right now. */
+export function ollamaStatus(): Promise<{ ready: boolean }> {
+  return invoke<{ ready: boolean }>("ollama_status");
+}
+
+/** Lifecycle transitions of the silently-supervised Ollama daemon. */
+export type OllamaEvent = { state: "ready" | "starting" | "unavailable" };
+
+export function onOllamaStatus(handler: (e: OllamaEvent) => void): Promise<UnlistenFn> {
+  return listen<OllamaEvent>("ollama:status", (e) => handler(e.payload));
 }
 
 export function generateDiagram(subjectId: string, topic: string): Promise<DiagramResponse> {

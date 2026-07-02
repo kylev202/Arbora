@@ -13,6 +13,7 @@ pub mod generate;
 pub mod map;
 pub mod model;
 pub mod outline;
+pub mod pet;
 pub mod plan;
 pub mod priority;
 pub mod profile;
