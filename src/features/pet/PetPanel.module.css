@@ -193,8 +193,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px; /* touch target ≥40px */
+  height: 40px;
   flex-shrink: 0;
   border: none;
   border-radius: 50%;

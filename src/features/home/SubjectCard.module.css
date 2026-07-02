@@ -1,11 +1,12 @@
+/* Subject identity = dot + FULL border tint (no stripe accents — §0 bans). */
 .card {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-6) var(--space-4) var(--space-4);
+  padding: var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--color-border)) 40%, var(--color-border));
   border-radius: var(--radius-lg);
   color: var(--color-text);
   text-decoration: none;
@@ -20,13 +21,6 @@
   box-shadow: var(--shadow-md);
   border-color: var(--subject-color, var(--color-border));
   text-decoration: none;
-}
-
-.stripe {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 4px;
-  background: var(--subject-color, var(--color-primary));
 }
 
 .head {

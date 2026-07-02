@@ -21,7 +21,6 @@ export function SubjectCard({ subject }: { subject: Subject }) {
       className={styles.card}
       style={{ ["--subject-color" as string]: subject.color }}
     >
-      <span className={styles.stripe} aria-hidden="true" />
       <div className={styles.head}>
         <span className={styles.dot} aria-hidden="true" />
         <h3 className={styles.name}>{subject.name}</h3>

@@ -3,6 +3,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+  min-height: 40px; /* touch target ≥40px */
   cursor: pointer;
 }
 
