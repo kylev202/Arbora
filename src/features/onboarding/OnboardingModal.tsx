@@ -190,7 +190,6 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
   }
 
   const isLast = step === TOTAL_STEPS;
-  const downloading = download.phase === "downloading";
 
   return (
     <Modal
@@ -214,8 +213,8 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
               </Button>
             )}
             {isLast ? (
-              <Button variant="primary" onClick={finish} disabled={downloading}>
-                {downloading ? "Downloading…" : "Get started"}
+              <Button variant="primary" onClick={finish}>
+                Get started
               </Button>
             ) : (
               <Button variant="primary" onClick={next}>
@@ -413,10 +412,15 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
             </>
           )}
           {download.phase === "downloading" && (
-            <ProgressBar
-              value={download.progress}
-              label={download.step || "Downloading model…"}
-            />
+            <>
+              <ProgressBar
+                value={download.progress}
+                label={download.step || "Downloading model…"}
+              />
+              <p className={styles.dlNote}>
+                You can finish now, the download keeps going in the background.
+              </p>
+            </>
           )}
           {download.phase === "error" && (
             <>
