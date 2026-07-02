@@ -30,6 +30,8 @@ export type DisplaySettings = {
   reducedMotion: boolean;
   /** Focus mode strips chrome down to the current task (Workstream D). */
   focusMode: boolean;
+  /** Pet may show one calm suggestion bubble (off = it only ever answers). */
+  petSuggestions: boolean;
 };
 
 const DEFAULTS: DisplaySettings = {
@@ -38,6 +40,7 @@ const DEFAULTS: DisplaySettings = {
   fontScale: 16,
   reducedMotion: false,
   focusMode: false,
+  petSuggestions: true,
 };
 
 const STORAGE_KEY = "arbora.display";

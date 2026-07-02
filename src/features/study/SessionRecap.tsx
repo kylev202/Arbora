@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, CitationChip } from "../../components";
 import { api } from "../../lib/api";
 import type { Card, FSRSRating } from "../../lib/types";
 import { ScheduleProposalCard } from "../calendar/ScheduleProposalCard";
+import { CELEBRATE_EVENT } from "../pet/Pet";
 import styles from "./SessionRecap.module.css";
 
 const MAX_RECAP_ITEMS = 8;
@@ -38,6 +39,11 @@ export function SessionRecap({
   onSeeTree: () => void;
 }) {
   const [proposalState, setProposalState] = useState<"open" | "accepted" | "dismissed">("open");
+
+  // Let the pet cheer once, gently, when a session completes (§1.2 celebrate).
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(CELEBRATE_EVENT));
+  }, []);
 
   const remembered = reviewed.filter((r) => r.rating === "good" || r.rating === "easy").length;
   const revisit = reviewed.length - remembered;

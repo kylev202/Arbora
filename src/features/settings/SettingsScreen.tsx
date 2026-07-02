@@ -259,6 +259,21 @@ export function SettingsScreen() {
               />
             </div>
           </section>
+
+          {/* ── Pet ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Pet</h2>
+            <div className={styles.toggles}>
+              <Checkbox
+                label="Let the pet offer suggestions (one small bubble at most, easy to dismiss)"
+                checked={settings.petSuggestions}
+                onChange={(e) => settings.set("petSuggestions", e.target.checked)}
+              />
+            </div>
+            <p className={styles.hint}>
+              With this off, the pet only ever speaks when you ask it something.
+            </p>
+          </section>
         </div>
       </main>
     </div>

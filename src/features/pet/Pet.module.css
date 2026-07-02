@@ -36,6 +36,73 @@
   border-color: var(--color-primary);
 }
 
+/* Gentle cheer: a soft glow + one slow scale, never confetti (ADR-0007). */
+.celebrate {
+  animation: cheer 0.6s var(--ease-out, ease-out) 1;
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+@keyframes cheer {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* One small self-dissolving suggestion bubble (§1.2). */
+.bubble {
+  position: fixed;
+  z-index: 899;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 260px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.bubbleBody {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  line-height: var(--leading-normal);
+}
+.bubbleBody:hover {
+  color: var(--color-primary);
+}
+
+.bubbleClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.bubbleClose:hover {
+  background: var(--color-surface-alt);
+}
+
 @keyframes breathe {
   0%,
   100% {
@@ -48,11 +115,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .idle,
-  .thinking {
+  .thinking,
+  .celebrate {
     animation: none;
   }
 }
 :global(html[data-reduced-motion="true"]) .idle,
-:global(html[data-reduced-motion="true"]) .thinking {
+:global(html[data-reduced-motion="true"]) .thinking,
+:global(html[data-reduced-motion="true"]) .celebrate {
   animation: none;
 }
