@@ -4,7 +4,9 @@ import { StatTile, Tree } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { relativeDays } from "../../lib/date";
-import type { TreeData } from "../../lib/types";
+// Only-grows achievement logic lives in lib/achievementTree (shared with the
+// home forest tree — same localStorage keys, so both views agree).
+import { getAchievementTree } from "../../lib/achievementTree";
 import styles from "./DashboardScreen.module.css";
 
 /**
@@ -12,32 +14,6 @@ import styles from "./DashboardScreen.module.css";
  * stats on the right. "Due today" is information, NOT punishment, and is kept
  * separate from the tree's state (Tree Metaphor).
  */
-
-// The tree is an achievement display — it must only grow, never regress.
-// We track the historical max mastery per subject in localStorage so lapses
-// (review→relearning) and new unlearned cards don't shrink the visual tree.
-function treeMaxKey(subjectId: string) {
-  return `arbora_tree_max_${subjectId}`;
-}
-
-function getAchievementTree(subjectId: string, live: TreeData): TreeData {
-  let maxMastered = live.concepts_mastered;
-  let maxPct = live.mastery_pct;
-  try {
-    const stored = localStorage.getItem(treeMaxKey(subjectId));
-    if (stored) {
-      const prev = JSON.parse(stored) as { mastered: number; pct: number };
-      maxMastered = Math.max(prev.mastered, live.concepts_mastered);
-      maxPct = Math.max(prev.pct, live.mastery_pct);
-    }
-    localStorage.setItem(treeMaxKey(subjectId), JSON.stringify({ mastered: maxMastered, pct: maxPct }));
-  } catch {}
-  return {
-    ...live,
-    concepts_mastered: maxMastered,
-    mastery_pct: maxPct,
-  };
-}
 
 export function DashboardScreen() {
   const { subjectId = "" } = useParams();

@@ -1,21 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lightning, Plus, Shuffle, Tree as TreeIcon } from "@phosphor-icons/react";
-import { Button, EmptyState, Input, Modal } from "../../components";
+import { Button, EmptyState, ForestTree, Input, Modal, type ForestBranchData } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
+import { getAchievementTree } from "../../lib/achievementTree";
 import type { Subject } from "../../lib/types";
 import { SubjectCard } from "./SubjectCard";
+import { TodoPanel } from "./TodoPanel";
 import styles from "./HomeScreen.module.css";
 
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
 
-/** S-01 — Home / subject list. The entry point; one primary: + New subject. */
+/** Neutral time-of-day greeting — no streaks, no "you've been away" (§3.1). */
+function greetingFor(name: string | null): string {
+  const h = new Date().getHours();
+  const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return name ? `${part}, ${name} 🌱` : `${part} 🌱`;
+}
+
+/** S-01 — Home (redesign §3): greeting + the forest tree (one branch per
+ * subject) + the todo panel, with the subject grid below. */
 export function HomeScreen() {
   const navigate = useNavigate();
   const remote = useAsync(() => api.listSubjects(), []);
+  const profile = useAsync(() => api.getProfile(), []);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [forest, setForest] = useState<ForestBranchData[] | null>(null);
   const [creating, setCreating] = useState(false);
 
   // Local mirror of the loaded list so a fresh create shows up immediately
@@ -24,6 +36,31 @@ export function HomeScreen() {
     if (remote.status === "loaded") setSubjects(remote.data);
   }, [remote.status, remote.data]);
 
+  // One branch per subject, fed by the same achievement-max data as the
+  // per-subject dashboard tree (so the forest never shrinks either).
+  useEffect(() => {
+    let cancelled = false;
+    if (subjects.length === 0) {
+      setForest([]);
+      return;
+    }
+    Promise.all(
+      subjects.map(async (subject) => {
+        const dash = await api.getSubjectDashboard(subject.id);
+        return { subject, tree: getAchievementTree(subject.id, dash.tree) };
+      }),
+    )
+      .then((branches) => {
+        if (!cancelled) setForest(branches);
+      })
+      .catch(() => {
+        if (!cancelled) setForest([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subjects]);
+
   async function handleCreate(name: string) {
     const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
     const created = await api.createSubject(name, color);
@@ -31,13 +68,42 @@ export function HomeScreen() {
     setCreating(false);
   }
 
+  const userName = profile.status === "loaded" ? profile.data.name : null;
+
   return (
     <div className={styles.screen}>
       <TopBar />
       <main className={styles.main}>
         <div className="page-wide">
+          <h1 className={styles.greeting}>{greetingFor(userName)}</h1>
+
+          <div className={styles.hero}>
+            <section className={styles.treeSide} aria-label="Your progress tree">
+              {subjects.length === 0 && remote.status === "loaded" ? (
+                <EmptyState
+                  icon={<TreeIcon weight="fill" />}
+                  title="No subjects yet"
+                  description="Start by adding your first subject — then drop in documents to grow it."
+                  action={
+                    <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
+                      New subject
+                    </Button>
+                  }
+                />
+              ) : (
+                <ForestTree
+                  branches={forest ?? []}
+                  onOpenSubject={(id) => navigate(`/subject/${id}`)}
+                />
+              )}
+            </section>
+            <aside className={styles.todoSide} aria-label="To do">
+              <TodoPanel subjects={subjects} onCreateSubject={() => setCreating(true)} />
+            </aside>
+          </div>
+
           <div className="screen-header">
-            <h1>Your subjects</h1>
+            <h2 className={styles.subjectsHeading}>Your subjects</h2>
             <div className={styles.headerActions}>
               {subjects.length > 0 && (
                 <>
@@ -70,19 +136,6 @@ export function HomeScreen() {
                 <div key={i} className={styles.skeleton} />
               ))}
             </div>
-          )}
-
-          {remote.status === "loaded" && subjects.length === 0 && (
-            <EmptyState
-              icon={<TreeIcon weight="fill" />}
-              title="No subjects yet"
-              description="Start by adding your first subject — then drop in documents to grow it."
-              action={
-                <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
-                  New subject
-                </Button>
-              }
-            />
           )}
 
           {remote.status === "loaded" && subjects.length > 0 && (
