@@ -66,6 +66,8 @@ export function HomeScreen() {
     const created = await api.createSubject(name, color);
     setSubjects((prev) => [...prev, created]);
     setCreating(false);
+    // Land on the timeline: import a syllabus or lay out the weeks (§4.1).
+    navigate(`/subject/${created.id}/timeline`);
   }
 
   const userName = profile.status === "loaded" ? profile.data.name : null;

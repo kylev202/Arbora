@@ -33,12 +33,35 @@ struct DeadlineOut {
     kind: String,
 }
 
+/// The outline week we're currently in (latest started week), for the
+/// "this week" dashboard block. `source_count == 0` drives the calm
+/// empty-state CTA — never a silent blank (redesign §4.2).
+#[derive(Serialize, sqlx::FromRow)]
+pub struct CurrentWeek {
+    week_id: String,
+    week_number: i64,
+    title: String,
+    summary: String,
+    source_count: i64,
+}
+
+/// Last-week / this-week / whole-term progress (redesign §4.2). "Reviews" =
+/// cards whose latest review fell in the window — neutral information, no
+/// targets or comparisons shown as judgement.
+#[derive(Serialize)]
+pub struct WeekProgress {
+    reviews_this_week: i64,
+    reviews_last_week: i64,
+    current_week: Option<CurrentWeek>,
+}
+
 #[derive(Serialize)]
 pub struct SubjectDashboard {
     subject_id: String,
     tree: TreeOut,
     stats: StudyStats,
     next_deadline: Option<DeadlineOut>,
+    week_progress: WeekProgress,
 }
 
 // ── DB layer ───────────────────────────────────────────────────────────────
@@ -108,12 +131,49 @@ async fn fetch_next_deadline(
     }))
 }
 
+async fn fetch_week_progress(pool: &SqlitePool, subject_id: &str) -> Result<WeekProgress, String> {
+    let (reviews_this_week, reviews_last_week): (i64, i64) = sqlx::query_as(
+        "SELECT
+           COALESCE(SUM(CASE WHEN cs.last_review >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-7 days')
+                             THEN 1 ELSE 0 END), 0),
+           COALESCE(SUM(CASE WHEN cs.last_review >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-14 days')
+                              AND cs.last_review < strftime('%Y-%m-%dT%H:%M:%SZ','now','-7 days')
+                             THEN 1 ELSE 0 END), 0)
+         FROM cards c JOIN card_schedule cs ON cs.card_id = c.id
+         WHERE c.subject_id = ?1 AND cs.last_review IS NOT NULL",
+    )
+    .bind(subject_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let current_week = sqlx::query_as::<_, CurrentWeek>(
+        "SELECT w.id AS week_id, w.week_number, w.title, w.summary,
+                (SELECT COUNT(*) FROM sources s WHERE s.week_id = w.id) AS source_count
+         FROM weeks w
+         WHERE w.subject_id = ?1 AND w.start_date IS NOT NULL
+           AND date(w.start_date) <= date('now','localtime')
+         ORDER BY w.start_date DESC LIMIT 1",
+    )
+    .bind(subject_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    Ok(WeekProgress {
+        reviews_this_week,
+        reviews_last_week,
+        current_week,
+    })
+}
+
 async fn build_dashboard(pool: &SqlitePool, subject_id: &str) -> Result<SubjectDashboard, String> {
     Ok(SubjectDashboard {
         subject_id: subject_id.to_string(),
         tree: fetch_tree(pool, subject_id).await?,
         stats: study::fetch_stats(pool, subject_id).await?,
         next_deadline: fetch_next_deadline(pool, subject_id).await?,
+        week_progress: fetch_week_progress(pool, subject_id).await?,
     })
 }
 
@@ -200,5 +260,56 @@ mod tests {
         assert_eq!(dash.tree.concepts_total, 2);
         assert_eq!(dash.stats.mastered, 1, "review-state card is mastered");
         assert!(dash.next_deadline.is_none(), "no deadlines seeded");
+        assert!(dash.week_progress.current_week.is_none(), "no outline yet");
+    }
+
+    #[tokio::test]
+    async fn week_progress_windows_and_current_week() {
+        let pool = seeded_pool().await;
+
+        // One review 2 days ago (this week), one 10 days ago (last week).
+        sqlx::query(
+            "UPDATE card_schedule SET last_review = strftime('%Y-%m-%dT%H:%M:%SZ','now','-2 days')
+             WHERE card_id = 'c1'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "UPDATE card_schedule SET last_review = strftime('%Y-%m-%dT%H:%M:%SZ','now','-10 days')
+             WHERE card_id = 'c2'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Outline: week 1 started long ago, week 2 started yesterday (current),
+        // week 3 starts in the future.
+        for (id, n, start) in [
+            ("w1", 1, "date('now','-8 days')"),
+            ("w2", 2, "date('now','-1 days')"),
+            ("w3", 3, "date('now','+6 days')"),
+        ] {
+            sqlx::query(&format!(
+                "INSERT INTO weeks (id,subject_id,week_number,title,start_date,created_at)
+                 VALUES (?1,'s',?2,'T',{start},'t')"
+            ))
+            .bind(id)
+            .bind(n)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        sqlx::query("UPDATE sources SET week_id = 'w2' WHERE id = 'src'")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let wp = fetch_week_progress(&pool, "s").await.unwrap();
+        assert_eq!(wp.reviews_this_week, 1);
+        assert_eq!(wp.reviews_last_week, 1);
+        let cur = wp.current_week.unwrap();
+        assert_eq!(cur.week_number, 2, "latest started week wins");
+        assert_eq!(cur.source_count, 1);
     }
 }

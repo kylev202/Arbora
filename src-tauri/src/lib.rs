@@ -59,6 +59,8 @@ pub fn run() {
             commands::review::approve_brief,
             commands::review::reject_brief,
             commands::study::get_due_cards,
+            commands::study::get_week_cards,
+            commands::path::get_subject_path,
             commands::study::get_due_cards_interleaved,
             commands::study::get_due_cards_prioritized,
             commands::study::submit_card_review,

@@ -82,6 +82,7 @@ function useFocusTimer(minutes: number | null) {
  * URL params:
  *   ?limit=N  — cap the session to N cards (Quick session)
  *   ?timer=N  — start a focus countdown of N minutes
+ *   ?week=ID  — stage check: only cards from that outline week's materials
  */
 export function StudyScreen() {
   const { subjectId = "" } = useParams();
@@ -89,8 +90,12 @@ export function StudyScreen() {
   const [searchParams] = useSearchParams();
   const limit = Number(searchParams.get("limit") ?? 50);
   const timerMinutes = searchParams.get("timer") ? Number(searchParams.get("timer")) : null;
+  const weekId = searchParams.get("week");
 
-  const due = useAsync(() => api.getDueCards(subjectId, limit), [subjectId, limit]);
+  const due = useAsync(
+    () => (weekId ? api.getWeekCards(subjectId, weekId, limit) : api.getDueCards(subjectId, limit)),
+    [subjectId, limit, weekId],
+  );
   const tts = useTts();
   const { formatted: timerDisplay, expired: timerExpired } = useFocusTimer(timerMinutes);
   const [timerDismissed, setTimerDismissed] = useState(false);

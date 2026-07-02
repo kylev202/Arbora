@@ -156,6 +156,36 @@ async fn fetch_due(
     .map(|rows| rows.into_iter().map(DueRow::into_due_card).collect())
 }
 
+/// Approved cards from one week's materials — the learning-path stage check
+/// (redesign §4.3). Due cards first, then the rest; a stage can always be
+/// practised, wrong answers just requeue (ADR-0007).
+async fn fetch_week_cards(
+    pool: &SqlitePool,
+    subject_id: &str,
+    week_id: &str,
+    limit: i64,
+) -> Result<Vec<DueCardOut>, String> {
+    sqlx::query_as::<_, DueRow>(
+        "SELECT c.id, c.subject_id, c.front, c.back, c.explanation,
+                c.source_id, c.page, c.timestamp_ms, c.excerpt,
+                s.title AS source_title,
+                cs.due, cs.stability, cs.difficulty, cs.state, cs.last_review
+         FROM cards c
+         JOIN card_schedule cs ON cs.card_id = c.id
+         JOIN sources s ON s.id = c.source_id
+         WHERE c.subject_id = ?1 AND c.reviewed = 1 AND s.week_id = ?2
+         ORDER BY (cs.due <= strftime('%Y-%m-%dT%H:%M:%SZ','now')) DESC, cs.due ASC
+         LIMIT ?3",
+    )
+    .bind(subject_id)
+    .bind(week_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+    .map(|rows| rows.into_iter().map(DueRow::into_due_card).collect())
+}
+
 // ── Schedule: read → sidecar → write ──────────────────────────────────────
 
 #[derive(sqlx::FromRow)]
@@ -385,6 +415,16 @@ pub async fn get_due_cards(
     limit: Option<i64>,
 ) -> Result<Vec<DueCardOut>, String> {
     fetch_due(pool.inner(), &subject_id, limit.unwrap_or(50)).await
+}
+
+#[tauri::command]
+pub async fn get_week_cards(
+    pool: State<'_, SqlitePool>,
+    subject_id: String,
+    week_id: String,
+    limit: Option<i64>,
+) -> Result<Vec<DueCardOut>, String> {
+    fetch_week_cards(pool.inner(), &subject_id, &week_id, limit.unwrap_or(50)).await
 }
 
 #[tauri::command]

@@ -5,6 +5,7 @@ import { Export, GraduationCap, Lightning, Play, Timer } from "@phosphor-icons/r
 import { Button, EmptyState, StatTile } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
+import { PathTrack } from "./PathTrack";
 import styles from "./StudyTab.module.css";
 
 /** S-02 Study tab — calm start screen. Starting a session is a single click. */
@@ -68,6 +69,8 @@ export function StudyTab() {
           {exportMsg}
         </p>
       )}
+
+      <PathTrack subjectId={subjectId} />
 
       {dueToday === 0 ? (
         <EmptyState

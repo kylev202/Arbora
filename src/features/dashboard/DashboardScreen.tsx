@@ -27,15 +27,44 @@ export function DashboardScreen() {
     return <div className="page">Couldn't load the dashboard.</div>;
   }
 
-  const { tree: liveTree, stats, next_deadline } = dash.data;
+  const { tree: liveTree, stats, next_deadline, week_progress } = dash.data;
   const tree = getAchievementTree(subjectId, liveTree);
   const focusItems = (focus.data ?? []).slice(0, 3);
+  const week = week_progress.current_week;
 
   return (
     <div className="page-wide">
       <div className="screen-header">
         <h1>Welcome back</h1>
       </div>
+
+      {/* This week (§4.2): what to learn now, or a clear CTA when empty. */}
+      {week && (
+        <section className={styles.weekNow} aria-label="This week">
+          <div className={styles.weekNowText}>
+            <h2 className={styles.weekNowTitle}>
+              This week · Week {week.week_number}
+              {week.title ? ` — ${week.title}` : ""}
+            </h2>
+            {week.source_count === 0 ? (
+              <p className={styles.weekNowEmpty}>
+                No material for this week yet — add this week's slides or readings to study them.
+              </p>
+            ) : (
+              week.summary && <p className={styles.weekNowSummary}>{week.summary}</p>
+            )}
+          </div>
+          {week.source_count === 0 ? (
+            <Link to={`/subject/${subjectId}/sources`} className={styles.weekNowCta}>
+              Add material
+            </Link>
+          ) : (
+            <Link to={`/subject/${subjectId}/study`} className={styles.weekNowCta}>
+              Study this week
+            </Link>
+          )}
+        </section>
+      )}
 
       {focusItems.length > 0 && (
         <section className={styles.focus} aria-label="What to focus on next">
@@ -73,6 +102,13 @@ export function DashboardScreen() {
             <StatTile icon={<Circle />} value={tree.concepts_learning} label="Cards learning" tone="learning" />
             <StatTile icon={<CalendarBlank />} value={stats.due_today} label="Due today" tone="muted" />
             <StatTile icon={<Flame weight="fill" />} value={`${stats.streak}d`} label="Streak" tone="muted" />
+          </div>
+
+          {/* Neutral week-over-week information, not judgement (§4.2). */}
+          <div className={styles.tiles}>
+            <StatTile value={week_progress.reviews_this_week} label="Reviews this week" tone="muted" />
+            <StatTile value={week_progress.reviews_last_week} label="Reviews last week" tone="muted" />
+            <StatTile value={`${Math.round(tree.mastery_pct * 100)}%`} label="Term mastery" tone="mastered" />
           </div>
 
           {next_deadline && (

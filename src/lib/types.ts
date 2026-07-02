@@ -252,11 +252,29 @@ export type TreeData = {
   concepts_learning: number; // gold leaves
 };
 
+/** The outline week we're currently in; `source_count === 0` drives the calm
+ * empty-state CTA (§4.2). */
+export type CurrentWeek = {
+  week_id: string;
+  week_number: number;
+  title: string;
+  summary: string;
+  source_count: number;
+};
+
+/** Neutral last-week / this-week review counts + the current outline week. */
+export type WeekProgress = {
+  reviews_this_week: number;
+  reviews_last_week: number;
+  current_week: CurrentWeek | null;
+};
+
 export type SubjectDashboard = {
   subject_id: string;
   tree: TreeData;
   stats: StudyStats;
   next_deadline: Deadline | null;
+  week_progress: WeekProgress;
 };
 
 // ── RAG Q&A ──────────────────────────────────────────────────────────────
@@ -294,6 +312,24 @@ export type Todo = {
   kind: string;
   done: boolean;
   source: TodoSource;
+};
+
+// ── Learning path (redesign slice F) ──────────────────────────────────────
+/** One stage of the in-subject path (an outline week + its card mastery).
+ * Stage state is derived from mastery, never dates — no "overdue" (ADR-0007). */
+export type PathStage = {
+  week_id: string;
+  week_number: number;
+  title: string;
+  total_cards: number;
+  mastered_cards: number;
+  due_cards: number;
+};
+
+export type SubjectPath = {
+  stages: PathStage[];
+  todos_done_today: number;
+  todos_total_today: number;
 };
 
 // ── Pet companion (redesign slice B) ──────────────────────────────────────

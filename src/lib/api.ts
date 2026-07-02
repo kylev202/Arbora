@@ -107,6 +107,10 @@ export const api = {
   proposeSchedule: ipc.proposeSchedule,
   acceptSchedule: ipc.acceptSchedule,
 
+  // ── Redesign slice F — learning path ──
+  getSubjectPath: ipc.getSubjectPath,
+  getWeekCards: ipc.getWeekCards,
+
   // ── Phase 6 — Knowledge map ──
   getKnowledgeMap: ipc.getKnowledgeMap,
 

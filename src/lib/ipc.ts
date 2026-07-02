@@ -45,6 +45,7 @@ import type {
   StudyWindowInput,
   Subject,
   SubjectDashboard,
+  SubjectPath,
   SystemInfo,
   Todo,
   UserProfile,
@@ -280,6 +281,22 @@ export function submitCardReview(
 /** Counts and streak for the StudyTab widget. */
 export function getStudyStats(subjectId: string): Promise<StudyStats> {
   return invoke<StudyStats>("get_study_stats", { subjectId });
+}
+
+// ── Learning path (redesign slice F) ───────────────────────────────────────
+
+/** Stages (one per outline week, mastery-derived) + today's todo counts. */
+export function getSubjectPath(subjectId: string): Promise<SubjectPath> {
+  return invoke<SubjectPath>("get_subject_path", { subjectId });
+}
+
+/** Cards from one week's materials, due-first — the stage-check session. */
+export function getWeekCards(
+  subjectId: string,
+  weekId: string,
+  limit?: number,
+): Promise<DueCard[]> {
+  return invoke<DueCard[]>("get_week_cards", { subjectId, weekId, limit });
 }
 
 // ── Content browsing + dashboard (Slice 4) ─────────────────────────────────
