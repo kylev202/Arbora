@@ -23,7 +23,7 @@ export const PRESET_OPTIONS: RadioOption<AIPreset>[] = [
   },
 ];
 
-/** Naive RAM → recommended preset (mock; a later phase reads real device RAM). */
+/** RAM → recommended preset. Callers pass real device RAM (api.getSystemInfo). */
 export function recommendedPreset(ramGb: number): AIPreset {
   if (ramGb <= 8) return "low";
   if (ramGb < 32) return "medium";

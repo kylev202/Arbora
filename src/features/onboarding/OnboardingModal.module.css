@@ -42,3 +42,75 @@
   font-weight: var(--weight-medium);
   color: var(--color-primary);
 }
+
+/* Two related fields side by side (dates, times, year/major). */
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* Subject name input + Add button on one line, aligned to the input box. */
+.addRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.addRow > :first-child {
+  flex: 1;
+}
+
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+/* One weekly study window: day select + from/to times + remove. */
+.windowRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Native select/time controls, matching the Input look (Field.module.css). */
+.select {
+  padding: var(--space-2) var(--space-3);
+  min-height: 40px;
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+.select:hover {
+  border-color: var(--color-text-muted);
+}
+.select:focus {
+  border-color: var(--color-primary);
+}
+
+.dlNote {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dlError {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
