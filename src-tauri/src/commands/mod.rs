@@ -8,6 +8,7 @@ pub mod chat;
 pub mod content;
 pub mod dashboard;
 pub mod diagram;
+pub mod events;
 pub mod export;
 pub mod generate;
 pub mod map;
@@ -22,6 +23,7 @@ pub mod settings;
 pub mod sources;
 pub mod study;
 pub mod subjects;
+pub mod todos;
 
 use serde::Serialize;
 use sqlx::SqlitePool;

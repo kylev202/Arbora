@@ -265,6 +265,37 @@ export type ChatMessageResponse = {
   citations: SourceRef[];
 };
 
+// ── Calendar + todos (redesign slice D) ───────────────────────────────────
+export type EventKind = "lecture" | "study" | "deadline" | "custom";
+export type EventStatus = "planned" | "done" | "moved";
+
+/** A timetable event. Times are naive local ISO ("YYYY-MM-DDTHH:MM") — a study
+ * session is a wall-clock commitment. `origin: "ai"` rows only exist after the
+ * user accepted a proposal (law #2). */
+export type CalendarEvent = {
+  id: string;
+  subject_id: string | null;
+  title: string;
+  start_at: string;
+  end_at: string;
+  kind: EventKind;
+  status: EventStatus;
+  origin: "user" | "ai";
+};
+
+export type TodoSource = "setup" | "ai" | "user";
+
+export type Todo = {
+  id: string;
+  subject_id: string | null;
+  title: string;
+  due: string | null;
+  session_slot: string | null;
+  kind: string;
+  done: boolean;
+  source: TodoSource;
+};
+
 // ── Pet companion (redesign slice B) ──────────────────────────────────────
 /** The pet's routed reply. `answer` carries authoritative citations (law #1);
  * the other kinds are calm state messages the UI renders itself. */

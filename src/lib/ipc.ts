@@ -13,6 +13,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AssignmentBrief,
+  CalendarEvent,
   Card,
   ChatMessageResponse,
   ConceptEntry,
@@ -20,6 +21,8 @@ import type {
   DiagramResponse,
   DeadlineType,
   DueCard,
+  EventKind,
+  EventStatus,
   FSRSRating,
   Grade,
   GradeSummary,
@@ -40,6 +43,7 @@ import type {
   Subject,
   SubjectDashboard,
   SystemInfo,
+  Todo,
   UserProfile,
   Week,
 } from "./types";
@@ -528,6 +532,75 @@ export function chatMessage(
 
 export function getKnowledgeMap(subjectId: string): Promise<ConceptEntry[]> {
   return invoke<ConceptEntry[]>("get_knowledge_map", { subjectId });
+}
+
+// ── Calendar events + todos (redesign slice D) ─────────────────────────────
+
+/** Events with `start_at` in [from, to). Omit both for everything. */
+export function listEvents(from?: string, to?: string): Promise<CalendarEvent[]> {
+  return invoke<CalendarEvent[]>("list_events", { from, to });
+}
+
+/** Create (id omitted) or update (id given) an event; returns the row. */
+export function upsertEvent(event: {
+  id?: string;
+  subject_id?: string | null;
+  title: string;
+  start_at: string;
+  end_at: string;
+  kind: EventKind;
+  status?: EventStatus;
+}): Promise<CalendarEvent> {
+  return invoke<CalendarEvent>("upsert_event", {
+    id: event.id,
+    subjectId: event.subject_id,
+    title: event.title,
+    startAt: event.start_at,
+    endAt: event.end_at,
+    kind: event.kind,
+    status: event.status,
+  });
+}
+
+/** Drag-drop reschedule: change only the times. */
+export function moveEvent(id: string, startAt: string, endAt: string): Promise<CalendarEvent> {
+  return invoke<CalendarEvent>("move_event", { id, startAt, endAt });
+}
+
+/** Mark planned/done/moved. */
+export function setEventStatus(id: string, status: EventStatus): Promise<CalendarEvent> {
+  return invoke<CalendarEvent>("set_event_status", { id, status });
+}
+
+export function deleteEvent(id: string): Promise<void> {
+  return invoke<void>("delete_event", { id });
+}
+
+/** All todos: open items first (by due date), done items last. */
+export function listTodos(): Promise<Todo[]> {
+  return invoke<Todo[]>("list_todos");
+}
+
+export function createTodo(todo: {
+  subject_id?: string | null;
+  title: string;
+  due?: string | null;
+  kind?: string;
+}): Promise<Todo> {
+  return invoke<Todo>("create_todo", {
+    subjectId: todo.subject_id,
+    title: todo.title,
+    due: todo.due,
+    kind: todo.kind,
+  });
+}
+
+export function setTodoDone(id: string, done: boolean): Promise<Todo> {
+  return invoke<Todo>("set_todo_done", { id, done });
+}
+
+export function deleteTodo(id: string): Promise<void> {
+  return invoke<void>("delete_todo", { id });
 }
 
 // ── Pet companion + Ollama lifecycle (redesign slice B) ────────────────────

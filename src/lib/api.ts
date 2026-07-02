@@ -92,6 +92,17 @@ export const api = {
   petMessage: ipc.petMessage,
   ollamaStatus: ipc.ollamaStatus,
 
+  // ── Redesign slice D — calendar + todos ──
+  listEvents: ipc.listEvents,
+  upsertEvent: ipc.upsertEvent,
+  moveEvent: ipc.moveEvent,
+  setEventStatus: ipc.setEventStatus,
+  deleteEvent: ipc.deleteEvent,
+  listTodos: ipc.listTodos,
+  createTodo: ipc.createTodo,
+  setTodoDone: ipc.setTodoDone,
+  deleteTodo: ipc.deleteTodo,
+
   // ── Phase 6 — Knowledge map ──
   getKnowledgeMap: ipc.getKnowledgeMap,
 
