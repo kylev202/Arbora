@@ -17,3 +17,17 @@
   font-family: inherit;
   user-select: none;
 }
+
+/* Branches REACH out from the trunk on mount (growth language §3) — a line
+   draw via dashoffset, ≤600ms; reduced-motion renders them instantly. */
+.branchPath {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: branch-reach var(--motion-tree) var(--ease-growth) backwards;
+}
+
+@keyframes branch-reach {
+  from {
+    stroke-dashoffset: 1;
+  }
+}

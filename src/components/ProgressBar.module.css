@@ -37,6 +37,12 @@
   transition: width var(--motion-base) var(--ease-out);
 }
 
+/* Learning progress grows — slower, greener, growth easing (§3). */
+.growth {
+  background: var(--color-accent);
+  transition: width var(--motion-grow) var(--ease-growth);
+}
+
 .indeterminate {
   width: 40%;
   animation: slide 1.2s ease-in-out infinite;

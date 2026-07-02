@@ -28,13 +28,29 @@
   stroke-linecap: round;
 }
 
+/* Leaves POP into place (growth is the motion language — §3). Seeded layout
+   keeps existing leaves' DOM stable, so only new leaves animate on data
+   change; reduced-motion neutralises via the global kill in tokens.css. */
 .leafGreen {
   fill: var(--color-accent);
   transition: r var(--motion-tree) var(--ease-out);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leaf-pop var(--motion-tree) var(--ease-growth) backwards;
 }
 .leafGold {
   fill: var(--color-accent-warm);
   transition: r var(--motion-tree) var(--ease-out);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leaf-pop var(--motion-tree) var(--ease-growth) backwards;
+}
+
+@keyframes leaf-pop {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 .fruit {

@@ -149,7 +149,13 @@ export function ForestTree({
               }
             }}
           >
-            <path d={b.path} strokeWidth={b.width} fill="none" className={styles.branch} />
+            <path
+              d={b.path}
+              strokeWidth={b.width}
+              fill="none"
+              pathLength={1}
+              className={`${styles.branch} ${forest.branchPath}`}
+            />
             {b.leaves.map((l, i) => (
               <circle
                 key={i}

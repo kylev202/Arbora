@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Check, Plant } from "@phosphor-icons/react";
-import { Button, ProgressBar } from "../../components";
+import { Button, LeafMotif, ProgressBar } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import type { PathStage } from "../../lib/types";
@@ -73,10 +73,14 @@ export function PathTrack({ subjectId }: { subjectId: string }) {
 
       {todayPct !== null && (
         <div className={styles.today}>
-          <ProgressBar value={todayPct} label={`Today's plan · ${todos_done_today} / ${todos_total_today}`} />
+          <ProgressBar
+            variant="growth"
+            value={todayPct}
+            label={`Today's plan · ${todos_done_today} / ${todos_total_today}`}
+          />
           {todayPct >= 1 && (
             <p className={styles.todayDone} role="status">
-              Today's plan complete 🌱
+              <LeafMotif size={16} className={styles.todayLeaf} /> Today's plan complete
             </p>
           )}
         </div>

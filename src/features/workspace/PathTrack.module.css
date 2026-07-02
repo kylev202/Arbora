@@ -30,9 +30,26 @@
 }
 
 .todayDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--color-accent-text);
+}
+
+/* The completion leaf sprouts in — gentle celebrate, can't be missed but
+   never loud (§3); reduced-motion shows it instantly. */
+.todayLeaf {
+  flex: none;
+  animation: leaf-in var(--motion-grow) var(--ease-growth) backwards;
+}
+
+@keyframes leaf-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 .noOutline {
@@ -87,6 +104,15 @@
   border-color: var(--color-path-done);
   background: var(--color-path-done);
   color: var(--color-on-primary);
+  /* A finished stage "sprouts bright" once — no confetti (§3). */
+  animation: node-grow var(--motion-grow) var(--ease-growth) backwards;
+}
+
+@keyframes node-grow {
+  from {
+    transform: scale(0.5);
+    opacity: 0.4;
+  }
 }
 
 /* Exactly one highlighted next step (§4.3). */
