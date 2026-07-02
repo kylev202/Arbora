@@ -272,7 +272,6 @@ export type PetReply =
   | { kind: "answer"; answer: string; citations: SourceRef[] }
   | { kind: "needs_subject" }
   | { kind: "no_material" }
-  | { kind: "app_help_pending" }
   | { kind: "refusal" };
 
 // ── Mermaid diagrams ──────────────────────────────────────────────────────

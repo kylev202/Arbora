@@ -34,7 +34,7 @@ from .ingest.job import run_ingest
 from .jobs import JobRegistry
 from .llm.models import model_ready, pull_model, warmup_model
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
-from .pet import route_question
+from .pet import answer_app_help, route_question
 from .outline import extract_outline, syllabus_to_text
 from .schemas.output import CardOut, OutlineExtraction, SourceRef
 from .srs import compute_next
@@ -160,6 +160,22 @@ class PetRouteRequest(BaseModel):
 
 class PetRouteResponse(BaseModel):
     domain: str  # "lesson" | "app_help" | "out_of_scope"
+
+
+class PetHelpRequest(BaseModel):
+    question: str
+    preset: str = "medium"
+
+
+class PetHelpRef(BaseModel):
+    section: int
+    title: str
+    excerpt: str
+
+
+class PetHelpResponse(BaseModel):
+    answer: str
+    refs: list[PetHelpRef]
 
 
 class ParseOutlineRequest(BaseModel):
@@ -415,6 +431,19 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return PetRouteResponse(domain=domain)
+
+    @app.post("/pet/help", response_model=PetHelpResponse, dependencies=guarded)
+    def pet_help(req: PetHelpRequest) -> PetHelpResponse:
+        # Domain B: grounded in the packaged help KB (law #1 — the pet never
+        # invents features; refs cite KB sections).
+        cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
+        try:
+            answer, refs = answer_app_help(req.question, get_provider(cfg))
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return PetHelpResponse(answer=answer, refs=[PetHelpRef(**r) for r in refs])
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 

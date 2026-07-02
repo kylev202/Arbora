@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tauri::State;
 
-use super::chat::{self, ChatCitation};
+use super::chat::{self, ChatCitation, LocationOut};
 use crate::sidecar::Sidecar;
 
 #[derive(Serialize)]
@@ -23,8 +23,6 @@ pub enum PetReply {
     NeedsSubject,
     /// Lesson question but the subject has no indexed material yet.
     NoMaterial,
-    /// App-help question; answered from the packaged KB from slice C onward.
-    AppHelpPending,
     /// Out of scope — the UI shows the gentle two-domains refusal.
     Refusal,
 }
@@ -32,6 +30,19 @@ pub enum PetReply {
 #[derive(Deserialize)]
 struct RouteResp {
     domain: String,
+}
+
+#[derive(Deserialize)]
+struct HelpRef {
+    section: i64,
+    title: String,
+    excerpt: String,
+}
+
+#[derive(Deserialize)]
+struct HelpResp {
+    answer: String,
+    refs: Vec<HelpRef>,
 }
 
 #[tauri::command]
@@ -76,7 +87,39 @@ pub async fn pet_message(
                 Err(e) => Err(e),
             },
         },
-        "app_help" => Ok(PetReply::AppHelpPending),
+        "app_help" => {
+            // Domain B: grounded in the packaged help KB; refs cite KB sections.
+            let resp = reqwest::Client::new()
+                .post(format!("{base}/pet/help"))
+                .header("X-Arbora-Token", sidecar.token())
+                .json(&serde_json::json!({ "question": question, "preset": preset }))
+                .send()
+                .await
+                .map_err(|e| format!("PET_FAILED: {e}"))?;
+            if resp.status().as_u16() == 503 {
+                return Err("OLLAMA_UNAVAILABLE".to_string());
+            }
+            let help: HelpResp = resp
+                .error_for_status()
+                .map_err(|e| format!("PET_FAILED: {e}"))?
+                .json()
+                .await
+                .map_err(|e| format!("PET_FAILED: {e}"))?;
+            let citations = help
+                .refs
+                .into_iter()
+                .map(|r| ChatCitation {
+                    source_id: "app-help".to_string(),
+                    source_title: format!("App guide: {}", r.title),
+                    location: LocationOut::Page { page: r.section },
+                    excerpt: r.excerpt,
+                })
+                .collect();
+            Ok(PetReply::Answer {
+                answer: help.answer,
+                citations,
+            })
+        }
         _ => Ok(PetReply::Refusal),
     }
 }

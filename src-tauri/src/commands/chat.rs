@@ -84,19 +84,20 @@ struct ChatSidecarResponse {
 
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
-enum LocationOut {
+pub(crate) enum LocationOut {
     Page { page: i64 },
     Timestamp { timestamp_ms: i64 },
 }
 
 /// A single citation returned with a chat answer. Same shape as `SourceRefOut`
-/// in content.rs so the UI can reuse `CitationChip`.
+/// in content.rs so the UI can reuse `CitationChip`. Fields are crate-visible
+/// so the pet can build KB-section citations with the same shape.
 #[derive(Serialize)]
 pub struct ChatCitation {
-    source_id: String,
-    source_title: String,
-    location: LocationOut,
-    excerpt: String,
+    pub(crate) source_id: String,
+    pub(crate) source_title: String,
+    pub(crate) location: LocationOut,
+    pub(crate) excerpt: String,
 }
 
 #[derive(Serialize)]

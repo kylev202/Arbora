@@ -22,8 +22,6 @@ function replyText(reply: PetReply): string {
       return "Pick a subject above so I can search your material for this.";
     case "no_material":
       return "That subject has no indexed material yet. Add a source and I can help.";
-    case "app_help_pending":
-      return "I'll be able to answer questions about using Arbora soon. For now, ask me about your study material.";
     case "refusal":
       return "I can only help with your study material and with using Arbora 🌱";
   }
