@@ -10,6 +10,8 @@ import "@fontsource/inter/600.css";
 import "@fontsource/be-vietnam-pro/400.css";
 import "@fontsource/be-vietnam-pro/500.css";
 import "@fontsource/be-vietnam-pro/600.css";
+// Fraunces: display serif for emotional headings only (--font-display).
+import "@fontsource/fraunces/600.css";
 
 import App from "./App";
 import { SettingsProvider } from "./settings";

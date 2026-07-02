@@ -1,7 +1,7 @@
 /* Floating pet avatar: fixed, draggable, above everything but modals. */
 .avatar {
   position: fixed;
-  z-index: 900; /* below Modal overlays (portal), above screens */
+  z-index: var(--z-pet); /* below Modal overlays (portal), above screens */
   width: 52px;
   height: 52px;
   display: flex;
@@ -10,7 +10,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: 50%;
   background: var(--color-surface);
-  color: var(--color-primary);
+  color: var(--color-pet);
   font-size: 24px;
   cursor: pointer;
   box-shadow: var(--shadow-md);
@@ -32,16 +32,16 @@
 
 .speaking {
   animation: none;
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+  color: var(--color-pet);
+  border-color: var(--color-pet);
 }
 
 /* Gentle cheer: a soft glow + one slow scale, never confetti (ADR-0007). */
 .celebrate {
-  animation: cheer 0.6s var(--ease-out, ease-out) 1;
-  border-color: var(--color-accent);
+  animation: cheer 0.6s var(--ease-growth, ease-out) 1;
+  border-color: var(--color-pet-cheer);
   color: var(--color-accent-text);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-pet-cheer) 25%, transparent);
 }
 
 @keyframes cheer {
@@ -59,7 +59,7 @@
 /* One small self-dissolving suggestion bubble (§1.2). */
 .bubble {
   position: fixed;
-  z-index: 899;
+  z-index: var(--z-bubble);
   display: flex;
   align-items: center;
   gap: var(--space-1);

@@ -77,26 +77,26 @@
   height: 28px;
   flex-shrink: 0;
   border-radius: 50%;
-  border: 2px solid var(--color-border-strong);
+  border: 2px solid var(--color-path-upcoming);
   background: var(--color-surface);
   font-size: 14px;
   z-index: 1;
 }
 
 .done .node {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--color-path-done);
+  background: var(--color-path-done);
   color: var(--color-on-primary);
 }
 
 /* Exactly one highlighted next step (§4.3). */
 .current {
   background: var(--color-surface);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-path-current);
 }
 .current .node {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-path-current);
+  color: var(--color-path-current);
 }
 
 /* Upcoming and empty are muted, never red, never locked. */

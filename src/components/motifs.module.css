@@ -1,0 +1,40 @@
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-primary);
+}
+
+/* Leaves breathe in and out of the stem — calm, ≤ tree tempo. Reduced motion
+   is neutralised globally (tokens.css) leaving a static sprout. */
+.loaderLeafLeft,
+.loaderLeafRight {
+  transform-box: fill-box;
+  animation: unfurl 2s var(--ease-growth) infinite;
+}
+.loaderLeafLeft {
+  transform-origin: 100% 100%;
+}
+.loaderLeafRight {
+  transform-origin: 0% 100%;
+  animation-delay: 1s;
+}
+
+@keyframes unfurl {
+  0%,
+  100% {
+    transform: scale(0.72);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loaderLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

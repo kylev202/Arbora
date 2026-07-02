@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.2.8",
+    "@fontsource/fraunces": "^5.2.9",
     "@fontsource/inter": "^5.2.8",
     "@phosphor-icons/react": "^2.1.10",
     "@tauri-apps/api": "^2",

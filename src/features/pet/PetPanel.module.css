@@ -1,7 +1,7 @@
 /* Compact chat panel anchored near the pet avatar. */
 .panel {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-pet);
   width: min(380px, calc(100vw - 24px));
   max-height: min(520px, calc(100vh - 96px));
   display: flex;

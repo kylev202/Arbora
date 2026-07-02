@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SproutMotif } from "./motifs";
 import styles from "./EmptyState.module.css";
 
 export type EmptyStateProps = {
@@ -9,15 +10,14 @@ export type EmptyStateProps = {
   action?: ReactNode;
 };
 
-/** Friendly empty state: icon + heading + one optional CTA. Never punishing. */
+/** Friendly empty state: icon + heading + one optional CTA. Never punishing.
+ * Defaults to the sprout motif — empty means "not grown YET" (§5.9). */
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className={styles.empty}>
-      {icon && (
-        <div className={styles.icon} aria-hidden="true">
-          {icon}
-        </div>
-      )}
+      <div className={styles.icon} aria-hidden="true">
+        {icon ?? <SproutMotif />}
+      </div>
       <h3 className={styles.title}>{title}</h3>
       {description && <p className={styles.description}>{description}</p>}
       {action && <div className={styles.action}>{action}</div>}

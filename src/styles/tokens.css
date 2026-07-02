@@ -47,6 +47,9 @@
   /* ── A2 · Typography ──────────────────────────────────────────────── */
   --font-sans: "Inter", "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  /* Display serif for EMOTIONAL headings only (greeting, subject names,
+     session complete) — warm editorial contrast to Inter. Max 3 families. */
+  --font-display: "Fraunces", "Be Vietnam Pro", Georgia, serif;
 
   --font-base: 16px; /* overridden by Settings (A5): 14/16/18/20 */
 
@@ -94,9 +97,35 @@
   /* ── A7 · Motion ──────────────────────────────────────────────────── */
   --motion-fast: 150ms;
   --motion-base: 200ms;
-  --motion-tree: 600ms;
+  --motion-grow: 400ms; /* progress fills, path nodes */
+  --motion-tree: 600ms; /* tree growth — the upper bound for any motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  /* "Growth" easing — sprouting/opening. Never bounce/elastic (calm). */
+  --ease-growth: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── A8 · Role tokens (v2 redesign): path / pet / calendar ────────── */
+  /* Learning path (ADR-0007): done = grown, current = the ONE next step,
+     upcoming = muted. Nothing is "locked" or red. */
+  --color-path-done: var(--color-accent);
+  --color-path-current: var(--color-primary);
+  --color-path-upcoming: var(--color-border-strong);
+
+  /* Pet — a creature of the same tree world (greens/earth). */
+  --color-pet: var(--color-primary);
+  --color-pet-cheer: var(--color-accent);
+
+  /* Calendar events by kind — deadline is earth gold, NEVER red/orange. */
+  --color-event-study: var(--color-primary);
+  --color-event-lecture: var(--color-info);
+  --color-event-deadline: var(--color-accent-warm);
+  --color-event-custom: var(--color-border-strong);
+
+  /* ── A9 · Semantic z-index scale ──────────────────────────────────── */
+  --z-nav: 100;
+  --z-bubble: 899; /* pet suggestion bubble, under the pet itself */
+  --z-pet: 900; /* floating pet — above screens, below modals */
+  --z-modal: 1000;
 }
 
 /* ── A6 · Dark theme ────────────────────────────────────────────────── */

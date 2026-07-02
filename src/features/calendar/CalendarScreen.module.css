@@ -238,23 +238,23 @@
 }
 
 .study {
-  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
-  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-event-study) 14%, var(--color-surface));
+  border-color: var(--color-event-study);
   color: var(--color-text);
 }
 .lecture {
-  background: color-mix(in srgb, #5a7d9a 16%, var(--color-surface));
-  border-color: #5a7d9a;
+  background: color-mix(in srgb, var(--color-event-lecture) 16%, var(--color-surface));
+  border-color: var(--color-event-lecture);
   color: var(--color-text);
 }
 .deadline {
-  background: color-mix(in srgb, var(--color-accent-warm) 20%, var(--color-surface));
-  border-color: var(--color-accent-warm);
+  background: color-mix(in srgb, var(--color-event-deadline) 20%, var(--color-surface));
+  border-color: var(--color-event-deadline);
   color: var(--color-text);
 }
 .custom {
   background: var(--color-surface-alt);
-  border-color: var(--color-border-strong);
+  border-color: var(--color-event-custom);
   color: var(--color-text);
 }
 

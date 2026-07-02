@@ -50,8 +50,16 @@ h3 {
   font-size: var(--text-lg);
 }
 
+/* Headings wrap balanced; long prose wraps pretty (no orphan words). */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
 p {
   margin: 0;
+  text-wrap: pretty;
 }
 
 a {
