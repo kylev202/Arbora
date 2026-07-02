@@ -35,6 +35,16 @@ from .jobs import JobRegistry
 from .llm.models import model_ready, pull_model, warmup_model
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
 from .pet import answer_app_help, route_question
+from .planner import (
+    BusyIn,
+    DeadlineIn,
+    LectureIn,
+    MissedIn,
+    PlanOut,
+    SubjectIn,
+    WindowIn,
+    plan_week,
+)
 from .outline import extract_outline, syllabus_to_text
 from .schemas.output import CardOut, OutlineExtraction, SourceRef
 from .srs import compute_next
@@ -176,6 +186,18 @@ class PetHelpRef(BaseModel):
 class PetHelpResponse(BaseModel):
     answer: str
     refs: list[PetHelpRef]
+
+
+class SchedulePlanRequest(BaseModel):
+    week_start: str  # ISO date (Monday)
+    windows: list[WindowIn] = []
+    subjects: list[SubjectIn] = []
+    deadlines: list[DeadlineIn] = []
+    lectures: list[LectureIn] = []
+    busy: list[BusyIn] = []
+    missed: list[MissedIn] = []
+    goal: str | None = None
+    session_minutes: int = 50
 
 
 class ParseOutlineRequest(BaseModel):
@@ -444,6 +466,28 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return PetHelpResponse(answer=answer, refs=[PetHelpRef(**r) for r in refs])
+
+    # ── Week planner (rule-based; proposals only — law #2) ─────────────────
+
+    @app.post("/schedule-plan", response_model=PlanOut, dependencies=guarded)
+    def schedule_plan(req: SchedulePlanRequest) -> PlanOut:
+        from datetime import date
+
+        try:
+            week_start = date.fromisoformat(req.week_start)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"bad week_start: {exc}") from exc
+        return plan_week(
+            week_start=week_start,
+            windows=req.windows,
+            subjects=req.subjects,
+            deadlines=req.deadlines,
+            lectures=req.lectures,
+            busy=req.busy,
+            missed=req.missed,
+            goal=req.goal,
+            session_minutes=req.session_minutes,
+        )
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 

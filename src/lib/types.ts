@@ -303,7 +303,34 @@ export type PetReply =
   | { kind: "answer"; answer: string; citations: SourceRef[] }
   | { kind: "needs_subject" }
   | { kind: "no_material" }
+  | { kind: "schedule_request" }
   | { kind: "refusal" };
+
+// ── AI week scheduler (redesign slice E) ──────────────────────────────────
+/** One proposed study session. Pure proposal — becomes an event + linked todo
+ * only via acceptSchedule (law #2). `reason` is a calm pre-built phrase. */
+export type ProposedSession = {
+  subject_id: string | null;
+  title: string;
+  start_at: string;
+  end_at: string;
+  kind: string;
+  reason: string;
+};
+
+/** A neutral "move this missed session here" proposal. */
+export type ProposedMove = {
+  event_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  reason: string;
+};
+
+export type SchedulePlan = {
+  sessions: ProposedSession[];
+  moves: ProposedMove[];
+};
 
 // ── Mermaid diagrams ──────────────────────────────────────────────────────
 export type DiagramResponse = {

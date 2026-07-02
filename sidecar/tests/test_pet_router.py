@@ -26,7 +26,7 @@ class _FakeProvider(LLMProvider):
 
 
 def test_route_classifies_each_domain():
-    for domain in ("lesson", "app_help", "out_of_scope"):
+    for domain in ("lesson", "app_help", "schedule", "out_of_scope"):
         provider = _FakeProvider([{"domain": domain}])
         assert route_question("q", provider) == domain
 

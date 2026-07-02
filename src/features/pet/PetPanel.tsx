@@ -4,13 +4,16 @@ import { ArrowRight, Minus } from "@phosphor-icons/react";
 import { CitationChip, Disclaimer, IconButton } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
-import type { PetReply, SourceRef } from "../../lib/types";
+import type { PetReply, SchedulePlan, SourceRef } from "../../lib/types";
+import { startOfWeek, toNaive } from "../calendar/dates";
+import { ScheduleProposalCard } from "../calendar/ScheduleProposalCard";
 import type { PetState } from "./Pet";
 import styles from "./PetPanel.module.css";
 
 type Turn =
   | { status: "loading"; question: string }
   | { status: "done"; question: string; text: string; citations: SourceRef[] }
+  | { status: "plan"; question: string; intro: string; plan: SchedulePlan }
   | { status: "error"; question: string; error: string };
 
 /** Calm copy for every non-answer reply kind (refusals are gentle, law #1). */
@@ -22,6 +25,9 @@ function replyText(reply: PetReply): string {
       return "Pick a subject above so I can search your material for this.";
     case "no_material":
       return "That subject has no indexed material yet. Add a source and I can help.";
+    case "schedule_request":
+      // Normally intercepted before this; kept for exhaustiveness.
+      return "Let me sketch a plan for your week…";
     case "refusal":
       return "I can only help with your study material and with using Arbora 🌱";
   }
@@ -87,16 +93,42 @@ export function PetPanel({
 
     try {
       const reply = await api.petMessage(q, subjectId);
-      setTurns((prev) => {
-        const next = [...prev];
-        next[idx] = {
-          status: "done",
-          question: q,
-          text: replyText(reply),
-          citations: reply.kind === "answer" ? reply.citations : [],
-        };
-        return next;
-      });
+      if (reply.kind === "schedule_request") {
+        // The pet announces what it did BEFORE showing the confirm cards (§1.4);
+        // nothing touches the calendar until the user accepts (law #2).
+        const weekStart = toNaive(startOfWeek(new Date())).split("T")[0];
+        const plan = await api.proposeSchedule(weekStart);
+        const count = plan.sessions.length + plan.moves.length;
+        setTurns((prev) => {
+          const next = [...prev];
+          next[idx] =
+            count === 0
+              ? {
+                  status: "done",
+                  question: q,
+                  text: "I couldn't find free study windows this week. Set your weekly windows in Settings and I'll plan around them 🌱",
+                  citations: [],
+                }
+              : {
+                  status: "plan",
+                  question: q,
+                  intro: `I've sketched ${count} suggestion${count === 1 ? "" : "s"} for this week from your free windows 🌱 Want to add them?`,
+                  plan,
+                };
+          return next;
+        });
+      } else {
+        setTurns((prev) => {
+          const next = [...prev];
+          next[idx] = {
+            status: "done",
+            question: q,
+            text: replyText(reply),
+            citations: reply.kind === "answer" ? reply.citations : [],
+          };
+          return next;
+        });
+      }
       onStateChange("speaking");
       setTimeout(() => onStateChange("idle"), 2000);
     } catch (e) {
@@ -110,6 +142,50 @@ export function PetPanel({
       setBusy(false);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }
+  }
+
+  type PlanPick = { session?: number; move?: number; times?: { start_at: string; end_at: string } };
+
+  /** Shrink a plan turn after one card is handled; when empty, the pet
+   * confirms out loud ("Added!" behaviour, §1.4). */
+  function shrinkPlan(turnIndex: number, pick: PlanPick, accepted: boolean) {
+    setTurns((prev) => {
+      const next = [...prev];
+      const turn = next[turnIndex];
+      if (turn.status !== "plan") return prev;
+      const plan = {
+        sessions: turn.plan.sessions.filter((_, j) => j !== pick.session),
+        moves: turn.plan.moves.filter((_, j) => j !== pick.move),
+      };
+      if (plan.sessions.length + plan.moves.length === 0) {
+        next[turnIndex] = {
+          status: "done",
+          question: turn.question,
+          text: accepted ? "Added to your calendar 🌱" : "Okay, leaving those out.",
+          citations: [],
+        };
+      } else {
+        next[turnIndex] = { ...turn, plan };
+      }
+      return next;
+    });
+  }
+
+  async function acceptFromTurn(turnIndex: number, pick: PlanPick) {
+    const turn = turns[turnIndex];
+    if (turn.status !== "plan") return;
+    if (pick.session !== undefined) {
+      const s = { ...turn.plan.sessions[pick.session], ...pick.times };
+      await api.acceptSchedule([s], []);
+    } else if (pick.move !== undefined) {
+      const m = { ...turn.plan.moves[pick.move], ...pick.times };
+      await api.acceptSchedule([], [m]);
+    }
+    shrinkPlan(turnIndex, pick, true);
+  }
+
+  function dismissFromTurn(turnIndex: number, pick: PlanPick) {
+    shrinkPlan(turnIndex, pick, false);
   }
 
   return (
@@ -187,6 +263,30 @@ export function PetPanel({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {turn.status === "plan" && (
+              <div className={styles.answer}>
+                <p className={styles.answerText}>{turn.intro}</p>
+                <div className={styles.planCards}>
+                  {turn.plan.moves.map((m, j) => (
+                    <ScheduleProposalCard
+                      key={`m-${m.event_id}`}
+                      proposal={{ ...m, isMove: true }}
+                      onAccept={(times) => void acceptFromTurn(i, { move: j, times })}
+                      onDismiss={() => dismissFromTurn(i, { move: j })}
+                    />
+                  ))}
+                  {turn.plan.sessions.map((s, j) => (
+                    <ScheduleProposalCard
+                      key={`s-${j}-${s.start_at}`}
+                      proposal={s}
+                      onAccept={(times) => void acceptFromTurn(i, { session: j, times })}
+                      onDismiss={() => dismissFromTurn(i, { session: j })}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>

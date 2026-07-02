@@ -19,6 +19,7 @@ pub mod plan;
 pub mod priority;
 pub mod profile;
 pub mod review;
+pub mod scheduler;
 pub mod settings;
 pub mod sources;
 pub mod study;

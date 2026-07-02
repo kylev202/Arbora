@@ -33,6 +33,9 @@ import type {
   ParsedWeek,
   PetReply,
   PriorityItem,
+  ProposedMove,
+  ProposedSession,
+  SchedulePlan,
   QuizItem,
   ReviewItem,
   Settings,
@@ -601,6 +604,24 @@ export function setTodoDone(id: string, done: boolean): Promise<Todo> {
 
 export function deleteTodo(id: string): Promise<void> {
   return invoke<void>("delete_todo", { id });
+}
+
+// ── AI week scheduler (redesign slice E) ───────────────────────────────────
+
+/** Ask the rule-based planner for a week proposal. Writes nothing — pair with
+ * `acceptSchedule` after the user reviews (law #2). `weekStart` = ISO date of
+ * the Monday to plan. Rejects with `SIDECAR_UNAVAILABLE`. */
+export function proposeSchedule(weekStart: string): Promise<SchedulePlan> {
+  return invoke<SchedulePlan>("propose_schedule", { weekStart });
+}
+
+/** Persist the approved parts of a proposal: sessions become `origin:"ai"`
+ * events each with a linked todo; moves reschedule the missed event. */
+export function acceptSchedule(
+  sessions: ProposedSession[],
+  moves: ProposedMove[],
+): Promise<void> {
+  return invoke<void>("accept_schedule", { sessions, moves });
 }
 
 // ── Pet companion + Ollama lifecycle (redesign slice B) ────────────────────

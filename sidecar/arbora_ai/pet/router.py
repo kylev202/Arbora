@@ -1,9 +1,11 @@
 """Pet domain router — classify a message before answering it (law #1 guard).
 
-The pet has exactly two valid domains:
+The pet serves exactly these intents:
   * ``lesson``   — questions about the user's own study material (RAG /chat).
   * ``app_help`` — questions about how to use Arbora (grounded in the packaged
     help KB).
+  * ``schedule`` — asking the pet to plan/rearrange study sessions or handle
+    deadlines (routed to the rule-based week planner, proposals only).
 Everything else is ``out_of_scope`` and gets a gentle refusal in the UI —
 the pet never freewheels on general knowledge.
 """
@@ -18,7 +20,7 @@ from ..llm.provider import LLMProvider, LLMSchemaError
 
 MAX_RETRIES = 2
 
-Domain = Literal["lesson", "app_help", "out_of_scope"]
+Domain = Literal["lesson", "app_help", "schedule", "out_of_scope"]
 
 
 class RouteGen(BaseModel):
@@ -34,6 +36,8 @@ into exactly one domain:
   or anything they would look up in their own lecture notes/readings.
 - "app_help": asking how to use the Arbora app itself (its buttons, screens,
   features, settings, importing files, reviewing cards, calendar, and so on).
+- "schedule": asking to plan or arrange study sessions, fill their week,
+  reschedule a missed session, or set up deadline reminders.
 - "out_of_scope": anything else (weather, news, general chit-chat, coding help,
   personal advice, other apps).
 

@@ -109,6 +109,12 @@
   gap: var(--space-2);
 }
 
+.planCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* Neutral error — no red (a11y-adhd). */
 .error {
   color: var(--color-warning);

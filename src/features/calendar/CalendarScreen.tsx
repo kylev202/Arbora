@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Check, Sparkle } from "@phosphor-icons/react";
 import { Button } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { api } from "../../lib/api";
-import type { CalendarEvent } from "../../lib/types";
+import type { CalendarEvent, SchedulePlan } from "../../lib/types";
+import { ScheduleProposalCard } from "./ScheduleProposalCard";
 import {
   addDays,
   addMinutes,
@@ -43,6 +44,10 @@ export function CalendarScreen() {
   const [anchor, setAnchor] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [modal, setModal] = useState<ModalState>(null);
+  const [plan, setPlan] = useState<SchedulePlan | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [planNote, setPlanNote] = useState("");
+  const [refreshTick, setRefreshTick] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     event: CalendarEvent;
@@ -65,7 +70,55 @@ export function CalendarScreen() {
       .then(setEvents)
       .catch(() => setEvents([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, anchor.getTime()]);
+  }, [view, anchor.getTime(), refreshTick]);
+
+  // ── AI week planner (proposals only until accepted — law #2) ─────────────
+
+  async function requestPlan() {
+    setPlanning(true);
+    setPlanNote("");
+    try {
+      const weekStart = toNaive(startOfWeek(anchor)).split("T")[0];
+      const result = await api.proposeSchedule(weekStart);
+      setPlan(result);
+      if (result.sessions.length === 0 && result.moves.length === 0) {
+        setPlanNote(
+          "No suggestions for this week. Set your weekly study windows in Settings so the planner knows when you're free.",
+        );
+      }
+    } catch (e) {
+      setPlanNote(
+        String(e).includes("SIDECAR_UNAVAILABLE")
+          ? "The AI is still getting ready. Try again in a moment."
+          : "Couldn't build a plan right now.",
+      );
+    } finally {
+      setPlanning(false);
+    }
+  }
+
+  async function acceptSession(index: number, times: { start_at: string; end_at: string }) {
+    if (!plan) return;
+    const session = { ...plan.sessions[index], ...times };
+    await api.acceptSchedule([session], []);
+    setPlan({ ...plan, sessions: plan.sessions.filter((_, i) => i !== index) });
+    setRefreshTick((n) => n + 1);
+  }
+
+  async function acceptMove(index: number, times: { start_at: string; end_at: string }) {
+    if (!plan) return;
+    const move = { ...plan.moves[index], ...times };
+    await api.acceptSchedule([], [move]);
+    setPlan({ ...plan, moves: plan.moves.filter((_, i) => i !== index) });
+    setRefreshTick((n) => n + 1);
+  }
+
+  async function acceptAll() {
+    if (!plan) return;
+    await api.acceptSchedule(plan.sessions, plan.moves);
+    setPlan(null);
+    setRefreshTick((n) => n + 1);
+  }
 
   function patchEvent(saved: CalendarEvent) {
     setEvents((prev) => {
@@ -152,6 +205,15 @@ export function CalendarScreen() {
         <div className={styles.header}>
           <h1 className={styles.h1}>Calendar</h1>
           <div className={styles.controls}>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Sparkle />}
+              onClick={() => void requestPlan()}
+              disabled={planning}
+            >
+              {planning ? "Planning…" : "AI plan this week"}
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
               Today
             </Button>
@@ -181,6 +243,45 @@ export function CalendarScreen() {
             </div>
           </div>
         </div>
+
+        {planNote && <p className={styles.planNote}>{planNote}</p>}
+        {plan && plan.sessions.length + plan.moves.length > 0 && (
+          <section className={styles.proposals} aria-label="AI schedule proposals">
+            <div className={styles.proposalsHeader}>
+              <span className={styles.proposalsTitle}>
+                Suggested sessions — nothing is saved until you accept.
+              </span>
+              <div className={styles.proposalsActions}>
+                <Button size="sm" variant="secondary" onClick={() => void acceptAll()}>
+                  Accept all
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setPlan(null)}>
+                  Dismiss all
+                </Button>
+              </div>
+            </div>
+            <div className={styles.proposalsGrid}>
+              {plan.moves.map((m, i) => (
+                <ScheduleProposalCard
+                  key={`move-${m.event_id}`}
+                  proposal={{ ...m, isMove: true }}
+                  onAccept={(times) => void acceptMove(i, times)}
+                  onDismiss={() => setPlan({ ...plan, moves: plan.moves.filter((_, j) => j !== i) })}
+                />
+              ))}
+              {plan.sessions.map((s, i) => (
+                <ScheduleProposalCard
+                  key={`s-${i}-${s.start_at}`}
+                  proposal={s}
+                  onAccept={(times) => void acceptSession(i, times)}
+                  onDismiss={() =>
+                    setPlan({ ...plan, sessions: plan.sessions.filter((_, j) => j !== i) })
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {view === "week" ? (
           <div className={styles.weekWrap}>

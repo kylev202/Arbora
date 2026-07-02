@@ -102,6 +102,8 @@ pub fn run() {
             commands::todos::create_todo,
             commands::todos::set_todo_done,
             commands::todos::delete_todo,
+            commands::scheduler::propose_schedule,
+            commands::scheduler::accept_schedule,
             commands::export::export_apkg,
             commands::chat::chat_message,
             commands::pet::pet_message,

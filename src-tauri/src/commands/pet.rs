@@ -23,6 +23,9 @@ pub enum PetReply {
     NeedsSubject,
     /// Lesson question but the subject has no indexed material yet.
     NoMaterial,
+    /// A scheduling ask — the UI runs the week planner and shows proposal
+    /// cards (the single review-gated scheduler path, law #2).
+    ScheduleRequest,
     /// Out of scope — the UI shows the gentle two-domains refusal.
     Refusal,
 }
@@ -87,6 +90,7 @@ pub async fn pet_message(
                 Err(e) => Err(e),
             },
         },
+        "schedule" => Ok(PetReply::ScheduleRequest),
         "app_help" => {
             // Domain B: grounded in the packaged help KB; refs cite KB sections.
             let resp = reqwest::Client::new()

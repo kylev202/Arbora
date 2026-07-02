@@ -103,6 +103,10 @@ export const api = {
   setTodoDone: ipc.setTodoDone,
   deleteTodo: ipc.deleteTodo,
 
+  // ── Redesign slice E — AI week scheduler (proposals via review) ──
+  proposeSchedule: ipc.proposeSchedule,
+  acceptSchedule: ipc.acceptSchedule,
+
   // ── Phase 6 — Knowledge map ──
   getKnowledgeMap: ipc.getKnowledgeMap,
 
