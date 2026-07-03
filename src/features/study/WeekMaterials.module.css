@@ -1,0 +1,84 @@
+.materials {
+  margin-top: var(--space-4);
+}
+
+.panel {
+  padding-top: var(--space-4);
+}
+
+.skeleton {
+  height: 160px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.emptyLink {
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* ── Flashcards ── */
+.flashHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.flashMeta {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.cardList > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.cardItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.cardItem:hover {
+  background: var(--color-surface-alt);
+}
+
+.cardFront {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardBack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.cardExplain {
+  color: var(--color-text-muted);
+}

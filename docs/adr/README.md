@@ -29,3 +29,4 @@ between layers. Routine work does not need one.
 | [0005](./0005-tree-from-card-schedule.md) | Dashboard tree derives mastery from card_schedule | Accepted |
 | [0006](./0006-semester-planning-and-priority.md) | Semester planning extends the subject; priority is computed | Accepted |
 | [0007](./0007-disable-webview-drag-drop.md) | Disable WebView2 drag-drop so the file picker can't crash | Accepted |
+| [0008](./0008-three-page-subject-view.md) | Three-page subject view; in-app flashcards replace Anki export; ephemeral cited tests | Accepted |

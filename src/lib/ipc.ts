@@ -47,6 +47,9 @@ import type {
   SubjectDashboard,
   SubjectPath,
   SystemInfo,
+  TestGrade,
+  TestItem,
+  TestKind,
   Todo,
   UserProfile,
   Week,
@@ -278,7 +281,7 @@ export function submitCardReview(
   return invoke<{ due: string; state: string }>("submit_card_review", { cardId, rating });
 }
 
-/** Counts and streak for the StudyTab widget. */
+/** Counts and streak for the Study page widgets. */
 export function getStudyStats(subjectId: string): Promise<StudyStats> {
   return invoke<StudyStats>("get_study_stats", { subjectId });
 }
@@ -530,14 +533,42 @@ export function onModelError(handler: (e: ModelError) => void): Promise<Unlisten
   return listen<ModelError>("model:error", (e) => handler(e.payload));
 }
 
-// ── Anki export (Slice 4) ──────────────────────────────────────────────────
+// ── Practice tests (subject view redesign) ─────────────────────────────────
 
-export type ExportResult = { path: string; card_count: number };
+/** Start grounded test generation from a subject's (optionally week-scoped)
+ * material. Returns the job id; progress arrives as `test:*` events and the
+ * finished items ride the `test:done` payload. Items are ephemeral — never
+ * persisted. Rejects with `NO_CHUNKS` or `SIDECAR_UNAVAILABLE`. */
+export function generateTest(
+  subjectId: string,
+  weekId: string | null,
+  types: TestKind[],
+): Promise<{ job_id: string }> {
+  return invoke<{ job_id: string }>("generate_test", { subjectId, weekId, types });
+}
 
-/** Export a subject's approved (reviewed) cards to an `.apkg` at `outPath`.
- *  Rejects with `NO_CARDS_TO_EXPORT` if nothing is approved yet. */
-export function exportApkg(subjectId: string, outPath: string): Promise<ExportResult> {
-  return invoke<ExportResult>("export_apkg", { subjectId, outPath });
+export type TestProgress = { job_id: string; progress: number; items_generated: number | null };
+export type TestDone = { job_id: string; items: TestItem[] };
+export type TestError = { job_id: string; error: string };
+
+export function onTestProgress(handler: (e: TestProgress) => void): Promise<UnlistenFn> {
+  return listen<TestProgress>("test:progress", (e) => handler(e.payload));
+}
+export function onTestDone(handler: (e: TestDone) => void): Promise<UnlistenFn> {
+  return listen<TestDone>("test:done", (e) => handler(e.payload));
+}
+export function onTestError(handler: (e: TestError) => void): Promise<UnlistenFn> {
+  return listen<TestError>("test:error", (e) => handler(e.payload));
+}
+
+/** Grade a free-text answer (short answer / Feynman) against the item's own
+ * grounded expected answer. Feedback is ephemeral. */
+export function gradeTestAnswer(
+  question: string,
+  expected: string,
+  userAnswer: string,
+): Promise<TestGrade> {
+  return invoke<TestGrade>("grade_test_answer", { question, expected, userAnswer });
 }
 
 /** Ask a question grounded in the subject's indexed sources (RAG Q&A).

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { CalendarBlank, Exam, FileText, Plus, Sparkle, X } from "@phosphor-icons/react";
 import { Button, EmptyState, IconButton, Input, Modal, RadioGroup, Tag } from "../../components";
 import { useAsync } from "../../lib/useAsync";
@@ -16,10 +15,13 @@ const DEADLINE_TYPES: { value: DeadlineType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-/** S-07 — Plan: deadlines + grade book. Day counts are neutral, never red. */
-export function PlanScreen() {
-  const { subjectId = "" } = useParams();
-  // Bump to refetch all three after a create/delete (useAsync re-runs on deps).
+/**
+ * Deadlines panel (Plan page): create, delete, and work with deadlines —
+ * grounded study briefs per assignment — plus the grade book. Day counts are
+ * neutral, never red.
+ */
+export function DeadlinesPanel({ subjectId }: { subjectId: string }) {
+  // Bump to refetch all after a create/delete (useAsync re-runs on deps).
   const [reload, setReload] = useState(0);
   const deadlines = useAsync(() => api.listDeadlines(subjectId), [subjectId, reload]);
   const grades = useAsync(() => api.listGrades(subjectId), [subjectId, reload]);
@@ -51,11 +53,7 @@ export function PlanScreen() {
   const deadlineList = deadlines.data ?? [];
 
   return (
-    <div className="page">
-      <div className="screen-header">
-        <h1>Plan</h1>
-      </div>
-
+    <>
       {/* ── Deadlines ── */}
       <section className={styles.section}>
         <div className={styles.sectionHead}>
@@ -137,7 +135,7 @@ export function PlanScreen() {
         weeks={weeks}
         brief={briefFor ? (briefByDeadline.get(briefFor.id) ?? null) : null}
       />
-    </div>
+    </>
   );
 }
 

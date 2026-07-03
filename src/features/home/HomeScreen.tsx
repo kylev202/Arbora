@@ -79,7 +79,7 @@ export function HomeScreen() {
     setSubjects((prev) => [...prev, created]);
     setCreating(false);
     // Land on the timeline: import a syllabus or lay out the weeks (§4.1).
-    navigate(`/subject/${created.id}/timeline`);
+    navigate(`/subject/${created.id}/overview`);
   }
 
   const userName = profile.status === "loaded" ? profile.data.name : null;

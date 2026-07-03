@@ -1,0 +1,237 @@
+.skeleton {
+  height: 320px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+
+.emptyLink {
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+.dueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── This week's session ── */
+.session {
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.sessionHead {
+  margin-bottom: var(--space-4);
+}
+
+.sessionText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sessionTitle {
+  font-size: var(--text-lg);
+}
+
+.sessionSummary {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+  max-width: 65ch;
+}
+
+.sessionEmpty {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.sessionEmpty a {
+  color: var(--color-primary);
+}
+
+.milestones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.milestone {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.milestoneIcon {
+  display: inline-flex;
+  flex: none;
+  font-size: 0.9rem;
+  translate: 0 1px;
+}
+.done .milestoneIcon {
+  color: var(--color-accent);
+}
+.learning .milestoneIcon {
+  color: var(--color-accent-warm);
+}
+.new .milestoneIcon {
+  color: var(--color-border-strong);
+}
+.done .milestoneText {
+  color: var(--color-text-muted);
+}
+
+.milestoneMore {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.sessionActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.checkHint {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Self-paced study ── */
+.selfPaced {
+  margin-bottom: var(--space-8);
+}
+
+.selfPacedHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--text-lg);
+}
+
+.mapLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+}
+
+.selfPacedHint {
+  margin: var(--space-1) 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.weekChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.weekChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.weekChip:hover {
+  border-color: var(--color-text-muted);
+}
+
+.weekChipActive,
+.weekChipActive:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.weekChipTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+.weekChipMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.selectedWeekTitle {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+/* ── Notes disclosure ── */
+.notes {
+  margin-bottom: var(--space-8);
+}
+
+.notesSummary {
+  cursor: pointer;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-2) 0;
+}
+
+.notesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.noteContent {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  white-space: pre-wrap;
+}
+
+.noteCitations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

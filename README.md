@@ -36,7 +36,7 @@ study brief carries a citation back to a page or timestamp. Nothing leaves your 
 - Priority queue: surfaces which weeks need attention based on deadline proximity and unstudied volume
 - Syllabus import: upload a PDF/PPTX/TXT and AI extracts a week-by-week outline for you to confirm
 - Assignment study briefs: grounded, cited study points per deadline — reviewed before use
-- Export to Anki (`.apkg`)
+- Practice tests in five styles — multiple choice, short answer, connect boxes, rearrange, Feynman — grounded and cited, with AI grading for free-text answers
 - Three AI presets: 🌱 Qwen3 4B (low RAM) · 🌿 8B (default) · 🌳 14B (high quality)
 
 ## Architecture

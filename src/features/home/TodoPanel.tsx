@@ -80,7 +80,7 @@ export function TodoPanel({
       label: "Add study material to a subject",
       done: hasSources === true,
       go: () =>
-        subjects.length > 0 ? navigate(`/subject/${subjects[0].id}/sources`) : onCreateSubject(),
+        subjects.length > 0 ? navigate(`/subject/${subjects[0].id}/overview`) : onCreateSubject(),
     },
   ];
   const setupDone = setup.every((s) => s.done);

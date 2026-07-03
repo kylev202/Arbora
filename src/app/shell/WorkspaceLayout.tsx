@@ -4,26 +4,21 @@ import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { TopBar } from "./TopBar";
 import { Breadcrumb, type Crumb } from "./Breadcrumb";
-import { Sidebar } from "./Sidebar";
+import { SubjectNav } from "./SubjectNav";
 import styles from "./WorkspaceLayout.module.css";
 
 const SECTION_LABELS: Record<string, string> = {
-  timeline: "Timeline",
-  sources: "Sources",
-  content: "Content",
+  overview: "Overview",
+  plan: "Plan",
   study: "Study",
   review: "Review",
-  plan: "Plan",
-  dashboard: "Dashboard",
-  ask: "Ask",
   map: "Map",
-  diagrams: "Diagrams",
 };
 
 /**
- * Frame for everything under /subject/:subjectId — top bar + breadcrumb +
- * section sidebar + the active tab via <Outlet>. Focus mode (Settings) drops
- * the sidebar so the user sees only the current task.
+ * Frame for everything under /subject/:subjectId — top bar + breadcrumb + the
+ * subject's three pages as a horizontal nav + the active page via <Outlet>.
+ * Focus mode (Settings) drops the nav so the user sees only the current task.
  */
 export function WorkspaceLayout() {
   const { subjectId = "" } = useParams();
@@ -35,12 +30,12 @@ export function WorkspaceLayout() {
   const reviewQueue = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
 
   const subjectName = subject.data?.name ?? "…";
-  const section = location.pathname.split("/")[3] ?? "timeline";
-  const sectionLabel = SECTION_LABELS[section] ?? "Timeline";
+  const section = location.pathname.split("/")[3] ?? "overview";
+  const sectionLabel = SECTION_LABELS[section] ?? "Overview";
 
   const crumbs: Crumb[] = [
     { label: "Home", to: "/" },
-    { label: subjectName, to: `/subject/${subjectId}/timeline` },
+    { label: subjectName, to: `/subject/${subjectId}/overview` },
     { label: sectionLabel },
   ];
 
@@ -52,12 +47,10 @@ export function WorkspaceLayout() {
   return (
     <div className={styles.shell}>
       <TopBar breadcrumb={<Breadcrumb crumbs={crumbs} />} />
-      <div className={styles.body}>
-        {!focusMode && <Sidebar subjectId={subjectId} badges={badges} />}
-        <main className={styles.content}>
-          <Outlet />
-        </main>
-      </div>
+      {!focusMode && <SubjectNav subjectId={subjectId} badges={badges} />}
+      <main className={styles.content}>
+        <Outlet />
+      </main>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
 import { ArrowRight, Shapes } from "@phosphor-icons/react";
 import { CitationChip, EmptyState, IconButton, Input, MermaidDiagram } from "../../components";
 import { api } from "../../lib/api";
@@ -20,11 +19,20 @@ function errorMessage(raw: string): string {
   return "Couldn't generate a diagram. Make sure Ollama is running and try again.";
 }
 
-/** S-Diagrams — AI generates a Mermaid diagram from indexed sources. */
-export function DiagramsScreen() {
-  const { subjectId = "" } = useParams();
+/**
+ * AI-generated Mermaid diagram from indexed sources, embedded in the Study
+ * page's week materials. `initialTopic` pre-fills the week's topic so one
+ * click visualises the week.
+ */
+export function DiagramPanel({
+  subjectId,
+  initialTopic = "",
+}: {
+  subjectId: string;
+  initialTopic?: string;
+}) {
   const [state, setState] = useState<DiagramState>({ status: "idle" });
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialTopic);
 
   async function submit() {
     const topic = input.trim();
@@ -70,8 +78,8 @@ export function DiagramsScreen() {
         {state.status === "idle" && (
           <EmptyState
             icon={<Shapes />}
-            title="Visualise your notes"
-            description="Type a topic above to generate a concept diagram from your indexed sources."
+            title="Visualise this week"
+            description="Generate a complete flowchart of a topic, drawn only from your indexed sources."
           />
         )}
 

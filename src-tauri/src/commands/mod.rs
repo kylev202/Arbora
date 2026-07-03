@@ -4,12 +4,12 @@
 //! cross-cutting dev/liveness pings. The single typed seam on the UI side is
 //! `src/lib/ipc.ts` — keep the two in sync.
 
+pub mod assess;
 pub mod chat;
 pub mod content;
 pub mod dashboard;
 pub mod diagram;
 pub mod events;
-pub mod export;
 pub mod generate;
 pub mod map;
 pub mod model;

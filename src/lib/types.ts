@@ -375,6 +375,33 @@ export type DiagramResponse = {
   citations: SourceRef[];
 };
 
+// ── Practice tests (subject view redesign) ───────────────────────────────
+/** Test items are ephemeral and cited — generated for one session, never
+ * persisted (chat/diagram precedent; law #2 covers stored deck items). */
+export type TestKind = "multiple_choice" | "short_answer" | "matching" | "ordering" | "feynman";
+
+export type MatchPair = { left: string; right: string };
+
+export type TestItem =
+  | {
+      kind: "multiple_choice";
+      question: string;
+      options: string[];
+      answer_index: number;
+      explanation: string;
+      source_ref: SourceRef;
+    }
+  | { kind: "short_answer"; question: string; expected_answer: string; source_ref: SourceRef }
+  | { kind: "matching"; instruction: string; pairs: MatchPair[]; source_ref: SourceRef }
+  | { kind: "ordering"; instruction: string; steps: string[]; source_ref: SourceRef }
+  | { kind: "feynman"; concept: string; key_points: string[]; source_ref: SourceRef };
+
+/** Structured grade of a free-text answer (short answer / Feynman). */
+export type TestGrade = {
+  verdict: "correct" | "partial" | "incorrect";
+  feedback: string;
+};
+
 // ── Knowledge map ─────────────────────────────────────────────────────────
 export type ConceptMastery = "mastered" | "learning" | "unstarted";
 

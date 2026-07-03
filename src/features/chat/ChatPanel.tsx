@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useParams } from "react-router-dom";
 import { ArrowRight, Brain } from "@phosphor-icons/react";
 import { CitationChip, Disclaimer, EmptyState } from "../../components";
 import { api } from "../../lib/api";
@@ -19,9 +18,12 @@ function errorMessage(raw: string): string {
   return "Couldn't get an answer. Make sure Ollama is running and try again.";
 }
 
-/** S-Ask — RAG Q&A grounded in the subject's indexed sources. */
-export function ChatScreen() {
-  const { subjectId = "" } = useParams();
+/**
+ * RAG Q&A grounded in the subject's indexed sources, embedded in the Study
+ * page's week materials. Specialised per-subject tutors are planned; for now
+ * every question goes to the same grounded chat.
+ */
+export function ChatPanel({ subjectId }: { subjectId: string }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,10 +59,6 @@ export function ChatScreen() {
 
   return (
     <div className={styles.screen}>
-      <div className="screen-header">
-        <h1>Ask</h1>
-      </div>
-
       <Disclaimer>
         Answers are generated from your sources only. Always verify important details.
       </Disclaimer>

@@ -1,0 +1,337 @@
+/* ── Setup ── */
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.setupIntro {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  max-width: 65ch;
+}
+
+.kindList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.kindDivider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.kindRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.kindHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.setupActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ── Generating ── */
+.generating {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-6);
+  padding: var(--space-8) 0;
+}
+
+/* ── Running ── */
+.progressLine {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.prompt {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+}
+.prompt svg {
+  translate: 0 2px;
+  color: var(--color-text-muted);
+}
+
+.itemActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.nextRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
+/* Answer states stay calm: green for correct, warm gold for revisit — no red. */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.option {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  text-align: left;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.option:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.option:disabled {
+  cursor: default;
+}
+
+.optionCorrect {
+  border-color: var(--color-accent);
+  background: var(--color-primary-soft);
+}
+
+.optionRevisit {
+  border-color: var(--color-accent-warm);
+}
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.explanation {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.expected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expectedLabel {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.expectedText {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  white-space: pre-line;
+}
+
+.gradeError {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Matching ── */
+.matchHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.matchGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.matchColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.matchBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.matchBox:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.matchBox:disabled {
+  cursor: default;
+}
+
+.matchActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.matchUsed {
+  opacity: 0.55;
+}
+
+.matchPick {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+}
+
+.correctionList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+/* ── Ordering ── */
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.orderStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.orderStep::before {
+  counter-increment: step;
+  content: counter(step);
+  flex: none;
+  width: 1.4rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.orderText {
+  flex: 1;
+  min-width: 0;
+}
+
+.orderControls {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.orderBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.orderBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+.orderBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Results ── */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.resultsTitle {
+  font-size: var(--text-xl);
+}
+
+.resultsCounts {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.resultsItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.resultsItem + .resultsItem {
+  border-top: 1px solid var(--color-border);
+}
+
+.resultsPrompt {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+@media (max-width: 600px) {
+  .matchGrid {
+    grid-template-columns: 1fr;
+  }
+}

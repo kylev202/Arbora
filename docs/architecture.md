@@ -40,7 +40,7 @@ The orchestrator and the only layer the OS trusts with the disk:
 Every byte of AI work, behind a FastAPI loopback server
 ([`arbora_ai/server.py`](../sidecar/arbora_ai/server.py)): ingest & OCR, Whisper
 transcription, chunking + embeddings + FAISS retrieval (`rag/`), the LLM provider
-abstraction (`llm/`, Ollama local ↔ BYO key), FSRS scheduling, and `.apkg` export.
+abstraction (`llm/`, Ollama local ↔ BYO key), FSRS scheduling, and grounded practice-test generation (`assess/`).
 
 ## How the layers talk
 

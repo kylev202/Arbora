@@ -101,6 +101,100 @@ class BriefPointGen(BaseModel):
     excerpt: str = Field(min_length=1, max_length=200)
 
 
+# ── Practice-test items (subject view redesign) ─────────────────────────────
+# On-demand practice tests are ephemeral and cited, like /chat and /diagram —
+# they are shown once, never persisted, so they don't pass the review gate
+# (law #2 applies to stored deck items). Same ADR-0004 posture: the model
+# returns content + a verbatim excerpt; the pipeline attaches the citation.
+
+
+class MatchPair(BaseModel):
+    left: str = Field(min_length=1, max_length=120)
+    right: str = Field(min_length=1, max_length=200)
+
+
+class ShortAnswerOut(BaseModel):
+    kind: Literal["short_answer"] = "short_answer"
+    question: str = Field(min_length=5, max_length=400)
+    expected_answer: str = Field(min_length=1, max_length=400)
+    source_ref: SourceRef
+
+
+class MatchingOut(BaseModel):
+    kind: Literal["matching"] = "matching"
+    instruction: str = Field(default="Match each term to its description.", max_length=200)
+    pairs: list[MatchPair] = Field(min_length=3, max_length=5)
+    source_ref: SourceRef
+
+
+class OrderingOut(BaseModel):
+    kind: Literal["ordering"] = "ordering"
+    instruction: str = Field(min_length=5, max_length=200)
+    steps: list[str] = Field(min_length=3, max_length=6)
+    source_ref: SourceRef
+
+
+class FeynmanOut(BaseModel):
+    kind: Literal["feynman"] = "feynman"
+    concept: str = Field(min_length=2, max_length=200)
+    key_points: list[str] = Field(min_length=2, max_length=4)
+    source_ref: SourceRef
+
+
+class MultipleChoiceOut(BaseModel):
+    kind: Literal["multiple_choice"] = "multiple_choice"
+    question: str = Field(min_length=5, max_length=400)
+    options: list[str] = Field(min_length=4, max_length=4)
+    answer_index: int = Field(ge=0, le=3)
+    explanation: str = Field(default="", max_length=600)
+    source_ref: SourceRef
+
+
+TestItemOut = Annotated[
+    Union[MultipleChoiceOut, ShortAnswerOut, MatchingOut, OrderingOut, FeynmanOut],
+    Field(discriminator="kind"),
+]
+
+
+class TestGenerationResult(BaseModel):
+    items: list[TestItemOut] = Field(default_factory=list)
+
+
+# LLM-facing flat gen schemas (citation attached by the pipeline, ADR-0004).
+
+
+class ShortAnswerGen(BaseModel):
+    question: str = Field(min_length=5, max_length=400)
+    expected_answer: str = Field(min_length=1, max_length=400)
+    excerpt: str = Field(min_length=1, max_length=200)
+
+
+class MatchingGen(BaseModel):
+    instruction: str = Field(default="Match each term to its description.", max_length=200)
+    pairs: list[MatchPair] = Field(min_length=3, max_length=5)
+    excerpt: str = Field(min_length=1, max_length=200)
+
+
+class OrderingGen(BaseModel):
+    instruction: str = Field(min_length=5, max_length=200)
+    steps: list[str] = Field(min_length=3, max_length=6)
+    excerpt: str = Field(min_length=1, max_length=200)
+
+
+class FeynmanGen(BaseModel):
+    concept: str = Field(min_length=2, max_length=200)
+    key_points: list[str] = Field(min_length=2, max_length=4)
+    excerpt: str = Field(min_length=1, max_length=200)
+
+
+class GradeGen(BaseModel):
+    """Structured grade of a free-text answer, compared ONLY against the item's
+    expected answer / key points (which are themselves grounded content)."""
+
+    verdict: Literal["correct", "partial", "incorrect"]
+    feedback: str = Field(min_length=1, max_length=500)
+
+
 # ── Syllabus outline extraction (slice 4) ───────────────────────────────────
 # Structured extraction from the user's *own* syllabus, confirmed before commit
 # (ADR-0006). This is editable schedule metadata, not a study claim, so per-item

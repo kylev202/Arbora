@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { FilePlus, Sparkle, Stack } from "@phosphor-icons/react";
 import { Button, EmptyState } from "../../components";
@@ -13,9 +13,12 @@ import { GenerateModal } from "./GenerateModal";
 import shared from "./Workspace.module.css";
 import styles from "./SourcesTab.module.css";
 
-/** S-02 Sources tab — document list + add + generate (the content pipeline entry). */
-export function SourcesTab() {
-  const { subjectId = "" } = useParams();
+/**
+ * Source-document manager, embedded as a section of the subject Overview page:
+ * add materials, assign them to weeks, and start grounded generation (the
+ * content pipeline entry). Rows stay live while ingest jobs run.
+ */
+export function SourcesPanel({ subjectId }: { subjectId: string }) {
   const navigate = useNavigate();
   const remote = useAsync(() => api.listSources(subjectId), [subjectId]);
   const outline = useAsync(() => api.getOutline(subjectId), [subjectId]);
@@ -85,10 +88,15 @@ export function SourcesTab() {
   const canGenerate = processed.length > 0;
 
   return (
-    <div className="page">
-      <div className="screen-header">
-        <h1>Source documents</h1>
-        <Button variant="secondary" icon={<FilePlus weight="bold" />} onClick={() => setAdding(true)}>
+    <section aria-label="Source documents">
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>Sources</h2>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<FilePlus weight="bold" />}
+          onClick={() => setAdding(true)}
+        >
           Add source
         </Button>
       </div>
@@ -157,6 +165,6 @@ export function SourcesTab() {
           navigate(`/subject/${subjectId}/review`);
         }}
       />
-    </div>
+    </section>
   );
 }

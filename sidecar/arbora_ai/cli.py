@@ -1,12 +1,12 @@
-"""Arbora Spike CLI — offline document → grounded, cited cards/quiz/notes → .apkg.
+"""Arbora Spike CLI — offline document → grounded, cited cards/quiz/notes.
 
-    python -m arbora_ai.cli path/to/doc.pdf --types cards,quiz --out deck.apkg
+    python -m arbora_ai.cli path/to/doc.pdf --types cards,quiz
 
 Proves the AI core end-to-end on real documents (Phase-3 Spike DoD): parse →
 chunk → constrained local generation → schema-validate → grounding check →
-quality report → Anki export. Local-only (Ollama) — Arbora is local-first.
-Nothing here is trusted until reviewed in the app (law #2); this CLI exports what
-passed grounding so the .apkg can be verified in Anki.
+quality report. Local-only (Ollama) — Arbora is local-first. Nothing here is
+trusted until reviewed in the app (law #2). Flashcards live in Arbora's own
+in-app review loop; the Anki export was removed with the subject-view redesign.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ import sys
 from pathlib import Path
 
 from .config import DEFAULT_PRESET, default_model
-from .export import export_apkg
 from .generate import generate_from_chunks
 from .ingest import chunk_units, parse_source
 from .ingest.parse import detect_type
@@ -51,7 +50,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--preset", default=DEFAULT_PRESET, choices=["low", "medium", "high"])
     p.add_argument("--model", default=None, help="override the Ollama model (e.g. qwen3:4b)")
     p.add_argument("--max-chunks", type=int, default=0, help="cap chunks (0 = all)")
-    p.add_argument("--out", type=Path, default=None, help="write .apkg here")
     args = p.parse_args(argv)
 
     if not args.file.exists():
@@ -99,11 +97,6 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  Q: {c.front}")
             print(f"  A: {c.back}")
             print(f"  cite: {c.source_ref.source_id} · {where} — “{c.source_ref.excerpt}”\n")
-
-    # 5. Export .apkg
-    if args.out and result.cards:
-        path = export_apkg(result.cards, deck_name=source_id, out_path=args.out)
-        print(f"Wrote {len(result.cards)} cards → {path}")
 
     accepted = sum(s.accepted for s in stats.values())
     print(f"\nDone. {accepted} grounded items kept.")

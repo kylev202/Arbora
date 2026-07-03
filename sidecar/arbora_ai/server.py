@@ -25,10 +25,10 @@ from typing import Literal
 from pydantic import BaseModel
 
 from . import __version__
+from .assess import grade_answer, run_test_generate
 from .chat.session import answer_question
 from .diagram.session import generate_diagram
 from .config import HOST, default_model
-from .export import export_apkg
 from .generate.job import run_assignment_brief, run_generate
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
@@ -46,7 +46,7 @@ from .planner import (
     plan_week,
 )
 from .outline import extract_outline, syllabus_to_text
-from .schemas.output import CardOut, OutlineExtraction, SourceRef
+from .schemas.output import OutlineExtraction, SourceRef
 from .srs import compute_next
 
 # Marker line Rust scans stdout for to learn the chosen port.
@@ -226,15 +226,26 @@ class ScheduleResponse(BaseModel):
     last_review: str
 
 
-class ExportRequest(BaseModel):
-    cards: list[CardOut]
-    deck_name: str
-    out_path: str
+class TestGenerateRequest(BaseModel):
+    subject_id: str
+    types: list[str]
+    chunks: list[GenChunk]
+    count_per_type: int = 2
+    llm_config: dict = {}
+    preset: str = "medium"
+    job_id: str | None = None
 
 
-class ExportResponse(BaseModel):
-    path: str
-    card_count: int
+class TestGradeRequest(BaseModel):
+    question: str
+    expected: str
+    user_answer: str
+    preset: str = "medium"
+
+
+class TestGradeResponse(BaseModel):
+    verdict: str  # "correct" | "partial" | "incorrect"
+    feedback: str
 
 
 class ChatChunk(BaseModel):
@@ -577,14 +588,62 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return DiagramResponse(title=title, mermaid_code=mermaid_code, source_refs=source_refs)
 
-    # ── Export ─────────────────────────────────────────────────────────────
+    # ── Practice tests (ephemeral, cited — chat/diagram precedent) ─────────
 
-    @app.post("/export", response_model=ExportResponse, dependencies=guarded)
-    def export(req: ExportRequest) -> ExportResponse:
-        # Law #2: the core only sends reviewed cards here; each carries its
-        # citation, which export_apkg renders into a visible Source line.
-        path = export_apkg(req.cards, req.deck_name, req.out_path)
-        return ExportResponse(path=str(path), card_count=len(req.cards))
+    @app.post("/test/generate", status_code=202, dependencies=guarded)
+    def test_generate(req: TestGenerateRequest) -> dict[str, str]:
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        chunks = [c.model_dump() for c in req.chunks]
+        job = registry.create(req.job_id)
+        registry.submit(
+            job,
+            lambda j: run_test_generate(
+                j,
+                chunks=chunks,
+                types=req.types,
+                count_per_type=req.count_per_type,
+                llm_config=cfg,
+            ),
+        )
+        return {"job_id": job.id}
+
+    @app.get("/test/generate/{job_id}/status", response_model=GenerateStatus, dependencies=guarded)
+    def test_generate_status(job_id: str) -> GenerateStatus:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        return GenerateStatus(
+            job_id=job.id,
+            state=job.state,
+            progress=job.progress,
+            items_generated=job.meta.get("items_generated"),
+            error=job.error,
+        )
+
+    @app.get("/test/generate/{job_id}/result", dependencies=guarded)
+    def test_generate_result(job_id: str) -> dict:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        if job.state != "done":
+            raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
+        return job.result  # {items: [{kind, ..., source_ref}]}
+
+    @app.post("/test/grade", response_model=TestGradeResponse, dependencies=guarded)
+    def test_grade(req: TestGradeRequest) -> TestGradeResponse:
+        # Synchronous: one structured LLM call. Feedback is ephemeral and only
+        # compares against the item's own grounded expected answer.
+        cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
+        try:
+            grade = grade_answer(get_provider(cfg), req.question, req.expected, req.user_answer)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        return TestGradeResponse(verdict=grade.verdict, feedback=grade.feedback)
 
     return app
 

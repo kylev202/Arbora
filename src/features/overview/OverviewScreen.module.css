@@ -1,4 +1,37 @@
-/* "This week" block (§4.2): intro or a clear CTA — never a silent blank. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reviewBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--color-primary-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.reviewBanner:hover {
+  text-decoration: none;
+  border-color: var(--color-primary);
+}
+
+.reviewCta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* "This week" block: intro or a clear CTA — never a silent blank. */
 .weekNow {
   display: flex;
   align-items: center;
@@ -22,8 +55,7 @@
   font-size: var(--text-base);
 }
 
-.weekNowSummary,
-.weekNowEmpty {
+.weekNowMuted {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   line-height: var(--leading-normal);
@@ -49,6 +81,7 @@
   grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
   gap: var(--space-8);
   align-items: start;
+  margin-bottom: var(--space-8);
 }
 
 .treePane {
@@ -67,8 +100,16 @@
   gap: var(--space-4);
 }
 
-.statsTitle {
+.sectionTitle {
   font-size: var(--text-lg);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .tiles {
@@ -96,55 +137,100 @@
   font-weight: var(--weight-medium);
 }
 
-/* "Focus next" — calm guidance, never a nag. */
-.focus {
-  margin-bottom: var(--space-6);
+/* ── Todos ── */
+.todos {
+  margin-bottom: var(--space-8);
 }
-.focusTitle {
-  font-size: var(--text-lg);
+
+.todoAdd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
-.focusList {
+.todoAdd > :first-child {
+  flex: 1;
+}
+
+.todoEmpty {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.todoList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.focusItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  text-decoration: none;
-  color: inherit;
 }
-.focusItem:hover {
-  border-color: var(--color-text-muted);
-}
-.focusIcon {
-  display: inline-flex;
-  flex: none;
-  font-size: 1.2rem;
-  color: var(--color-citation-text);
-}
-.focusText {
+
+.todoItem {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+}
+.todoItem + .todoItem {
+  border-top: 1px solid var(--color-border);
+}
+.todoItem > :first-child {
+  flex: 1;
   min-width: 0;
 }
-.focusWeek {
-  font-weight: var(--weight-medium);
-  color: var(--color-text);
-}
-.focusReason {
-  font-size: var(--text-sm);
+
+.todoDone {
   color: var(--color-text-muted);
+}
+
+.todoDue {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Edit subject modal ── */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.colors {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.colorsLegend {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-2);
+}
+
+.colorRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+}
+.colorSwatch:hover {
+  border-color: var(--color-border-strong);
+}
+.colorActive,
+.colorActive:hover {
+  border-color: var(--color-text);
 }
 
 .skeleton {
@@ -156,5 +242,8 @@
 @media (max-width: 860px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+  .headerActions {
+    flex-wrap: wrap;
   }
 }

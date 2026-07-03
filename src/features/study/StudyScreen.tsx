@@ -84,6 +84,7 @@ function useFocusTimer(minutes: number | null) {
  *   ?limit=N  — cap the session to N cards (Quick session)
  *   ?timer=N  — start a focus countdown of N minutes
  *   ?week=ID  — stage check: only cards from that outline week's materials
+ *   ?then=ID  — pre-week check: after the recap, offer continuing into that week
  */
 export function StudyScreen() {
   const { subjectId = "" } = useParams();
@@ -92,6 +93,7 @@ export function StudyScreen() {
   const limit = Number(searchParams.get("limit") ?? 50);
   const timerMinutes = searchParams.get("timer") ? Number(searchParams.get("timer")) : null;
   const weekId = searchParams.get("week");
+  const thenWeekId = searchParams.get("then");
 
   const due = useAsync(
     () => (weekId ? api.getWeekCards(subjectId, weekId, limit) : api.getDueCards(subjectId, limit)),
@@ -107,6 +109,16 @@ export function StudyScreen() {
   // Session log for the end-of-session recap (grounded by construction, §4.4).
   const reviewedRef = useRef<ReviewedCard[]>([]);
   const nextDuesRef = useRef<string[]>([]);
+
+  // Chaining check → this-week session changes only the search params; reset
+  // the session state so the new week starts fresh.
+  useEffect(() => {
+    setIndex(0);
+    setFlipped(false);
+    setDone(false);
+    reviewedRef.current = [];
+    nextDuesRef.current = [];
+  }, [weekId, limit]);
 
   const cards = due.data ?? [];
   const total = cards.length;
@@ -195,7 +207,12 @@ export function StudyScreen() {
           reviewed={reviewedRef.current}
           nextDues={nextDuesRef.current}
           onExit={() => navigate(`/subject/${subjectId}/study`)}
-          onSeeTree={() => navigate(`/subject/${subjectId}/dashboard`)}
+          onSeeTree={() => navigate(`/subject/${subjectId}/overview`)}
+          onContinue={
+            thenWeekId
+              ? () => navigate(`/subject/${subjectId}/study/session?week=${thenWeekId}`)
+              : null
+          }
         />
       </div>
     );
@@ -214,7 +231,7 @@ export function StudyScreen() {
           }
           action={
             <div className={styles.doneActions}>
-              <Button variant="primary" onClick={() => navigate(`/subject/${subjectId}/dashboard`)}>
+              <Button variant="primary" onClick={() => navigate(`/subject/${subjectId}/overview`)}>
                 See your tree
               </Button>
               <Button variant="ghost" onClick={() => navigate(`/subject/${subjectId}/study`)}>

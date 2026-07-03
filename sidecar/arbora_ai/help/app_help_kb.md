@@ -3,7 +3,7 @@
 Tài liệu hướng dẫn sử dụng Arbora — nguồn grounding cho Domain B của pet AI.
 Mỗi mục là 1 đơn vị embed độc lập (dùng dấu `---` để chia chunk khi ingest).
 Bản đóng gói theo app; bản biên tập gốc nằm ở vault `App Help KB.md` — sửa ở đó rồi đồng bộ sang đây.
-Cập nhật lần cuối: 2026-07-02.
+Cập nhật lần cuối: 2026-07-03.
 
 ---
 
@@ -61,15 +61,20 @@ Tất cả thông tin này đều chỉ lưu trên máy bạn. Có thể sửa l
 5. Nhấn "Tạo môn".
 
 Sau khi tạo, môn học xuất hiện như một cành cây mới trên màn Home. Click vào cành đó
-hoặc vào thẻ môn để vào workspace của môn học đó.
+hoặc vào thẻ môn để vào không gian của môn học.
+
+Mỗi môn học có đúng **3 trang**, chuyển bằng thanh điều hướng ngang dưới thanh trên cùng:
+- **Overview (Tổng quan)** — quản lý thông tin môn, tài liệu nguồn, tiến trình học, todo tuần này.
+- **Plan (Kế hoạch)** — kế hoạch học, deadline, timeline theo tuần.
+- **Study (Học)** — buổi học tuần này và học tự do theo tuần (flashcard, test, sơ đồ, hỏi AI).
 
 ---
 
 ## 4. Thêm tài liệu (nguồn học)
 
-Trong workspace của môn học, vào tab **"Sources"** (Nguồn):
+Trong trang **Overview** của môn học, kéo xuống mục **"Sources"** (Nguồn):
 
-1. Nhấn **"+ Thêm tài liệu"** hoặc kéo thả file vào vùng drop.
+1. Nhấn **"Add source"** hoặc kéo thả file vào vùng drop.
 2. **Định dạng hỗ trợ:** PDF, slide PPTX, file văn bản TXT/MD/DOCX, ghi âm MP3/WAV/M4A,
    video MP4/MKV/WebM/AVI/MOV.
 3. Nếu thêm audio/video, app sẽ tự dùng Whisper để chuyển thành văn bản — quá trình này
@@ -86,9 +91,9 @@ app sẽ báo bạn cần thêm nội dung cho tuần đó.
 
 ## 5. Sinh nội dung học (ghi chú, thẻ học, câu hỏi)
 
-Sau khi có tài liệu, trong tab **"Content"**:
+Sau khi có tài liệu, ở mục Sources trên trang **Overview**:
 
-1. Nhấn **"Tạo nội dung"** (nút Generate).
+1. Nhấn **"Generate content from sources"**.
 2. Chọn loại nội dung muốn tạo: **Ghi chú, Thẻ học (Flashcard), Câu hỏi ôn tập (Quiz)**.
 3. AI sẽ đọc tài liệu, tạo nội dung và kèm trích dẫn nguồn (trang/timestamp) cho mỗi mục.
 4. Có progress bar trong quá trình tạo — tùy file lớn nhỏ mà mất 10–60 giây.
@@ -121,7 +126,7 @@ Arbora dùng hệ thống FSRS để lên lịch ôn tập — bạn chỉ ôn �
 tất cả. Kết quả là nhớ lâu hơn với thời gian ít hơn.
 
 **Bắt đầu ôn:**
-1. Vào tab **"Study"** trong workspace môn, hoặc nhấn "Study smart" ở Home.
+1. Vào trang **"Study"** của môn, hoặc nhấn "Study smart" ở Home.
 2. App hiện thẻ mặt trước — nhớ câu trả lời, rồi nhấn "Lật thẻ".
 3. Xem mặt sau, tự đánh giá: **Quên / Khó / Nhớ / Dễ** (không có màu đỏ — "Quên" màu xám,
    không phạt bạn, chỉ lịch ôn của thẻ đó sẽ điều chỉnh).
@@ -136,18 +141,24 @@ tất cả. Kết quả là nhớ lâu hơn với thời gian ít hơn.
 
 ---
 
-## 8. Học theo chặng (Learning Path)
+## 8. Buổi học tuần này & học tự do (trang Study)
 
-Trong tab Study của môn học, bạn thấy **con đường học** chia thành các chặng theo tuần/chủ đề:
+Trang **Study** của môn có hai phần:
 
-- Mỗi chặng = 1 nhóm kiến thức (ví dụ: tuần 1 — Giới thiệu, tuần 2 — Chương 2…).
-- Chặng hiện tại được đánh dấu rõ — **1 bước kế tiếp duy nhất**, không gây bối rối.
-- Học xong chặng → kiểm tra nhanh ngay → mở chặng kế.
-- Làm sai không mất gì — câu đó chỉ được lặp lại để củng cố.
-- Thanh tiến trình hôm nay 0%→100% tăng khi bạn hoàn thành từng chặng trong ngày.
+**Buổi học tuần này (This week's session):**
+- Tổng quan kiến thức tuần hiện tại, chia nhỏ thành **từng chặng theo khái niệm** — mỗi
+  khái niệm một bước nhỏ, hoàn thành được ngay.
+- Từ tuần 2 trở đi, app đề xuất **kiểm tra nhanh kiến thức tuần trước** trước khi vào bài
+  tuần này (giúp nhớ lâu hơn) — bỏ qua được, không ép.
+- Có nút "10-minute focus" (đếm ngược 10 phút) và "Quick 5" (ôn 5 thẻ).
 
-Cuối buổi học, app tóm tắt những gì bạn đã học (có trích dẫn nguồn) và đề xuất ngày ôn lại
-để chắc trí nhớ.
+**Học tự do (Self-paced study):**
+- Xem kiến thức của **tất cả các tuần** — chọn tuần bất kỳ, tuần nào cũng luôn mở.
+- Mỗi tuần có 4 loại tài liệu học: **Flashcards** (thẻ học trong app), **Test** (bài kiểm tra
+  đa dạng), **Diagram** (sơ đồ), **Ask AI** (hỏi đáp).
+
+Cuối buổi học, app tóm tắt những gì bạn đã học (có trích dẫn nguồn) và đề xuất 1–2 buổi
+**"rewind"** (ôn lại) vào những ngày kế tiếp — bạn xác nhận rồi mới ghi vào lịch.
 
 ---
 
@@ -173,9 +184,11 @@ xám = tùy chỉnh.
 
 ---
 
-## 10. Cây tiến trình (Dashboard)
+## 10. Cây tiến trình & Tổng quan môn (Overview)
 
-Màn Home và tab Dashboard trong mỗi môn hiển thị **cây tiến trình**:
+Màn Home và trang **Overview** trong mỗi môn hiển thị **cây tiến trình** cùng số liệu học tập
+(số lần ôn tuần này, tuần trước, % nắm vững cả kỳ), todo tuần này, và mục quản lý tài liệu.
+Ở đây cũng sửa được tên/màu môn học hoặc xoá môn (nút Edit subject / Delete).
 
 - **Cây tổng ở Home:** mỗi cành = 1 môn học; lá trên cành = kiến thức môn đó bạn đã nắm.
 - **Cây trong môn:** cành nhánh và lá theo tiến trình thẻ đã "mastered" (ôn đủ lần, nhớ lâu).
@@ -239,25 +252,29 @@ mục tiêu (pass/GPA cao) — đúng những gì onboarding đã hỏi.
 
 ---
 
-## 13. Lập kế hoạch học kỳ (Timeline / Outline)
+## 13. Lập kế hoạch học kỳ (trang Plan)
 
-Trong workspace của môn, tab **"Timeline"** hiển thị cấu trúc môn theo tuần:
+Trang **Plan** của môn có 3 mục phân tách rõ ràng:
 
-- Mỗi tuần có: nội dung/kiến thức cần học, tài liệu được gán, deadline (nếu có).
-- Click vào tuần để xem chi tiết, thêm tài liệu vào đúng tuần, gán assignment.
-- Nút **"Import Syllabus"** → tải file đề cương, AI parse ra cấu trúc tuần + deadline, bạn xác nhận trước khi lưu.
-- Tay chỉnh được: thêm/sửa/xoá tuần, thay đổi deadline.
+**Plan (Kế hoạch):** gợi ý "Focus next" (nên học tuần nào trước, dựa vào deadline gần và
+lượng bài chưa học), danh sách buổi học đã xếp trên lịch, và nút **"Plan my week"** — AI đề
+xuất các buổi học tuần này, bạn duyệt [Accept/Edit/Dismiss] từng buổi rồi mới ghi vào lịch.
 
-Tab **"Plan"** hiển thị tất cả deadline của môn + sổ điểm để bạn theo dõi điểm số theo từng bài.
+**Deadlines:** tất cả deadline của môn — thêm/xoá/chỉnh, tạo Assignment Brief — cùng sổ điểm
+(Grade book) để theo dõi điểm từng bài.
+
+**Timeline:** cấu trúc môn theo tuần — mỗi tuần có nội dung, tài liệu được gán, deadline.
+Nút **"Import syllabus"** → tải file đề cương, AI parse ra cấu trúc tuần + deadline, bạn xác
+nhận trước khi lưu. Tay chỉnh được: thêm/sửa tuần, đổi ngày.
 
 **Assignment Brief:** Với từng bài tập/deadline, nhấn "Tạo brief ôn tập" → AI tóm tắt kiến thức
 liên quan (từ tài liệu của bạn, có trích dẫn) để bạn ôn trước khi nộp. Cũng qua review trước khi hiện.
 
 ---
 
-## 14. Hỏi đáp theo môn (Ask / RAG Chat)
+## 14. Hỏi đáp theo môn (Ask AI)
 
-Tab **"Ask"** trong workspace của môn (hoặc chat với pet trong ngữ cảnh môn đó):
+Trang **Study** → chọn tuần → tab **"Ask AI"** (hoặc chat với pet trong ngữ cảnh môn đó):
 
 - Nhập câu hỏi về kiến thức môn bất kỳ.
 - AI tìm trong tài liệu của môn đó (FAISS search), trả lời + kèm trích dẫn trang/timestamp.
@@ -268,7 +285,7 @@ Tab **"Ask"** trong workspace của môn (hoặc chat với pet trong ngữ cả
 
 ## 15. Knowledge Map (Bản đồ kiến thức)
 
-Tab **"Map"** trong workspace môn:
+Link **"Knowledge map"** ở mục Self-paced study trên trang Study:
 
 - Hiển thị các khái niệm chính của môn và mức độ nắm vững (mastery state) của từng khái niệm.
 - Xanh = nắm vững, vàng = đang học, xám = chưa bắt đầu.
@@ -276,13 +293,29 @@ Tab **"Map"** trong workspace môn:
 
 ---
 
-## 16. Sơ đồ (Diagrams)
+## 16. Sơ đồ (Diagram)
 
-Tab **"Diagrams"** trong workspace môn:
+Trang **Study** → chọn tuần → tab **"Diagram"**:
 
-- Nhấn "Tạo sơ đồ" → AI tạo sơ đồ Mermaid từ tài liệu của môn (có trích dẫn).
+- Chủ đề được điền sẵn theo tuần đang chọn; nhấn mũi tên → AI tạo sơ đồ flowchart Mermaid
+  hoàn chỉnh từ tài liệu của môn (có trích dẫn).
 - Sơ đồ render ngay trên app, offline hoàn toàn.
-- Duyệt qua Review trước khi lưu.
+- Sơ đồ chỉ để xem trong phiên — không lưu vào deck nên không cần qua Review.
+
+---
+
+## 16b. Bài kiểm tra (Test)
+
+Trang **Study** → chọn tuần → tab **"Test"** → "Set up a test":
+
+- **Chọn thể loại câu hỏi** trước mỗi bài test: Multiple choice (trắc nghiệm), Short answer
+  (trả lời ngắn), Connect boxes (nối ô), Rearrange (sắp xếp thứ tự), Feynman (giải thích
+  bằng lời của bạn). Chọn 1, vài, hoặc tất cả.
+- AI tạo bài kiểm tra từ đúng tài liệu tuần đó — mỗi câu đều có trích dẫn nguồn.
+- Làm từng câu một. Trắc nghiệm/nối ô/sắp xếp chấm ngay tại chỗ; trả lời ngắn và Feynman
+  được AI chấm và nhận xét (nhận xét chỉ so với đáp án gốc, giọng ôn hoà, không phạt).
+- Kết quả cuối bài: đúng / gần đúng / cần xem lại — không điểm số đáng sợ, không màu đỏ.
+- Bài test dùng xong là xong, không lưu lại.
 
 ---
 

@@ -7,23 +7,36 @@ import { CELEBRATE_EVENT } from "../pet/Pet";
 import styles from "./SessionRecap.module.css";
 
 const MAX_RECAP_ITEMS = 8;
+const MAX_REWINDS = 2;
 
 export type ReviewedCard = { card: Card; rating: FSRSRating };
 
-/** Soonest future FSRS due (ISO date) among the session's cards, or null. */
-function soonestDue(dues: string[]): string | null {
+/** Up to two future ISO dates to rewind on: the soonest distinct FSRS dues of
+ * the session's cards, padded with due+3 days when only one date exists. */
+function rewindDates(dues: string[]): string[] {
   const today = new Date().toISOString().split("T")[0];
-  const future = dues.map((d) => d.split("T")[0]).filter((d) => d > today);
-  if (future.length === 0) return null;
-  return future.sort()[0];
+  const future = [...new Set(dues.map((d) => d.split("T")[0]).filter((d) => d > today))].sort();
+  const picked = future.slice(0, MAX_REWINDS);
+  if (picked.length === 1) {
+    const [y, m, d] = picked[0].split("-").map(Number);
+    const later = new Date(y, m - 1, d + 3);
+    const mm = String(later.getMonth() + 1).padStart(2, "0");
+    const dd = String(later.getDate()).padStart(2, "0");
+    picked.push(`${later.getFullYear()}-${mm}-${dd}`);
+  }
+  return picked;
 }
+
+type ProposalState = "open" | "accepted" | "dismissed";
 
 /**
  * End-of-session recap (§4.4). Grounded BY CONSTRUCTION: everything shown is
  * assembled from the cards just reviewed and their authoritative citations —
- * no generation, no chance to hallucinate, instant on the low preset. Offers
- * one review-ahead session built from the cards' real FSRS dues, through the
- * same accept-gated scheduler path as every AI proposal (law #2).
+ * no generation, no chance to hallucinate, instant on the low preset. Lines up
+ * one or two "rewind" sessions on the next days, built from the cards' real
+ * FSRS dues, through the same accept-gated scheduler path as every AI
+ * proposal (law #2). When the session was a pre-week check, `continueTo`
+ * offers the jump into this week's material.
  */
 export function SessionRecap({
   subjectId,
@@ -31,14 +44,17 @@ export function SessionRecap({
   nextDues,
   onExit,
   onSeeTree,
+  onContinue,
 }: {
   subjectId: string;
   reviewed: ReviewedCard[];
   nextDues: string[];
   onExit: () => void;
   onSeeTree: () => void;
+  /** Present when a check session should chain into this week's session. */
+  onContinue?: (() => void) | null;
 }) {
-  const [proposalState, setProposalState] = useState<"open" | "accepted" | "dismissed">("open");
+  const [proposalStates, setProposalStates] = useState<ProposalState[]>([]);
 
   // Let the pet cheer once, gently, when a session completes (§1.2 celebrate).
   useEffect(() => {
@@ -60,24 +76,30 @@ export function SessionRecap({
     return unique.slice(0, MAX_RECAP_ITEMS);
   }, [reviewed]);
 
-  const dueDate = soonestDue(nextDues);
-  const proposal =
-    dueDate === null
-      ? null
-      : {
-          subject_id: subjectId,
-          title: "Review this material",
-          start_at: `${dueDate}T18:00`,
-          end_at: `${dueDate}T18:50`,
-          kind: "study",
-          reason: "Cards from this session come due around then. A short review locks them in.",
-        };
+  const proposals = useMemo(
+    () =>
+      rewindDates(nextDues).map((date) => ({
+        subject_id: subjectId,
+        title: "Rewind this material",
+        start_at: `${date}T18:00`,
+        end_at: `${date}T18:50`,
+        kind: "study",
+        reason: "A short rewind around when these cards come due locks them in.",
+      })),
+    [nextDues, subjectId],
+  );
 
-  async function acceptProposal(times: { start_at: string; end_at: string }) {
-    if (!proposal) return;
-    await api.acceptSchedule([{ ...proposal, ...times }], []);
-    setProposalState("accepted");
+  useEffect(() => {
+    setProposalStates(proposals.map(() => "open"));
+  }, [proposals]);
+
+  async function acceptProposal(index: number, times: { start_at: string; end_at: string }) {
+    await api.acceptSchedule([{ ...proposals[index], ...times }], []);
+    setProposalStates((prev) => prev.map((s, i) => (i === index ? "accepted" : s)));
   }
+
+  const openProposals = proposals.filter((_, i) => proposalStates[i] === "open");
+  const acceptedCount = proposalStates.filter((s) => s === "accepted").length;
 
   return (
     <div className={styles.recap}>
@@ -104,25 +126,44 @@ export function SessionRecap({
         )}
       </section>
 
-      {proposal && proposalState === "open" && (
-        <section aria-label="Review-ahead suggestion" className={styles.proposal}>
-          <ScheduleProposalCard
-            proposal={proposal}
-            onAccept={(times) => void acceptProposal(times)}
-            onDismiss={() => setProposalState("dismissed")}
-          />
+      {openProposals.length > 0 && (
+        <section aria-label="Rewind suggestions" className={styles.proposal}>
+          <h2 className={styles.coveredTitle}>Rewind sessions</h2>
+          {proposals.map((p, i) =>
+            proposalStates[i] === "open" ? (
+              <ScheduleProposalCard
+                key={p.start_at}
+                proposal={p}
+                onAccept={(times) => void acceptProposal(i, times)}
+                onDismiss={() =>
+                  setProposalStates((prev) => prev.map((s, j) => (j === i ? "dismissed" : s)))
+                }
+              />
+            ) : null,
+          )}
         </section>
       )}
-      {proposalState === "accepted" && (
+      {acceptedCount > 0 && (
         <p className={styles.accepted} role="status">
-          Added to your calendar 🌱
+          {acceptedCount === 1 ? "Rewind added to your calendar 🌱" : "Rewinds added to your calendar 🌱"}
         </p>
       )}
 
       <div className={styles.actions}>
-        <Button variant="primary" onClick={onSeeTree}>
-          See your tree
-        </Button>
+        {onContinue ? (
+          <>
+            <Button variant="primary" onClick={onContinue}>
+              Continue to this week
+            </Button>
+            <Button variant="secondary" onClick={onSeeTree}>
+              See your tree
+            </Button>
+          </>
+        ) : (
+          <Button variant="primary" onClick={onSeeTree}>
+            See your tree
+          </Button>
+        )}
         <Button variant="ghost" onClick={onExit}>
           Done
         </Button>

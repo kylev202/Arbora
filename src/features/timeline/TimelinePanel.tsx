@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { CalendarBlank, NotePencil, Plus, UploadSimple } from "@phosphor-icons/react";
 import { Button, EmptyState } from "../../components";
 import { useAsync } from "../../lib/useAsync";
@@ -12,12 +12,12 @@ import { WeekCard } from "./WeekCard";
 import styles from "./TimelineScreen.module.css";
 
 /**
- * S-07c — Timeline: the subject's spine. A vertical run of weeks (the unit
- * outline) with each week's materials and the deadlines that land in it. Setup
- * and per-week editing reuse the outline modals; dates are neutral, never "late".
+ * Timeline panel (Plan page): the subject's spine. A vertical run of weeks
+ * (the unit outline) with each week's materials and the deadlines that land in
+ * it. Setup and per-week editing reuse the outline modals; dates are neutral,
+ * never "late".
  */
-export function TimelineScreen() {
-  const { subjectId = "" } = useParams();
+export function TimelinePanel({ subjectId }: { subjectId: string }) {
   const [reload, setReload] = useState(0);
   const outline = useAsync(() => api.getOutline(subjectId), [subjectId, reload]);
   const sources = useAsync(() => api.listSources(subjectId), [subjectId, reload]);
@@ -30,14 +30,7 @@ export function TimelineScreen() {
   const refresh = () => setReload((r) => r + 1);
 
   if (outline.status === "loading") {
-    return (
-      <div className="page">
-        <div className="screen-header">
-          <h1>Timeline</h1>
-        </div>
-        <div className={styles.skeleton} aria-hidden="true" />
-      </div>
-    );
+    return <div className={styles.skeleton} aria-hidden="true" />;
   }
 
   const data = outline.data ?? null;
@@ -50,25 +43,22 @@ export function TimelineScreen() {
   const priorityByWeek = topPriority(priority.data ?? [], 3);
 
   return (
-    <div className="page">
-      <div className="screen-header">
-        <h1>Timeline</h1>
-        {hasOutline && (
-          <div className={styles.headerActions}>
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<UploadSimple weight="bold" />}
-              onClick={() => setImporting(true)}
-            >
-              Import syllabus
-            </Button>
-            <Button size="sm" icon={<NotePencil weight="bold" />} onClick={() => setEditingSetup(true)}>
-              Edit outline
-            </Button>
-          </div>
-        )}
-      </div>
+    <section aria-label="Timeline">
+      {hasOutline && (
+        <div className={styles.headerActions}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<UploadSimple weight="bold" />}
+            onClick={() => setImporting(true)}
+          >
+            Import syllabus
+          </Button>
+          <Button size="sm" icon={<NotePencil weight="bold" />} onClick={() => setEditingSetup(true)}>
+            Edit outline
+          </Button>
+        </div>
+      )}
 
       {!hasOutline ? (
         <EmptyState
@@ -112,8 +102,8 @@ export function TimelineScreen() {
             <p className={styles.unassigned}>
               {unassigned} {unassigned === 1 ? "material isn't" : "materials aren't"} assigned to a
               week yet.{" "}
-              <Link to={`/subject/${subjectId}/sources`} className={styles.link}>
-                Assign them in Sources
+              <Link to={`/subject/${subjectId}/overview`} className={styles.link}>
+                Assign them in Overview
               </Link>
               .
             </p>
@@ -146,7 +136,7 @@ export function TimelineScreen() {
         subjectId={subjectId}
         onCommitted={refresh}
       />
-    </div>
+    </section>
   );
 }
 

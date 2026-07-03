@@ -45,7 +45,7 @@ pub(crate) async fn fetch_preset(pool: &SqlitePool) -> String {
         .unwrap_or_else(|_| "medium".to_string())
 }
 
-async fn source_title(pool: &SqlitePool, source_id: &str) -> String {
+pub(crate) async fn source_title(pool: &SqlitePool, source_id: &str) -> String {
     sqlx::query_as::<_, (String,)>("SELECT title FROM sources WHERE id = ?1")
         .bind(source_id)
         .fetch_optional(pool)

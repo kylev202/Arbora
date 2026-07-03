@@ -131,7 +131,7 @@ export function ReviewScreen() {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable;
       if (e.key === "Escape") {
         if (editing) setEditing(false);
-        else navigate(`/subject/${subjectId}/content`);
+        else navigate(`/subject/${subjectId}/study`);
         return;
       }
       if (typing) return;
@@ -170,7 +170,7 @@ export function ReviewScreen() {
           title="Nothing to review"
           description="Generate content from your sources and it'll appear here for review before saving."
           action={
-            <Button variant="secondary" onClick={() => navigate(`/subject/${subjectId}/sources`)}>
+            <Button variant="secondary" onClick={() => navigate(`/subject/${subjectId}/overview`)}>
               Go to sources
             </Button>
           }
@@ -216,7 +216,7 @@ export function ReviewScreen() {
               title="Review complete"
               description="Kept items are saved to this subject. Discarded ones are gone. Nothing untraceable was trusted."
               action={
-                <Button variant="primary" onClick={() => navigate(`/subject/${subjectId}/content`)}>
+                <Button variant="primary" onClick={() => navigate(`/subject/${subjectId}/study`)}>
                   Back to content
                 </Button>
               }

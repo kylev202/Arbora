@@ -82,8 +82,9 @@ export const api = {
   modelReady: ipc.modelReady,
   downloadModel: ipc.downloadModel,
 
-  // ── Slice 4d — Anki export (live) ──
-  exportApkg: ipc.exportApkg,
+  // ── Practice tests (subject view redesign) ──
+  generateTest: ipc.generateTest,
+  gradeTestAnswer: ipc.gradeTestAnswer,
 
   // ── Phase 6 — RAG Q&A ──
   chatMessage: ipc.chatMessage,
