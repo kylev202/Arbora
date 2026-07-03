@@ -1,4 +1,5 @@
 .bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -41,6 +42,50 @@
 .breadcrumb {
   min-width: 0;
   overflow: hidden;
+}
+
+/* Centered primary nav: the app's two main destinations, always in view and
+   easy to hit (segmented pill, 40px targets). Absolutely centered so it stays
+   put regardless of the left (brand/breadcrumb) and right (settings) widths. */
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-full);
+}
+
+.navItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+.navItem:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+.navItem svg {
+  font-size: 1.2rem;
+}
+.navActive,
+.navActive:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .right {

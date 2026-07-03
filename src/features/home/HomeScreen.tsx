@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Lightning, Plus, Shuffle, Tree as TreeIcon } from "@phosphor-icons/react";
+import { ArrowRight, Plus, Tree as TreeIcon } from "@phosphor-icons/react";
 import { Button, EmptyState, ForestTree, Input, Modal, type ForestBranchData } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
@@ -127,28 +127,11 @@ export function HomeScreen() {
             </aside>
           </div>
 
+          <hr className={styles.divider} />
+
           <div className="screen-header">
             <h2 className={styles.subjectsHeading}>Your subjects</h2>
             <div className={styles.headerActions}>
-              {subjects.length > 0 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    icon={<Lightning />}
-                    onClick={() => navigate("/interleaved?smart=1")}
-                    title="Study cards from subjects with upcoming deadlines first"
-                  >
-                    Study smart
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<Shuffle />}
-                    onClick={() => navigate("/interleaved")}
-                  >
-                    Study all
-                  </Button>
-                </>
-              )}
               {/* Secondary here: the screen's ONE primary is "Continue studying"
                   (the empty state carries its own primary when there's nothing). */}
               <Button variant="secondary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>

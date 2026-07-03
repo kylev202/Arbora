@@ -153,7 +153,7 @@ Cuối buổi học, app tóm tắt những gì bạn đã học (có trích d�
 
 ## 9. Lịch học (Calendar)
 
-Tab **Lịch** ở Home quản lý thời gian biểu học tập:
+Mở **Lịch** từ biểu tượng lịch trên thanh trên cùng (cạnh Settings) để quản lý thời gian biểu:
 
 **Xem lịch:** Mặc định xem theo tuần; chuyển sang tháng bằng nút góc trên phải.
 

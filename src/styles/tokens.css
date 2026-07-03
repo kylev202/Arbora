@@ -40,6 +40,7 @@
   --color-citation-text: #3f6076; /* darkened from spec for AA on its bg */
 
   --color-fruit: #c46a4f; /* warm terracotta — decorative tree fruit (NOT danger) */
+  --color-bark: #6f5138; /* warm brown — trunk & branches (bark, never leaves) */
 
   --color-focus: #4a7c59; /* focus ring */
   --color-overlay: rgba(43, 43, 40, 0.32);
@@ -156,6 +157,7 @@
   --color-citation-text: #a7c4d6;
 
   --color-fruit: #d98b6f;
+  --color-bark: #a07d5b; /* lighter warm bark for dark surfaces */
 
   --color-focus: #7cb479;
   --color-overlay: rgba(0, 0, 0, 0.55);

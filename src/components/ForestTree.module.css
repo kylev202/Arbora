@@ -1,6 +1,14 @@
 .branchGroup {
   cursor: pointer;
 }
+
+/* Transparent, wide catch area — receives pointer events along the stroke so
+   the whole branch is an easy target, not just the hairline path. */
+.branchHit {
+  stroke: transparent;
+  stroke-linecap: round;
+  pointer-events: stroke;
+}
 .branchGroup:hover .branchLabel,
 .branchGroup:focus-visible .branchLabel {
   fill: var(--color-primary);
@@ -12,22 +20,31 @@
 }
 
 .branchLabel {
-  fill: var(--color-text-muted);
-  font-size: 11px;
+  fill: var(--color-text);
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
   font-family: inherit;
+  -webkit-user-select: none;
   user-select: none;
+  /* White halo so each subject name stays legible over the leaves. */
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
 }
 
-/* Branches REACH out from the trunk on mount (growth language §3) — a line
-   draw via dashoffset, ≤600ms; reduced-motion renders them instantly. */
-.branchPath {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  animation: branch-reach var(--motion-tree) var(--ease-growth) backwards;
+/* Branches GROW out from the trunk on mount (growth language §3) — a gentle
+   scale-in from the base, ≤600ms; reduced-motion renders them instantly. */
+.branchShape {
+  fill: var(--color-bark);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: branch-grow var(--motion-tree) var(--ease-growth) backwards;
 }
 
-@keyframes branch-reach {
+@keyframes branch-grow {
   from {
-    stroke-dashoffset: 1;
+    transform: scale(0.3);
+    opacity: 0;
   }
 }

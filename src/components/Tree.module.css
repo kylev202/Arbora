@@ -20,11 +20,11 @@
 }
 
 .trunk {
-  fill: var(--color-primary);
+  fill: var(--color-bark);
 }
 
 .branch {
-  stroke: var(--color-primary);
+  stroke: var(--color-bark);
   stroke-linecap: round;
 }
 
@@ -41,6 +41,16 @@
 .leafGold {
   fill: var(--color-accent-warm);
   transition: r var(--motion-tree) var(--ease-out);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: leaf-pop var(--motion-tree) var(--ease-growth) backwards;
+}
+
+/* Soft foliage mass sitting behind a tip's leaves — flat muted green for
+   canopy depth (not a shadow; the design system stays flat). */
+.canopy {
+  fill: var(--color-primary);
+  opacity: 0.9;
   transform-box: fill-box;
   transform-origin: center;
   animation: leaf-pop var(--motion-tree) var(--ease-growth) backwards;
