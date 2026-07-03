@@ -1,26 +1,39 @@
-/* Subject identity = dot + FULL border tint (no stripe accents — §0 bans). */
+/* Subject identity = dot + FULL border tint (no stripe accents — §0 bans).
+   A glass pane, faintly lit by the subject's own color from within. */
 .card {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid color-mix(in srgb, var(--subject-color, var(--color-border)) 40%, var(--color-border));
+  background:
+    radial-gradient(
+      120% 80% at 50% -20%,
+      color-mix(in srgb, var(--subject-color, var(--color-primary)) 10%, transparent),
+      transparent 60%
+    ),
+    var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid color-mix(in srgb, var(--subject-color, var(--color-border)) 40%, var(--glass-border));
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm), var(--glass-highlight);
   color: var(--color-text);
   text-decoration: none;
   overflow: hidden;
   transition:
-    transform var(--motion-fast) var(--ease-out),
-    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-base) var(--ease-spring),
+    box-shadow var(--motion-base) var(--ease-out),
     border-color var(--motion-fast) var(--ease-out);
 }
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-lg), var(--glass-highlight);
   border-color: var(--subject-color, var(--color-border));
   text-decoration: none;
+}
+.card:active {
+  transform: translateY(-1px) scale(0.995);
 }
 
 .head {
@@ -38,6 +51,7 @@
 }
 
 .name {
+  font-family: var(--font-display);
   font-size: var(--text-lg);
 }
 

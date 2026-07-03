@@ -11,6 +11,11 @@
   overflow-y: auto;
 }
 
+/* Every screen rises into view on route change (Outlet swaps remount it). */
+.content > * {
+  animation: rise var(--motion-slow) var(--ease-out) both;
+}
+
 /* Reading area stays comfortable on wide monitors; screens opt in via .page. */
 :global(.page) {
   max-width: var(--content-max-width);

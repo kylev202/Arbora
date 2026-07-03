@@ -8,14 +8,16 @@
   cursor: pointer;
   transition:
     background-color var(--motion-fast) var(--ease-standard),
-    color var(--motion-fast) var(--ease-standard);
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-spring);
 }
 .iconButton:hover {
   color: var(--color-text);
   background: var(--color-surface-alt);
+  transform: translateY(-1px);
 }
 .iconButton:active {
-  transform: scale(0.96);
+  transform: scale(0.94);
 }
 
 .md {
@@ -31,8 +33,11 @@
   background: transparent;
 }
 .surface {
-  background: var(--color-surface);
-  border-color: var(--color-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+  box-shadow: var(--shadow-sm), var(--glass-highlight);
 }
 
 .glyph {

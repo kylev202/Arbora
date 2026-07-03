@@ -1,11 +1,15 @@
 /**
  * Arbora design tokens — single source of truth for color, type, space, motion.
- * Mirrors resources/vault "Design System". Calm, low-overwhelm, ADHD-aware.
+ * v3 "Aurora Canopy": glassmorphism grounded in the forest identity — light
+ * filtering through a canopy. Frosted-glass surfaces float over a slow-drifting
+ * aurora background (see global.css).
  *
- * Hard rules encoded here:
+ * Hard rules encoded here (unchanged from v2):
  *  - No red for learning states. --color-danger is for destructive actions ONLY.
- *  - Every text/surface pair targets WCAG AA (>= 4.5:1).
+ *  - Every text/surface pair targets WCAG AA (>= 4.5:1) against the *effective*
+ *    backdrop (glass over aurora).
  *  - Motion animates transform/opacity only; reduced-motion kills it.
+ *  - data-contrast="high" turns glass opaque and disables blur.
  *
  * Theming is attribute-driven on <html>:
  *   data-theme="light|dark"   data-contrast="normal|high"
@@ -13,44 +17,58 @@
  */
 
 :root {
-  /* ── A1 · Color (light) ───────────────────────────────────────────── */
-  --color-primary: #457155; /* forest green — primary action, branches (AA-tuned) */
-  --color-primary-hover: #3d6849;
-  --color-primary-soft: #e8f0ea;
+  /* ── A1 · Color (light — "Aurora Day") ────────────────────────────── */
+  --color-primary: #2f7d54; /* vivid emerald — primary action (5.0:1 on white) */
+  --color-primary-hover: #276b47;
+  --color-primary-soft: rgba(47, 125, 84, 0.12); /* tint — reads on glass */
   --color-on-primary: #ffffff;
 
-  --color-accent: #6ba368; /* fresh green — mastery / progress (fills, not text) */
-  --color-accent-text: #41803e; /* darker green for green TEXT (AA on surface) */
-  --color-accent-warm: #c9a227; /* earth gold — "learning", unripe fruit (fills) */
+  --color-accent: #55b378; /* mastery / progress (fills, not text) */
+  --color-accent-text: #2e7d4d; /* green TEXT — AA on light glass */
+  --color-accent-warm: #d9a520; /* gold — "learning", unripe fruit (fills) */
 
-  --color-bg: #faf8f4; /* warm off-white */
-  --color-surface: #ffffff;
-  --color-surface-alt: #f2eee7;
-  --color-border: #e0dad0; /* soft — dividers, card edges (decorative) */
-  --color-border-strong: #888475; /* >=3:1 on all surfaces — control edges (WCAG 1.4.11) */
-  --color-text: #2b2b28;
-  --color-text-muted: #6b665e;
+  --color-bg: #edf3ee; /* pale sage — under the aurora layers */
+  --color-surface: rgba(255, 255, 255, 0.6); /* default glass pane */
+  --color-surface-solid: #ffffff; /* opaque escape hatch (inputs, print, HC) */
+  --color-surface-alt: rgba(47, 82, 60, 0.07); /* inset tint on glass */
+  --color-border: rgba(47, 82, 60, 0.14); /* soft dividers on glass */
+  --color-border-strong: #7c8a7d; /* >=3:1 control edges (WCAG 1.4.11) */
+  --color-text: #1d241e;
+  --color-text-muted: #5f6b60; /* 4.9:1 on light glass */
 
-  --color-success: #4a7c59;
-  --color-info: #5a7d9a; /* muted blue — neutral */
-  --color-warning: #7d5e0a; /* deep earth gold — AA as text on light (not red) */
+  --color-success: #2f7d54;
+  --color-info: #3f6b95; /* muted blue — neutral (5.6:1 on white) */
+  --color-warning: #7d5e0a; /* deep earth gold — AA as text (not red) */
   --color-danger: #b5524a; /* earth red — destructive ONLY */
 
-  --color-citation-bg: #f0f4f8;
-  --color-citation-text: #3f6076; /* darkened from spec for AA on its bg */
+  --color-citation-bg: rgba(90, 125, 154, 0.14);
+  --color-citation-text: #3a5a72;
 
-  --color-fruit: #c46a4f; /* warm terracotta — decorative tree fruit (NOT danger) */
-  --color-bark: #6f5138; /* warm brown — trunk & branches (bark, never leaves) */
+  --color-fruit: #c46a4f; /* warm terracotta — decorative tree fruit */
+  --color-bark: #6f5138; /* warm brown — trunk & branches */
 
-  --color-focus: #4a7c59; /* focus ring */
-  --color-overlay: rgba(43, 43, 40, 0.32);
+  --color-focus: #2f7d54; /* focus ring */
+  --color-overlay: rgba(16, 24, 18, 0.4);
+
+  /* ── A1b · Glass (the material) ───────────────────────────────────── */
+  --glass-bg: rgba(255, 255, 255, 0.55); /* cards, panels */
+  --glass-bg-strong: rgba(255, 255, 255, 0.78); /* modals, bars, popovers */
+  --glass-bg-soft: rgba(255, 255, 255, 0.32); /* nested / decorative panes */
+  --glass-border: rgba(255, 255, 255, 0.65); /* light catching the edge */
+  --glass-blur: blur(20px) saturate(160%);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --aurora-a: rgba(85, 179, 120, 0.3); /* canopy green */
+  --aurora-b: rgba(217, 165, 32, 0.18); /* sun gold */
+  --aurora-c: rgba(74, 123, 166, 0.18); /* sky blue */
 
   /* ── A2 · Typography ──────────────────────────────────────────────── */
   --font-sans: "Inter", "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
-  /* Display serif for EMOTIONAL headings only (greeting, subject names,
-     session complete) — warm editorial contrast to Inter. Max 3 families. */
+  /* Display serif — the emotional voice (greeting, subject names, recap).
+     Oversized, tight, occasionally italic. */
   --font-display: "Fraunces", "Be Vietnam Pro", Georgia, serif;
+  /* Heading grotesk — the structural voice (screen titles, stats, nav, labels). */
+  --font-heading: "Space Grotesk", "Be Vietnam Pro", var(--font-sans);
 
   --font-base: 16px; /* overridden by Settings (A5): 14/16/18/20 */
 
@@ -58,15 +76,20 @@
   --text-sm: 0.9rem;
   --text-base: 1rem; /* body */
   --text-lg: 1.25rem; /* card title */
-  --text-xl: 1.563rem; /* screen title */
-  --text-2xl: 1.953rem; /* large heading */
+  --text-xl: 1.6rem; /* screen title */
+  --text-2xl: 2.1rem; /* large heading */
+  --text-3xl: 2.8rem; /* display / hero */
 
-  --leading-tight: 1.3;
+  --tracking-tight: -0.03em; /* display & big headings */
+  --tracking-wide: 0.09em; /* tiny caps labels */
+
+  --leading-tight: 1.25;
   --leading-normal: 1.6; /* roomy for ESL/ADHD */
 
   --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
+  --weight-bold: 700;
 
   /* ── A3 · Spacing / radius / shadow ───────────────────────────────── */
   --space-1: 0.25rem;
@@ -78,34 +101,40 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* diffuse, opacity < 0.1 — minimalist, near-flat */
-  --shadow-sm: 0 1px 2px rgba(43, 43, 40, 0.06);
-  --shadow-md: 0 2px 8px rgba(43, 43, 40, 0.08);
-  --shadow-lg: 0 8px 24px rgba(43, 43, 40, 0.1);
+  /* soft ambient depth — glass floats, it doesn't sit */
+  --shadow-sm: 0 1px 3px rgba(23, 42, 30, 0.07);
+  --shadow-md: 0 6px 20px rgba(23, 42, 30, 0.09);
+  --shadow-lg: 0 16px 40px rgba(23, 42, 30, 0.13);
+  --shadow-glow: 0 0 0 1px rgba(47, 125, 84, 0.18), 0 4px 20px rgba(47, 125, 84, 0.22);
 
   /* ── A4 · Layout ──────────────────────────────────────────────────── */
   --sidebar-width: 220px;
   --sidebar-width-collapsed: 64px;
-  --content-max-width: 760px;
+  --content-max-width: 780px;
   --modal-width: 520px;
   --modal-width-sm: 440px;
 
   /* ── A7 · Motion ──────────────────────────────────────────────────── */
-  --motion-fast: 150ms;
-  --motion-base: 200ms;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 380ms; /* entrances */
   --motion-grow: 400ms; /* progress fills, path nodes */
   --motion-tree: 600ms; /* tree growth — the upper bound for any motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  /* "Growth" easing — sprouting/opening. Never bounce/elastic (calm). */
+  /* "Growth" easing — sprouting/opening. */
   --ease-growth: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Gentle spring for micro-interactions — a whisper of overshoot, never bouncy. */
+  --ease-spring: cubic-bezier(0.3, 1.32, 0.45, 1);
+  --rise-distance: 14px;
 
-  /* ── A8 · Role tokens (v2 redesign): path / pet / calendar ────────── */
+  /* ── A8 · Role tokens: path / pet / calendar ──────────────────────── */
   /* Learning path (ADR-0007): done = grown, current = the ONE next step,
      upcoming = muted. Nothing is "locked" or red. */
   --color-path-done: var(--color-accent);
@@ -129,53 +158,75 @@
   --z-modal: 1000;
 }
 
-/* ── A6 · Dark theme ────────────────────────────────────────────────── */
+/* ── A6 · Dark theme — "Aurora Night" ───────────────────────────────── */
 [data-theme="dark"] {
-  --color-primary: #6ba368; /* brighter on dark */
-  --color-primary-hover: #7cb479;
-  --color-primary-soft: #243029;
-  --color-on-primary: #14160f;
+  --color-primary: #66b586; /* brighter on dark */
+  --color-primary-hover: #7cc497;
+  --color-primary-soft: rgba(102, 181, 134, 0.16);
+  --color-on-primary: #0c130e;
 
-  --color-accent: #7cb479;
-  --color-accent-text: #7cb479; /* accent already AA on dark surface */
-  --color-accent-warm: #d8b94a;
+  --color-accent: #7cc497;
+  --color-accent-text: #7cc497; /* accent already AA on dark glass */
+  --color-accent-warm: #dcbb4e;
 
-  --color-bg: #1c1b19;
-  --color-surface: #262521;
-  --color-surface-alt: #2e2c28;
-  --color-border: #3a3833;
-  --color-border-strong: #7c776d; /* >=3:1 control edges on dark */
-  --color-text: #ede9e1;
-  --color-text-muted: #a39e94;
+  --color-bg: #0e130f; /* deep forest night — under the aurora */
+  --color-surface: rgba(28, 38, 31, 0.55);
+  --color-surface-solid: #1b231d;
+  --color-surface-alt: rgba(255, 255, 255, 0.06);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: #83907f; /* >=3:1 control edges on dark */
+  --color-text: #e9efe9;
+  --color-text-muted: #a4b2a5;
 
-  --color-success: #7cb479;
+  --color-success: #7cc497;
   --color-info: #8fb0c9;
-  --color-warning: #d8b94a;
+  --color-warning: #dcbb4e;
   --color-danger: #d9837b;
 
-  --color-citation-bg: #232c33;
+  --color-citation-bg: rgba(143, 176, 201, 0.14);
   --color-citation-text: #a7c4d6;
 
   --color-fruit: #d98b6f;
-  --color-bark: #a07d5b; /* lighter warm bark for dark surfaces */
+  --color-bark: #a07d5b;
 
-  --color-focus: #7cb479;
-  --color-overlay: rgba(0, 0, 0, 0.55);
+  --color-focus: #7cc497;
+  --color-overlay: rgba(0, 0, 0, 0.6);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.36);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --glass-bg: rgba(24, 33, 27, 0.55);
+  --glass-bg-strong: rgba(21, 29, 24, 0.82);
+  --glass-bg-soft: rgba(30, 41, 34, 0.35);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --aurora-a: rgba(58, 158, 102, 0.28); /* emerald glow */
+  --aurora-b: rgba(196, 154, 42, 0.14); /* ember gold */
+  --aurora-c: rgba(72, 122, 168, 0.2); /* night sky */
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 0 1px rgba(102, 181, 134, 0.25), 0 4px 24px rgba(102, 181, 134, 0.2);
 }
 
-/* ── High-contrast variant (a11y) ───────────────────────────────────── */
+/* ── High-contrast variant (a11y): glass goes opaque, blur goes away ── */
 [data-contrast="high"] {
   --color-text: #000000;
   --color-text-muted: #3a3631;
   --color-border: #6b665e;
   --color-border-strong: #6b665e;
-  --color-primary: #2f5d3a;
-  --color-primary-hover: #244a2d;
+  --color-primary: #245e3e;
+  --color-primary-hover: #1c4a31;
   --color-citation-text: #1f3d52;
+
+  --color-surface: var(--color-surface-solid);
+  --glass-bg: var(--color-surface-solid);
+  --glass-bg-strong: var(--color-surface-solid);
+  --glass-bg-soft: var(--color-surface-solid);
+  --glass-border: #6b665e;
+  --glass-blur: none;
+  --glass-highlight: inset 0 0 0 transparent;
+  --aurora-a: transparent;
+  --aurora-b: transparent;
+  --aurora-c: transparent;
 }
 
 [data-theme="dark"][data-contrast="high"] {
@@ -185,6 +236,12 @@
   --color-border-strong: #8a857b;
   --color-primary: #8fce8b;
   --color-primary-hover: #a0d99c;
+
+  --color-surface: var(--color-surface-solid);
+  --glass-bg: var(--color-surface-solid);
+  --glass-bg-strong: var(--color-surface-solid);
+  --glass-bg-soft: var(--color-surface-solid);
+  --glass-border: #8a857b;
 }
 
 /* ── Reduced motion: kill all animation/transition (A7 / a11y baseline) ─ */

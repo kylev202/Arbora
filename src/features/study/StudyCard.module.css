@@ -5,10 +5,13 @@
   gap: var(--space-4);
   min-height: 320px;
   padding: var(--space-8);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
+  animation: pop var(--motion-slow) var(--ease-spring) both;
 }
 
 .readAloud {
@@ -18,9 +21,10 @@
 }
 
 .prompt {
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--weight-medium);
-  line-height: var(--leading-normal);
+  line-height: 1.45;
   padding-top: var(--space-6);
 }
 

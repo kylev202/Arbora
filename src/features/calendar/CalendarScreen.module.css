@@ -48,12 +48,21 @@
   height: 40px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--color-text);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-spring);
 }
 .navBtn:hover {
   background: var(--color-surface-alt);
+  transform: translateY(-1px);
+}
+.navBtn:active {
+  transform: scale(0.94);
 }
 
 .rangeLabel {
@@ -76,7 +85,9 @@
   padding: 0 var(--space-3);
   border: none;
   border-right: 1px solid var(--color-border-strong);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -137,8 +148,12 @@
 .weekWrap {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
+  background: var(--glass-bg-soft);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
   overflow: hidden;
   min-height: 0;
   flex: 1;
@@ -147,7 +162,9 @@
 .dayHeaders {
   display: flex;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .gutterSpacer {
@@ -303,11 +320,12 @@
   min-height: 96px;
   padding: var(--space-2);
   border: none;
-  background: var(--color-bg);
+  background: var(--glass-bg);
   font-family: inherit;
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 .monthCell:hover {
   background: var(--color-surface-alt);

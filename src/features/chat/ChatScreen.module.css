@@ -35,9 +35,13 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm), var(--glass-highlight);
+  animation: rise var(--motion-slow) var(--ease-out) both;
 }
 
 .answerText {
@@ -97,7 +101,9 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-full);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--color-text);
   font-size: var(--text-base);
   font-family: inherit;
@@ -106,6 +112,7 @@
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
 }
 .input::placeholder {
   color: var(--color-text-muted);
@@ -127,10 +134,18 @@
   background: var(--color-primary);
   color: var(--color-on-primary);
   cursor: pointer;
-  transition: background-color var(--motion-fast) var(--ease-standard);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-out),
+    transform var(--motion-base) var(--ease-spring);
 }
 .send:hover:not(:disabled) {
   background: var(--color-primary-hover);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+.send:active:not(:disabled) {
+  transform: scale(0.92);
 }
 .send:disabled {
   opacity: 0.4;

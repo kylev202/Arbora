@@ -15,12 +15,14 @@
   gap: var(--space-2);
 }
 
-/* The one emotional heading on Home — display serif (§2.2). */
+/* The one emotional heading on Home — oversized display serif (§2.2). */
 .greeting {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
   font-family: var(--font-display);
+  font-size: var(--text-3xl);
   font-weight: var(--weight-semibold);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  animation: rise var(--motion-slow) var(--ease-out) both;
 }
 
 /* Hero row: forest tree (emotional center) + todo panel on the right. */
@@ -30,6 +32,8 @@
   gap: var(--space-6);
   align-items: start;
   margin-bottom: var(--space-8);
+  animation: rise var(--motion-slow) var(--ease-out) both;
+  animation-delay: 70ms;
 }
 
 @media (max-width: 900px) {
@@ -38,16 +42,20 @@
   }
 }
 
-/* The emotional center: Committed color strategy — the tree lives on a soft
-   green ground, the one place color owns the surface (§2.1). */
+/* The emotional center: the tree lives behind glass tinted by its own
+   canopy — the one place color owns the surface (§2.1). */
 .treeSide {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-6) var(--space-4);
-  background: var(--color-primary-soft);
-  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, var(--color-primary-soft), var(--glass-bg-soft));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
 }
 
 .todoSide {
@@ -75,7 +83,8 @@
 .skeleton {
   height: 280px;
   border-radius: var(--radius-lg);
-  background: var(--color-surface-alt);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
   animation: pulse 1.4s ease-in-out infinite;
 }
 

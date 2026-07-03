@@ -16,7 +16,9 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -66,15 +68,20 @@
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
+  animation: pop var(--motion-slow) var(--ease-spring) both;
 }
 
 .prompt {
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-medium);
-  line-height: var(--leading-tight);
+  line-height: 1.4;
 }
 .prompt svg {
   translate: 0 2px;
@@ -102,17 +109,24 @@
 .option {
   min-height: 44px;
   padding: var(--space-2) var(--space-4);
-  background: var(--color-bg);
+  background: var(--glass-bg-soft);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   text-align: left;
   font-size: var(--text-base);
   color: var(--color-text);
   cursor: pointer;
-  transition: border-color var(--motion-fast) var(--ease-standard);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-base) var(--ease-spring);
 }
 .option:hover:not(:disabled) {
   border-color: var(--color-primary);
+  transform: translateX(3px);
+}
+.option:active:not(:disabled) {
+  transform: scale(0.99);
 }
 .option:disabled {
   cursor: default;
@@ -310,7 +324,9 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }

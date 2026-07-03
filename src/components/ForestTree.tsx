@@ -103,7 +103,7 @@ export function ForestTree({
   onOpenSubject: (subjectId: string) => void;
   size?: number;
 }) {
-  const { W, H, groundY, trunkTopY, cx, branches, crown } = useMemo(() => {
+  const { W, H, groundY, trunkTopY, cx, branches } = useMemo(() => {
     const W = 480;
     const H = 380;
     const groundY = 344;
@@ -211,31 +211,7 @@ export function ForestTree({
       };
     });
 
-    // A decorative crown of foliage at the treetop — fills the centre so the
-    // branches read as one canopy dome. Structural (like the trunk), not leaves.
-    const avgPct = data.length
-      ? data.reduce((s, d) => s + d.tree.mastery_pct, 0) / data.length
-      : 0;
-    const crownRng = seededRng("crown");
-    const crownCy = trunkTopY - lerp(70, 130, avgPct);
-    const crownR = lerp(46, 78, avgPct);
-    const crown: { x: number; y: number; rx: number; ry: number }[] = [];
-    if (data.length > 0) {
-      crown.push({ x: cx, y: crownCy, rx: crownR, ry: crownR * 0.82 });
-      const puffs = 6;
-      for (let k = 0; k < puffs; k++) {
-        const a = (k / puffs) * Math.PI * 2;
-        const rr = crownR * (0.42 + crownRng() * 0.24);
-        crown.push({
-          x: cx + Math.cos(a) * crownR * 0.55 * (0.7 + crownRng() * 0.5),
-          y: crownCy + Math.sin(a) * crownR * 0.42 * (0.7 + crownRng() * 0.5),
-          rx: rr,
-          ry: rr * (0.8 + crownRng() * 0.18),
-        });
-      }
-    }
-
-    return { W, H, groundY, trunkTopY, cx, branches, crown };
+    return { W, H, groundY, trunkTopY, cx, branches };
   }, [data]);
 
   return (
@@ -265,18 +241,6 @@ export function ForestTree({
               Q ${cx + 15} ${groundY - 6} ${cx + 24} ${groundY} Z`}
           className={styles.trunk}
         />
-
-        {/* treetop crown — foliage dome behind the branches */}
-        {crown.map((c, i) => (
-          <ellipse
-            key={i}
-            cx={c.x}
-            cy={c.y}
-            rx={c.rx}
-            ry={c.ry}
-            className={styles.canopy}
-          />
-        ))}
 
         {branches.map((b) => (
           <g

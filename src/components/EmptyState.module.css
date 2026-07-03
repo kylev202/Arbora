@@ -12,14 +12,33 @@
 
 .icon {
   display: inline-flex;
-  font-size: 2.5rem;
-  color: var(--color-text-muted);
-  opacity: 0.8;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  font-size: 2.2rem;
+  color: var(--color-primary);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--glass-highlight);
+  animation: float-y 5s ease-in-out infinite;
 }
 
 .title {
+  font-family: var(--font-display);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .description {

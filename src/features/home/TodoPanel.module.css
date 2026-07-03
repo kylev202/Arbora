@@ -3,13 +3,18 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm), var(--glass-highlight);
 }
 
 .heading {
+  font-family: var(--font-heading);
   font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
   margin-bottom: var(--space-3);
 }
 

@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import styles from "./Tabs.module.css";
 
 export type TabItem<T extends string> = {
@@ -18,11 +18,37 @@ export type TabsProps<T extends string> = {
 
 /**
  * In-page tab strip (role=tablist) with roving tabindex + arrow-key navigation.
- * The active tab gets an underline indicator. Panels are rendered by the caller
- * (each should have role=tabpanel + aria-labelledby={`tab-${id}`}).
+ * A sliding underline indicator springs to the active tab. Panels are rendered
+ * by the caller (each should have role=tabpanel + aria-labelledby={`tab-${id}`}).
  */
 export function Tabs<T extends string>({ items, value, onChange, label }: TabsProps<T>) {
-  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  const [animate, setAnimate] = useState(false);
+
+  const measure = useCallback(() => {
+    const el = buttonRefs.current[value];
+    if (!el) return;
+    setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [value]);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(list);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnimate(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   function onKeyDown(e: React.KeyboardEvent) {
     const idx = items.findIndex((t) => t.id === value);
@@ -36,18 +62,31 @@ export function Tabs<T extends string>({ items, value, onChange, label }: TabsPr
     e.preventDefault();
     const nextId = items[next].id;
     onChange(nextId);
-    refs.current[nextId]?.focus();
+    buttonRefs.current[nextId]?.focus();
   }
 
   return (
-    <div className={styles.tablist} role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <div
+      ref={listRef}
+      className={styles.tablist}
+      role="tablist"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+    >
+      {indicator && (
+        <span
+          aria-hidden="true"
+          className={`${styles.indicator} ${animate ? "" : styles.noTransition}`}
+          style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }}
+        />
+      )}
       {items.map((tab) => {
         const selected = tab.id === value;
         return (
           <button
             key={tab.id}
             ref={(el) => {
-              refs.current[tab.id] = el;
+              buttonRefs.current[tab.id] = el;
             }}
             id={`tab-${tab.id}`}
             role="tab"

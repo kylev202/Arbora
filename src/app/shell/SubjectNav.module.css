@@ -1,37 +1,100 @@
+/* Subject pages nav — a floating glass pill under the top bar. */
 .nav {
+  position: relative;
+  z-index: calc(var(--z-nav) - 1);
   display: flex;
   justify-content: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-6);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-1);
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--space-4));
+  margin: var(--space-4) auto 0;
+  padding: var(--space-1);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm), var(--glass-highlight);
+  animation: rise var(--motion-slow) var(--ease-out) both;
+  animation-delay: 60ms;
+  /* Let a horizontal drag on the thumb pan the pill instead of scrolling. */
+  touch-action: none;
+}
+
+/* The sliding active pill — springs between segments and follows a drag. */
+.thumb {
+  position: absolute;
+  top: var(--space-1);
+  left: 0;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, width;
+  transition:
+    transform 350ms var(--ease-spring),
+    width 350ms var(--ease-spring);
+}
+/* First paint + active-frame of a drag: track the finger 1:1, no easing. */
+.noTransition {
+  transition: none;
 }
 
 .link {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 48px;
+  height: 40px;
   padding: 0 var(--space-4);
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-full);
   color: var(--color-text-muted);
+  font-family: var(--font-heading);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   text-decoration: none;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
   transition:
     color var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-base) var(--ease-out);
+    transform var(--motion-base) var(--ease-spring);
 }
 .link:hover {
   color: var(--color-text);
   text-decoration: none;
+  transform: translateY(-1px);
+}
+.link:active {
+  transform: scale(0.97);
 }
 
 .active,
 .active:hover {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--color-on-primary);
+  transform: none;
+  cursor: grab;
+}
+/* While dragging, the whole strip shows the grabbing cursor and the pill
+   shouldn't lift on the pointer hover it's under. */
+.grabbing .active {
+  cursor: grabbing;
+}
+.grabbing .link:hover {
+  transform: none;
+}
+
+.divider {
+  display: block;
+  width: 1px;
+  height: 24px;
+  background: var(--glass-border);
+  margin: 0 var(--space-1);
+  align-self: center;
+  flex: none;
 }
 
 .icon {
@@ -47,14 +110,11 @@
   font-variant-numeric: tabular-nums;
 }
 .active .badge {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--color-on-primary);
 }
 
 @media (max-width: 720px) {
-  .nav {
-    padding: 0 var(--space-2);
-  }
   .link {
     padding: 0 var(--space-3);
   }

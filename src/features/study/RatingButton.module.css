@@ -8,21 +8,27 @@
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-highlight);
   cursor: pointer;
   transition:
-    transform var(--motion-fast) var(--ease-standard),
+    transform var(--motion-base) var(--ease-spring),
     border-color var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-fast) var(--ease-standard);
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-out);
 }
 .btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .label {
+  font-family: var(--font-heading);
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }

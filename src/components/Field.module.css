@@ -17,10 +17,14 @@
   font-family: inherit;
   font-size: var(--text-base);
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  transition: border-color var(--motion-fast) var(--ease-standard);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-out);
 }
 .control::placeholder {
   color: var(--color-text-muted);
@@ -30,6 +34,7 @@
 }
 .control:focus {
   border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
   /* focus-visible ring from global handles the outline */
 }
 

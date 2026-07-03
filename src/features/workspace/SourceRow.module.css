@@ -62,7 +62,9 @@
 .weekSelect {
   font: inherit;
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);
@@ -96,7 +98,9 @@
   font: inherit;
   font-weight: var(--weight-medium);
   color: var(--color-text);
-  background: var(--color-surface);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: var(--space-1) var(--space-2);

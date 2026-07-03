@@ -16,9 +16,9 @@ const SECTION_LABELS: Record<string, string> = {
 };
 
 /**
- * Frame for everything under /subject/:subjectId — top bar + breadcrumb + the
- * subject's three pages as a horizontal nav + the active page via <Outlet>.
- * Focus mode (Settings) drops the nav so the user sees only the current task.
+ * Frame for everything under /subject/:subjectId — top bar + the combined
+ * Home/Calendar + subject-page nav strip + the active page via <Outlet>.
+ * Focus mode (Settings) drops the strip and restores the top bar's center nav.
  */
 export function WorkspaceLayout() {
   const { subjectId = "" } = useParams();
@@ -46,7 +46,7 @@ export function WorkspaceLayout() {
 
   return (
     <div className={styles.shell}>
-      <TopBar breadcrumb={<Breadcrumb crumbs={crumbs} />} />
+      <TopBar breadcrumb={<Breadcrumb crumbs={crumbs} />} hideNav={!focusMode} />
       {!focusMode && <SubjectNav subjectId={subjectId} badges={badges} />}
       <main className={styles.content}>
         <Outlet />

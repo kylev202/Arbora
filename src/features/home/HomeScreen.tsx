@@ -149,7 +149,7 @@ export function HomeScreen() {
           )}
 
           {remote.status === "loaded" && subjects.length > 0 && (
-            <div className={styles.grid}>
+            <div className={`${styles.grid} stagger`}>
               {subjects.map((s) => (
                 <SubjectCard key={s.id} subject={s} />
               ))}
