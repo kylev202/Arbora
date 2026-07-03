@@ -185,7 +185,7 @@ export function SettingsScreen() {
 
           {/* ── AI preset ── */}
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>AI — machine preset</h2>
+            <h2 className={styles.sectionTitle}>AI model preset</h2>
             <RadioGroup
               legend="Machine preset"
               hideLegend

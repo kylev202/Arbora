@@ -56,11 +56,11 @@ export function DashboardScreen() {
           <div className={styles.weekNowText}>
             <h2 className={styles.weekNowTitle}>
               This week · Week {week.week_number}
-              {week.title ? ` — ${week.title}` : ""}
+              {week.title ? ` · ${week.title}` : ""}
             </h2>
             {week.source_count === 0 ? (
               <p className={styles.weekNowEmpty}>
-                No material for this week yet — add this week's slides or readings to study them.
+                No material for this week yet. Add this week's slides or readings to study them.
               </p>
             ) : (
               week.summary && <p className={styles.weekNowSummary}>{week.summary}</p>

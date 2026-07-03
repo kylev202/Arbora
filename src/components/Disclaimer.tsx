@@ -18,7 +18,7 @@ export function Disclaimer({ children, variant = "note" }: DisclaimerProps) {
     <div className={`${styles.disclaimer} ${styles[variant]}`} role="note">
       <Warning className={styles.icon} aria-hidden="true" weight="fill" />
       <span>
-        {children ?? "AI can make mistakes — verify against the original source before trusting it."}
+        {children ?? "AI can make mistakes. Verify against the original source before trusting it."}
       </span>
     </div>
   );

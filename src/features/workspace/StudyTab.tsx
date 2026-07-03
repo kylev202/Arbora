@@ -34,7 +34,7 @@ export function StudyTab() {
     } catch (e) {
       setExportMsg(
         String(e).includes("NO_CARDS_TO_EXPORT")
-          ? "No approved cards to export yet — approve some in the review gate first."
+          ? "No approved cards to export yet. Approve some in the review gate first."
           : "Export failed. Make sure the AI sidecar is running and try again.",
       );
     } finally {
@@ -76,7 +76,7 @@ export function StudyTab() {
         <EmptyState
           icon={<span aria-hidden="true">🌱</span>}
           title="All done for today"
-          description="Nothing is due right now. Rest is part of learning — your tree keeps its size."
+          description="Nothing is due right now. Rest is part of learning. Your tree keeps its size."
         />
       ) : (
         <div className={styles.start}>

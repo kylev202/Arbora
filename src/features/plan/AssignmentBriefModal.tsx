@@ -160,8 +160,8 @@ export function AssignmentBriefModal({
               </div>
             ) : (
               <p className={styles.hint}>
-                Set up a unit outline on the Timeline first, then assign materials to its weeks —
-                the brief is built from the material in the weeks you pick here.
+                Set up a unit outline on the Timeline first, then assign materials to its weeks.
+                The brief is built from the material in the weeks you pick here.
               </p>
             )}
           </section>
@@ -194,7 +194,7 @@ export function AssignmentBriefModal({
         <div className={styles.body}>
           <p>
             Built <strong>{items} focus point{items === 1 ? "" : "s"}</strong>. They're waiting in the
-            review queue — nothing is saved until you approve it.
+            review queue. Nothing is saved until you approve it.
           </p>
           <Disclaimer />
         </div>

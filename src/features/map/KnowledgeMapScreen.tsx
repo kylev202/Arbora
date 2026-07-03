@@ -35,7 +35,7 @@ function ConceptTile({ entry }: { entry: ConceptEntry }) {
       data-mastery={entry.mastery}
       onClick={() => setExpanded((v) => !v)}
       aria-expanded={expanded}
-      aria-label={`${entry.concept} — ${MASTERY_LABEL[entry.mastery]}`}
+      aria-label={`${entry.concept}, ${MASTERY_LABEL[entry.mastery]}`}
     >
       <div className={styles.tileHeader}>
         <span className={styles.masteryDot} data-mastery={entry.mastery} aria-hidden />

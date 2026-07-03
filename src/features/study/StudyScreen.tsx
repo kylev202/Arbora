@@ -171,7 +171,7 @@ export function StudyScreen() {
         <EmptyState
           icon={<span aria-hidden="true">🌿</span>}
           title="Great session!"
-          description="Your focus time is up. Take a short break — your tree keeps its size while you rest."
+          description="Your focus time is up. Take a short break. Your tree keeps its size while you rest."
           action={
             <div className={styles.doneActions}>
               <Button variant="primary" onClick={exit}>
@@ -209,8 +209,8 @@ export function StudyScreen() {
           title={total === 0 ? "Nothing due right now" : "All done today"}
           description={
             total === 0
-              ? "Come back when cards are due. Resting is fine — your tree keeps its size."
-              : "Nice session. Your tree grows from what you retained — see it on the dashboard."
+              ? "Come back when cards are due. Resting is fine. Your tree keeps its size."
+              : "Nice session. Your tree grows from what you retained. See it on the dashboard."
           }
           action={
             <div className={styles.doneActions}>

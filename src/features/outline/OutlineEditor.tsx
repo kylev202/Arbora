@@ -60,7 +60,7 @@ export function SetupOutlineModal({
           type="date"
           value={termStart}
           onChange={(e) => setTermStart(e.target.value)}
-          hint="Optional — sets each week's date automatically. You can leave it blank."
+          hint="Optional: sets each week's date automatically. You can leave it blank."
         />
         <Input
           label="Number of weeks"

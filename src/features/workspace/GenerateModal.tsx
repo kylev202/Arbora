@@ -161,7 +161,7 @@ export function GenerateModal({
         <div className={styles.generating}>
           <p>
             Generated <strong>{items} item{items === 1 ? "" : "s"}</strong>. They're waiting in the
-            review queue — nothing is saved until you approve it.
+            review queue. Nothing is saved until you approve it.
           </p>
           <Disclaimer />
         </div>

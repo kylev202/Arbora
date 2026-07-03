@@ -129,7 +129,7 @@ export function Tree({ data, seed, size = 280, hideCaption, className }: TreePro
   const ariaLabel =
     stage === 0
       ? "A seedling, ready to grow as you master cards."
-      : `Your tree at stage ${stage} of 5 — ${data.concepts_mastered} concepts mastered, ${data.concepts_learning} learning (${masteredPct}% mastery).`;
+      : `Your tree at stage ${stage} of 5: ${data.concepts_mastered} concepts mastered, ${data.concepts_learning} learning (${masteredPct}% mastery).`;
 
   return (
     <div className={`${styles.wrap} ${className ?? ""}`}>

@@ -214,7 +214,7 @@ export function ReviewScreen() {
             <EmptyState
               icon={<CheckCircle weight="fill" />}
               title="Review complete"
-              description="Kept items are saved to this subject. Discarded ones are gone — nothing untraceable was trusted."
+              description="Kept items are saved to this subject. Discarded ones are gone. Nothing untraceable was trusted."
               action={
                 <Button variant="primary" onClick={() => navigate(`/subject/${subjectId}/content`)}>
                   Back to content
@@ -226,7 +226,7 @@ export function ReviewScreen() {
               <>
                 {currentStatus !== "pending" && (
                   <p className={styles.decided}>
-                    {currentStatus === "kept" ? "Kept ✓" : "Discarded"} — you can still change this.
+                    {currentStatus === "kept" ? "Kept ✓" : "Discarded"} · you can still change this.
                   </p>
                 )}
 

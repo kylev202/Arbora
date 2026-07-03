@@ -249,7 +249,7 @@ export function CalendarScreen() {
           <section className={styles.proposals} aria-label="AI schedule proposals">
             <div className={styles.proposalsHeader}>
               <span className={styles.proposalsTitle}>
-                Suggested sessions — nothing is saved until you accept.
+                Suggested sessions: nothing is saved until you accept.
               </span>
               <div className={styles.proposalsActions}>
                 <Button size="sm" variant="secondary" onClick={() => void acceptAll()}>

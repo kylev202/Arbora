@@ -145,7 +145,7 @@ export function AddSourceModal({
           <CheckCircle weight="fill" className={styles.doneIcon} aria-hidden="true" />
           <div>
             <p className={styles.fileName}>{fileName}</p>
-            <p className={styles.doneText}>Processed and indexed — ready to generate content.</p>
+            <p className={styles.doneText}>Processed and indexed. Ready to generate content.</p>
           </div>
         </div>
       )}

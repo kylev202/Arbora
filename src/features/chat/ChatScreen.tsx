@@ -13,7 +13,7 @@ type Turn =
 
 function errorMessage(raw: string): string {
   if (raw.includes("NO_CHUNKS"))
-    return "No indexed material yet — add sources and ingest them first.";
+    return "No indexed material yet. Add sources and ingest them first.";
   if (raw.includes("SIDECAR_UNAVAILABLE"))
     return "AI sidecar is not ready. Wait a moment and try again.";
   return "Couldn't get an answer. Make sure Ollama is running and try again.";
@@ -62,7 +62,7 @@ export function ChatScreen() {
       </div>
 
       <Disclaimer>
-        Answers are generated from your sources only — always verify important details.
+        Answers are generated from your sources only. Always verify important details.
       </Disclaimer>
 
       <div className={styles.messages} aria-live="polite" aria-label="Conversation">

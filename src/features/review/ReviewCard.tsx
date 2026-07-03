@@ -111,7 +111,7 @@ function DisplayFields({ item }: { item: ReviewItem }) {
   if (item.kind === "brief") {
     return (
       <div className={styles.fields}>
-        <Field label={`Study brief — ${item.deadline_title}`}>
+        <Field label={`Study brief · ${item.deadline_title}`}>
           <span className={styles.note}>{item.content}</span>
         </Field>
       </div>

@@ -97,7 +97,7 @@ export function HomeScreen() {
                 <EmptyState
                   icon={<TreeIcon weight="fill" />}
                   title="No subjects yet"
-                  description="Start by adding your first subject — then drop in documents to grow it."
+                  description="Start by adding your first subject, then drop in documents to grow it."
                   action={
                     <Button variant="primary" icon={<Plus weight="bold" />} onClick={() => setCreating(true)}>
                       New subject

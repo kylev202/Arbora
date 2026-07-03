@@ -294,7 +294,7 @@ export function PetPanel({
         <div ref={bottomRef} />
       </div>
 
-      <Disclaimer>AI can be wrong — check the sources.</Disclaimer>
+      <Disclaimer>AI can be wrong. Check the sources.</Disclaimer>
 
       <form
         className={styles.inputRow}

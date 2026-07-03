@@ -14,7 +14,7 @@ export function TopBar({ breadcrumb }: { breadcrumb?: ReactNode }) {
   return (
     <header className={styles.bar}>
       <div className={styles.left}>
-        <Link to="/" className={styles.brand} aria-label="Arbora — home">
+        <Link to="/" className={styles.brand} aria-label="Arbora, home">
           <Tree weight="fill" className={styles.brandIcon} aria-hidden="true" />
           <span className={styles.brandName}>Arbora</span>
         </Link>

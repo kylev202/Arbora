@@ -70,7 +70,7 @@ export function SessionRecap({
           start_at: `${dueDate}T18:00`,
           end_at: `${dueDate}T18:50`,
           kind: "study",
-          reason: "Cards from this session come due around then — a short review locks them in.",
+          reason: "Cards from this session come due around then. A short review locks them in.",
         };
 
   async function acceptProposal(times: { start_at: string; end_at: string }) {

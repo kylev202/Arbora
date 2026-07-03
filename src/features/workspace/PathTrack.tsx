@@ -97,7 +97,7 @@ export function PathTrack({ subjectId }: { subjectId: string }) {
               <div className={styles.body}>
                 <span className={styles.title}>
                   Week {s.week_number}
-                  {s.title ? ` — ${s.title}` : ""}
+                  {s.title ? ` · ${s.title}` : ""}
                 </span>
                 <span className={styles.meta}>
                   {state === "empty"

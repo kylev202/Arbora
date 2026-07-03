@@ -108,7 +108,7 @@ export function Pet() {
           const missed = events.filter((e) => e.kind === "study" && e.status === "planned");
           if (missed.length > 0) {
             next = {
-              text: "A study session slipped by — want help finding a new spot?",
+              text: "A study session slipped by. Want help finding a new spot?",
               go: () => navigate("/calendar"),
             };
           }

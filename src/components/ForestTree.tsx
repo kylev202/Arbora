@@ -140,7 +140,7 @@ export function ForestTree({
             className={forest.branchGroup}
             role="link"
             tabIndex={0}
-            aria-label={`${b.subject.name} — ${Math.round(b.pct * 100)}% mastered. Open subject.`}
+            aria-label={`${b.subject.name}, ${Math.round(b.pct * 100)}% mastered. Open subject.`}
             onClick={() => onOpenSubject(b.subject.id)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {

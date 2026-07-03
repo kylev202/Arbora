@@ -129,7 +129,7 @@ export function ImportSyllabusModal({
           <p className={styles.dropText}>Choose your unit syllabus</p>
           <p className={styles.dropHint}>
             PDF, Word doc, slides, or a text file. Arbora reads it on-device and pulls out the weeks and
-            deadlines for you to check — nothing is saved until you confirm.
+            deadlines for you to check. Nothing is saved until you confirm.
           </p>
           <Button variant="primary" icon={<FilePlus weight="bold" />} onClick={choose}>
             Choose file
@@ -156,7 +156,7 @@ export function ImportSyllabusModal({
       {phase === "review" && (
         <div className={styles.review}>
           <Disclaimer>
-            AI can misread a syllabus — check these weeks and dates before you create the outline.
+            AI can misread a syllabus. Check these weeks and dates before you create the outline.
           </Disclaimer>
 
           {empty && (
@@ -171,7 +171,7 @@ export function ImportSyllabusModal({
             type="date"
             value={termStart}
             onChange={(e) => setTermStart(e.target.value)}
-            hint="Optional — sets each week's date automatically."
+            hint="Optional: sets each week's date automatically."
           />
 
           <section className={styles.section}>

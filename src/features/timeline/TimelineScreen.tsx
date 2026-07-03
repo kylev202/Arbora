@@ -74,7 +74,7 @@ export function TimelineScreen() {
         <EmptyState
           icon={<CalendarBlank />}
           title="Lay out your semester"
-          description="Import your syllabus and Arbora pulls out the weeks and deadlines for you to check — or set it up by hand. Each week becomes a place to hang topics, materials, and deadlines."
+          description="Import your syllabus and Arbora pulls out the weeks and deadlines for you to check, or set it up by hand. Each week becomes a place to hang topics, materials, and deadlines."
           action={
             <div className={styles.setupActions}>
               <Button
@@ -111,9 +111,9 @@ export function TimelineScreen() {
           {unassigned > 0 && (
             <p className={styles.unassigned}>
               {unassigned} {unassigned === 1 ? "material isn't" : "materials aren't"} assigned to a
-              week yet —{" "}
+              week yet.{" "}
               <Link to={`/subject/${subjectId}/sources`} className={styles.link}>
-                assign them in Sources
+                Assign them in Sources
               </Link>
               .
             </p>

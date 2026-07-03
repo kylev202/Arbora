@@ -14,7 +14,7 @@ type DiagramState =
 
 function errorMessage(raw: string): string {
   if (raw.includes("NO_CHUNKS"))
-    return "No indexed material yet — add sources and ingest them first.";
+    return "No indexed material yet. Add sources and ingest them first.";
   if (raw.includes("SIDECAR_UNAVAILABLE"))
     return "AI sidecar is not ready. Wait a moment and try again.";
   return "Couldn't generate a diagram. Make sure Ollama is running and try again.";
