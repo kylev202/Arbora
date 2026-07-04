@@ -91,6 +91,13 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+.segment:not(.segmentActive):hover {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
 }
 .segment:last-child {
   border-right: none;
@@ -221,6 +228,10 @@
 .hourCell {
   height: 48px;
   border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+.dayCol:hover .hourCell:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
 .nowLine {
@@ -229,8 +240,17 @@
   right: 0;
   height: 2px;
   background: var(--color-primary);
-  opacity: 0.5;
   pointer-events: none;
+  z-index: 1;
+}
+.nowDot {
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
 }
 
 /* One event block. Colors by kind — deadline is earth gold, never red.
@@ -238,7 +258,7 @@
    blocks read clearly against the frosted grid, with a thicker accent edge. */
 .event {
   position: absolute;
-  left: 4px;
+  left: 0;
   right: 4px;
   display: flex;
   flex-direction: column;
@@ -247,7 +267,7 @@
   padding: 3px var(--space-2) 3px calc(var(--space-2) - 1px);
   border: 1px solid;
   border-left-width: 3px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   font-family: inherit;
   /* Text scales with the viewport so it stays legible at any resolution,
@@ -297,9 +317,11 @@
 }
 
 .dragging {
-  box-shadow: var(--shadow-md);
-  opacity: 0.9;
-  z-index: 2;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  opacity: 0.88;
+  transform: scale(1.03) translateY(-2px);
+  z-index: 10;
+  transition: none;
 }
 
 .eventTitle {
@@ -360,6 +382,8 @@
 }
 .monthCell:hover {
   background: var(--color-surface-alt);
+  transform: scale(1.01);
+  z-index: 1;
 }
 .monthCell.outside {
   opacity: 0.45;
@@ -391,4 +415,31 @@
 
 .moreCount {
   color: var(--color-text-muted);
+}
+
+/* ── Slot hover ghost ──────────────────────────────────────────────────── */
+
+.slotGhost {
+  position: absolute;
+  left: 0;
+  right: 4px;
+  height: 48px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border: 1px dashed var(--color-primary);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  opacity: 0.7;
+  z-index: 1;
+}
+
+/* Live block while dragging out a new event's time range. */
+.selectionBlock {
+  position: absolute;
+  left: 0;
+  right: 4px;
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  z-index: 2;
 }

@@ -13,7 +13,7 @@ const KINDS: { value: EventKind; label: string }[] = [
   { value: "custom", label: "Other" },
 ];
 
-const EVENT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
+const EVENT_COLORS = ["#3B7DD8", "#2DA58E", "#7C5CBF", "#D4644A", "#C4963A", "#5A8F6B"];
 
 type RepeatFreq = "daily" | "weekly" | "monthly";
 

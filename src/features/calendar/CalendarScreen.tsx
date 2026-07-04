@@ -68,6 +68,15 @@ export function CalendarScreen() {
     preview: { start_at: string; end_at: string } | null;
   } | null>(null);
   const [, forceRender] = useState(0);
+  const [hoverSlot, setHoverSlot] = useState<{ dayIndex: number; top: number } | null>(null);
+  const [selection, setSelection] = useState<{ dayIndex: number; startMin: number; endMin: number } | null>(null);
+  const selectRef = useRef<{
+    dayIndex: number;
+    startMin: number;
+    endMin: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
 
   const weekStart = startOfWeek(anchor);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -160,13 +169,23 @@ export function CalendarScreen() {
 
   // ── Week-view interactions ────────────────────────────────────────────────
 
-  function slotFromClick(dayIndex: number, offsetY: number): EventDraft {
-    const mins = Math.floor(offsetY / PX_PER_MIN / 60) * 60; // snap to the hour
-    const start = addMinutes(
-      new Date(days[dayIndex].getFullYear(), days[dayIndex].getMonth(), days[dayIndex].getDate(), DAY_START_HOUR),
-      mins,
-    );
-    const end = addMinutes(start, 60);
+  /** Snap a pointer position to a {day column, minutes-into-day} slot. */
+  function gridSlot(clientX: number, clientY: number): { dayIndex: number; min: number } | null {
+    const grid = gridRef.current;
+    if (!grid) return null;
+    const rect = grid.getBoundingClientRect();
+    const colWidth = rect.width / 7;
+    const dayIndex = Math.min(6, Math.max(0, Math.floor((clientX - rect.left) / colWidth)));
+    const totalMin = (DAY_END_HOUR - DAY_START_HOUR) * 60;
+    const rawMin = Math.min(totalMin, Math.max(0, (clientY - rect.top) / PX_PER_MIN));
+    return { dayIndex, min: Math.round(rawMin / SNAP_MIN) * SNAP_MIN };
+  }
+
+  function draftFromRange(dayIndex: number, startMin: number, endMin: number): EventDraft {
+    const day = days[dayIndex];
+    const base = new Date(day.getFullYear(), day.getMonth(), day.getDate(), DAY_START_HOUR);
+    const start = addMinutes(base, Math.min(startMin, endMin));
+    const end = addMinutes(base, Math.max(startMin, endMin));
     return {
       date: toNaive(start).split("T")[0],
       start: toNaive(start).split("T")[1],
@@ -212,6 +231,52 @@ export function CalendarScreen() {
       // Optimistic: show the drop position immediately.
       patchEvent({ ...event, start_at, end_at });
     }
+  }
+
+  // ── Drag-to-select a new event's time range ───────────────────────────────
+
+  function onGridPointerDown(e: React.PointerEvent) {
+    if (dragRef.current) return; // press started on an event
+    const slot = gridSlot(e.clientX, e.clientY);
+    if (!slot) return;
+    selectRef.current = {
+      dayIndex: slot.dayIndex,
+      startMin: slot.min,
+      endMin: slot.min,
+      startY: e.clientY,
+      moved: false,
+    };
+    setSelection({ dayIndex: slot.dayIndex, startMin: slot.min, endMin: slot.min });
+    setHoverSlot(null);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onGridPointerMove(e: React.PointerEvent) {
+    const sel = selectRef.current;
+    if (sel) {
+      const slot = gridSlot(e.clientX, e.clientY);
+      if (!slot) return;
+      if (Math.abs(e.clientY - sel.startY) >= DRAG_THRESHOLD) sel.moved = true;
+      sel.endMin = slot.min; // column stays fixed to where the drag started
+      setSelection({ dayIndex: sel.dayIndex, startMin: sel.startMin, endMin: slot.min });
+      return;
+    }
+    if (dragRef.current) return; // an event is being dragged
+    const slot = gridSlot(e.clientX, e.clientY);
+    if (slot) setHoverSlot({ dayIndex: slot.dayIndex, top: slot.min * PX_PER_MIN });
+  }
+
+  function onGridPointerUp() {
+    const sel = selectRef.current;
+    selectRef.current = null;
+    setSelection(null);
+    if (!sel) return;
+    const startMin = Math.min(sel.startMin, sel.endMin);
+    let endMin = Math.max(sel.startMin, sel.endMin);
+    // A tap (no real drag) falls back to a default 1-hour block.
+    if (!sel.moved || endMin - startMin < SNAP_MIN) endMin = startMin + 60;
+    endMin = Math.min(endMin, (DAY_END_HOUR - DAY_START_HOUR) * 60);
+    setModal({ event: null, draft: draftFromRange(sel.dayIndex, startMin, endMin) });
   }
 
   const now = new Date();
@@ -321,21 +386,39 @@ export function CalendarScreen() {
                   </div>
                 ))}
               </div>
-              <div className={styles.grid} ref={gridRef}>
+              <div
+                className={styles.grid}
+                ref={gridRef}
+                onPointerDown={onGridPointerDown}
+                onPointerMove={onGridPointerMove}
+                onPointerUp={onGridPointerUp}
+                onPointerLeave={() => {
+                  if (!selectRef.current) setHoverSlot(null);
+                }}
+              >
                 {days.map((d, di) => (
-                  <div
-                    key={d.getTime()}
-                    className={styles.dayCol}
-                    onClick={(e) => {
-                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                      setModal({ event: null, draft: slotFromClick(di, e.clientY - rect.top) });
-                    }}
-                  >
+                  <div key={d.getTime()} className={styles.dayCol}>
                     {hours.map((h) => (
                       <div key={h} className={styles.hourCell} />
                     ))}
                     {sameDay(d, now) && nowOffset > 0 && nowOffset < (DAY_END_HOUR - DAY_START_HOUR) * 60 * PX_PER_MIN && (
-                      <div className={styles.nowLine} style={{ top: nowOffset }} aria-hidden="true" />
+                      <div className={styles.nowLine} style={{ top: nowOffset }} aria-hidden="true">
+                        <div className={styles.nowDot} />
+                      </div>
+                    )}
+                    {hoverSlot?.dayIndex === di && !dragRef.current && !selection && (
+                      <div className={styles.slotGhost} style={{ top: hoverSlot.top }} aria-hidden="true" />
+                    )}
+                    {selection?.dayIndex === di && (
+                      <div
+                        className={styles.selectionBlock}
+                        style={{
+                          top: Math.min(selection.startMin, selection.endMin) * PX_PER_MIN,
+                          height:
+                            Math.max(SNAP_MIN, Math.abs(selection.endMin - selection.startMin)) * PX_PER_MIN,
+                        }}
+                        aria-hidden="true"
+                      />
                     )}
                     {events
                       .filter((ev) => {
