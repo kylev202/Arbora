@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   Circle,
+  Compass,
   GraduationCap,
   Lightning,
   Plant,
@@ -15,6 +16,7 @@ import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import type { CardState, PathStage } from "../../lib/types";
 import { WeekMaterials } from "./WeekMaterials";
+import { JourneyOutline, journeyCta, journeyUrl } from "./JourneyPanel";
 import styles from "./StudyHomeScreen.module.css";
 
 const MILESTONE_CAP = 12;
@@ -173,10 +175,12 @@ const MILESTONE_STATE: Record<CardState, "done" | "learning" | "new"> = {
 };
 
 /**
- * The week's knowledge at a glance: overview text, then one small milestone
- * per concept so a big week becomes a series of finishable steps. From week 2
- * on, the primary path starts with a quick check of last week (spacing effect)
- * — skippable, never forced.
+ * This week's session, led by the guided journey: an overview note, one small
+ * lesson at a time (note + varied practice questions), then a recall round.
+ * The journey's checkpoint map shows what's ahead; before a journey is built,
+ * this week's concepts preview stands in. The pre-week check (spacing effect)
+ * and the short flashcard shortcuts stay as secondary paths — skippable, never
+ * forced.
  */
 function ThisWeekSession({
   subjectId,
@@ -191,6 +195,10 @@ function ThisWeekSession({
 }) {
   const navigate = useNavigate();
   const cards = useAsync(() => api.getWeekCards(subjectId, stage.week_id, 200), [subjectId, stage.week_id]);
+  const walkthrough = useAsync(
+    () => api.getWeekWalkthrough(subjectId, stage.week_id),
+    [subjectId, stage.week_id],
+  );
 
   const milestones = useMemo(() => {
     const list = (cards.data ?? []).map((c) => ({
@@ -202,8 +210,8 @@ function ThisWeekSession({
     return list.sort((a, b) => (a.state === "done" ? 1 : 0) - (b.state === "done" ? 1 : 0));
   }, [cards.data]);
 
-  const withCheck = prevStage !== null;
-  const startThisWeek = () => navigate(`/subject/${subjectId}/study/session?week=${stage.week_id}`);
+  const wt = walkthrough.data ?? null;
+  const openJourney = () => navigate(journeyUrl(subjectId, stage.week_id, stage.week_number));
   const startWithCheck = () =>
     prevStage &&
     navigate(
@@ -230,39 +238,39 @@ function ThisWeekSession({
         </p>
       ) : (
         <>
-          <ol className={styles.milestones} aria-label="This week's concepts">
-            {milestones.slice(0, MILESTONE_CAP).map((m) => (
-              <li key={m.id} className={`${styles.milestone} ${styles[m.state]}`}>
-                <span className={styles.milestoneIcon} aria-hidden="true">
-                  {m.state === "done" ? (
-                    <Check weight="bold" />
-                  ) : m.state === "learning" ? (
-                    <Plant weight="fill" />
-                  ) : (
-                    <Circle />
-                  )}
-                </span>
-                <span className={styles.milestoneText}>{m.concept}</span>
-              </li>
-            ))}
-          </ol>
-          {milestones.length > MILESTONE_CAP && (
-            <p className={styles.milestoneMore}>…and {milestones.length - MILESTONE_CAP} more.</p>
+          {wt ? (
+            <JourneyOutline walkthrough={wt} />
+          ) : (
+            <>
+              <ol className={styles.milestones} aria-label="This week's concepts">
+                {milestones.slice(0, MILESTONE_CAP).map((m) => (
+                  <li key={m.id} className={`${styles.milestone} ${styles[m.state]}`}>
+                    <span className={styles.milestoneIcon} aria-hidden="true">
+                      {m.state === "done" ? (
+                        <Check weight="bold" />
+                      ) : m.state === "learning" ? (
+                        <Plant weight="fill" />
+                      ) : (
+                        <Circle />
+                      )}
+                    </span>
+                    <span className={styles.milestoneText}>{m.concept}</span>
+                  </li>
+                ))}
+              </ol>
+              {milestones.length > MILESTONE_CAP && (
+                <p className={styles.milestoneMore}>…and {milestones.length - MILESTONE_CAP} more.</p>
+              )}
+            </>
           )}
 
           <div className={styles.sessionActions}>
-            {withCheck && prevStage ? (
-              <>
-                <Button variant="primary" icon={<Play weight="fill" />} onClick={startWithCheck}>
-                  Quick check Week {prevStage.week_number}, then start
-                </Button>
-                <Button variant="secondary" onClick={startThisWeek}>
-                  Skip straight to this week
-                </Button>
-              </>
-            ) : (
-              <Button variant="primary" icon={<Play weight="fill" />} onClick={startThisWeek}>
-                Start this week's session
+            <Button variant="primary" icon={<Compass weight="fill" />} onClick={openJourney}>
+              {wt ? journeyCta(wt) : "Start this week's journey"}
+            </Button>
+            {prevStage && (
+              <Button variant="secondary" icon={<Play weight="fill" />} onClick={startWithCheck}>
+                Quick check Week {prevStage.week_number}
               </Button>
             )}
             <Button
@@ -280,11 +288,10 @@ function ThisWeekSession({
               Quick 5
             </Button>
           </div>
-          {withCheck && prevStage && (
-            <p className={styles.checkHint}>
-              A short check of last week before new material helps it stick. Skipping is fine.
-            </p>
-          )}
+          <p className={styles.checkHint}>
+            The journey walks you through this week's notes and lessons, then a recall round.
+            {prevStage && " A quick check of last week first helps it stick — skipping is fine."}
+          </p>
         </>
       )}
     </section>

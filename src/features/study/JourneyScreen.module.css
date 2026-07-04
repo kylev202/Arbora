@@ -1,0 +1,108 @@
+.skeleton {
+  height: 320px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.building {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-8) 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: var(--space-4);
+}
+
+.rebuild {
+  align-self: flex-start;
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.rebuild:hover {
+  color: var(--color-text);
+}
+
+.stage {
+  min-width: 0;
+}
+
+/* ── Notes (overview + lessons) ── */
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.lessonKicker {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.noteTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+}
+
+.noteBody {
+  white-space: pre-wrap;
+  line-height: var(--leading-normal);
+}
+
+.citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── Practice ── */
+.practice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.practiceNote {
+  color: var(--color-text-muted);
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.actionError {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

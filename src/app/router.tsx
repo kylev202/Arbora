@@ -5,6 +5,7 @@ import { PlanningScreen } from "../features/plan/PlanningScreen";
 import { StudyHomeScreen } from "../features/study/StudyHomeScreen";
 import { ReviewScreen } from "../features/review/ReviewScreen";
 import { StudyScreen } from "../features/study/StudyScreen";
+import { JourneyScreen } from "../features/study/JourneyScreen";
 import { TestScreen } from "../features/test/TestScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { CalendarScreen } from "../features/calendar/CalendarScreen";
@@ -32,6 +33,7 @@ export function AppRoutes() {
         <Route path="plan" element={<PlanningScreen />} />
         <Route path="study" element={<StudyHomeScreen />} />
         <Route path="study/session" element={<StudyScreen />} />
+        <Route path="study/journey" element={<JourneyScreen />} />
         <Route path="study/test" element={<TestScreen />} />
         <Route path="review" element={<ReviewScreen />} />
         <Route path="map" element={<KnowledgeMapScreen />} />

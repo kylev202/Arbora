@@ -26,6 +26,7 @@ pub mod sources;
 pub mod study;
 pub mod subjects;
 pub mod todos;
+pub mod walkthrough;
 
 use serde::Serialize;
 use sqlx::SqlitePool;

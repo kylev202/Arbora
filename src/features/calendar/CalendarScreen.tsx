@@ -399,6 +399,9 @@ export function CalendarScreen() {
         onClose={() => setModal(null)}
         onSaved={patchEvent}
         onDeleted={(id) => setEvents((prev) => prev.filter((e) => e.id !== id))}
+        onGroupDeleted={(groupId) =>
+          setEvents((prev) => prev.filter((e) => e.recurrence_group_id !== groupId))
+        }
       />
     </div>
   );

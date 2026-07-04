@@ -7,21 +7,23 @@ import { api } from "../../lib/api";
 import type { DueCard, PathStage } from "../../lib/types";
 import { ChatPanel } from "../chat/ChatPanel";
 import { DiagramPanel } from "../diagrams/DiagramPanel";
+import { JourneyPanel } from "./JourneyPanel";
 import styles from "./WeekMaterials.module.css";
 
-type MaterialTab = "flashcards" | "test" | "diagram" | "ask";
+type MaterialTab = "journey" | "flashcards" | "test" | "diagram" | "ask";
 
 /**
- * Self-paced materials for one week: Flashcards (Arbora's own in-app review
- * loop), Test (varied grounded practice tests), Diagram (flowchart of the
- * week's topic), and Ask AI (grounded chat). One material at a time — sub-tabs
- * keep the page calm.
+ * Self-paced materials for one week: Journey (the guided walkthrough — notes,
+ * lessons, recall), Flashcards (Arbora's own in-app review loop), Test (varied
+ * grounded practice tests), Diagram (flowchart of the week's topic), and Ask AI
+ * (grounded chat). One material at a time — sub-tabs keep the page calm.
  */
 export function WeekMaterials({ subjectId, week }: { subjectId: string; week: PathStage }) {
-  const [tab, setTab] = useState<MaterialTab>("flashcards");
+  const [tab, setTab] = useState<MaterialTab>("journey");
   const cards = useAsync(() => api.getWeekCards(subjectId, week.week_id, 200), [subjectId, week.week_id]);
 
   const items: TabItem<MaterialTab>[] = [
+    { id: "journey", label: "Journey" },
     { id: "flashcards", label: "Flashcards", badge: cards.data?.length || undefined },
     { id: "test", label: "Test" },
     { id: "diagram", label: "Diagram" },
@@ -35,6 +37,7 @@ export function WeekMaterials({ subjectId, week }: { subjectId: string; week: Pa
       <Tabs items={items} value={tab} onChange={setTab} label={`${weekLabel} materials`} />
 
       <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} className={styles.panel}>
+        {tab === "journey" && <JourneyPanel subjectId={subjectId} week={week} />}
         {tab === "flashcards" && (
           <FlashcardsPanel subjectId={subjectId} week={week} cards={cards.data ?? []} loading={cards.status === "loading"} />
         )}

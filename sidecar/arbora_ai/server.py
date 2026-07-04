@@ -29,7 +29,7 @@ from .assess import grade_answer, run_test_generate
 from .chat.session import answer_question
 from .diagram.session import generate_diagram
 from .config import HOST, default_model
-from .generate.job import run_assignment_brief, run_generate
+from .generate.job import run_assignment_brief, run_generate, run_walkthrough
 from .ingest.job import run_ingest
 from .jobs import JobRegistry
 from .llm.models import model_ready, pull_model, warmup_model
@@ -134,6 +134,16 @@ class AssignmentBriefRequest(BaseModel):
     subject_id: str
     deadline_id: str
     assignment_title: str
+    chunks: list[GenChunk]
+    llm_config: dict = {}
+    preset: str = "medium"
+    job_id: str | None = None
+
+
+class WalkthroughRequest(BaseModel):
+    subject_id: str
+    week_id: str
+    week_title: str = ""
     chunks: list[GenChunk]
     llm_config: dict = {}
     preset: str = "medium"
@@ -421,6 +431,46 @@ def create_app() -> FastAPI:
         if job.state != "done":
             raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
         return job.result  # {content, source_refs}
+
+    # ── Week walkthrough (guided week session, review-gated) ───────────────
+
+    @app.post("/walkthrough", status_code=202, dependencies=guarded)
+    def walkthrough(req: WalkthroughRequest) -> dict[str, str]:
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        chunks = [c.model_dump() for c in req.chunks]
+        job = registry.create(req.job_id)
+        registry.submit(
+            job,
+            lambda j: run_walkthrough(
+                j, chunks=chunks, week_title=req.week_title, llm_config=cfg
+            ),
+        )
+        return {"job_id": job.id}
+
+    @app.get("/walkthrough/{job_id}/status", response_model=GenerateStatus, dependencies=guarded)
+    def walkthrough_status(job_id: str) -> GenerateStatus:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        return GenerateStatus(
+            job_id=job.id,
+            state=job.state,
+            progress=job.progress,
+            items_generated=job.meta.get("items_generated"),
+            error=job.error,
+        )
+
+    @app.get("/walkthrough/{job_id}/result", dependencies=guarded)
+    def walkthrough_result(job_id: str) -> dict:
+        job = registry.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        if job.state != "done":
+            raise HTTPException(status_code=409, detail=f"job not done (state={job.state})")
+        return job.result  # {overview, overview_refs, lessons}
 
     # ── Ollama model management (onboarding preset download) ───────────────
 

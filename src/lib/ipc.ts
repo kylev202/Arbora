@@ -53,6 +53,7 @@ import type {
   Todo,
   UserProfile,
   Week,
+  WeekWalkthrough,
 } from "./types";
 
 /** Snapshot of the Python AI sidecar, as reported by the Rust core. */
@@ -561,6 +562,17 @@ export function onTestError(handler: (e: TestError) => void): Promise<UnlistenFn
   return listen<TestError>("test:error", (e) => handler(e.payload));
 }
 
+/** Journey checkpoint questions: one ephemeral item per requested kind, built
+ * only from the chunks the lesson was generated from. Same `test:*` events and
+ * posture as `generateTest`. Rejects with `NO_CHUNKS` or `SIDECAR_UNAVAILABLE`. */
+export function generateLessonTest(
+  subjectId: string,
+  lessonId: string,
+  types: TestKind[],
+): Promise<{ job_id: string }> {
+  return invoke<{ job_id: string }>("generate_lesson_test", { subjectId, lessonId, types });
+}
+
 /** Grade a free-text answer (short answer / Feynman) against the item's own
  * grounded expected answer. Feedback is ephemeral. */
 export function gradeTestAnswer(
@@ -569,6 +581,74 @@ export function gradeTestAnswer(
   userAnswer: string,
 ): Promise<TestGrade> {
   return invoke<TestGrade>("grade_test_answer", { question, expected, userAnswer });
+}
+
+// ── Week walkthrough / journey (guided week session) ───────────────────────
+
+/** Start grounded walkthrough generation (overview note + lesson notes) for an
+ * outline week. Returns the job id; progress arrives as `walkthrough:*` events.
+ * The result is persisted staged (reviewed = 0) for the inline first-read gate;
+ * regenerating replaces the week's walkthrough. Rejects with `NO_CHUNKS`,
+ * `WEEK_NOT_FOUND` or `SIDECAR_UNAVAILABLE`. */
+export function generateWeekWalkthrough(
+  subjectId: string,
+  weekId: string,
+): Promise<{ job_id: string }> {
+  return invoke<{ job_id: string }>("generate_week_walkthrough", { subjectId, weekId });
+}
+
+export type WalkthroughProgress = {
+  job_id: string;
+  progress: number;
+  items_generated: number | null;
+};
+export type WalkthroughDone = { job_id: string; items_generated: number };
+export type WalkthroughError = { job_id: string; error: string };
+
+export function onWalkthroughProgress(
+  handler: (e: WalkthroughProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<WalkthroughProgress>("walkthrough:progress", (e) => handler(e.payload));
+}
+export function onWalkthroughDone(handler: (e: WalkthroughDone) => void): Promise<UnlistenFn> {
+  return listen<WalkthroughDone>("walkthrough:done", (e) => handler(e.payload));
+}
+export function onWalkthroughError(handler: (e: WalkthroughError) => void): Promise<UnlistenFn> {
+  return listen<WalkthroughError>("walkthrough:error", (e) => handler(e.payload));
+}
+
+/** The week's walkthrough with lessons and journey progress, or null if none
+ * has been generated yet. */
+export function getWeekWalkthrough(
+  subjectId: string,
+  weekId: string,
+): Promise<WeekWalkthrough | null> {
+  return invoke<WeekWalkthrough | null>("get_week_walkthrough", { subjectId, weekId });
+}
+
+/** Inline gate: the user read the overview note and kept it (law #2). */
+export function approveWalkthroughOverview(walkthroughId: string): Promise<void> {
+  return invoke("approve_walkthrough_overview", { walkthroughId });
+}
+
+/** Inline gate: the user read this lesson's note and kept it (law #2). */
+export function approveWalkthroughLesson(lessonId: string): Promise<void> {
+  return invoke("approve_walkthrough_lesson", { lessonId });
+}
+
+/** Journey progress: the lesson checkpoint (note + questions) is done. */
+export function completeWalkthroughLesson(lessonId: string): Promise<void> {
+  return invoke("complete_walkthrough_lesson", { lessonId });
+}
+
+/** Journey progress: the whole journey (incl. the recall session) is done. */
+export function completeWalkthrough(walkthroughId: string): Promise<void> {
+  return invoke("complete_walkthrough", { walkthroughId });
+}
+
+/** Discard the walkthrough (reject/regenerate primitive). */
+export function deleteWeekWalkthrough(walkthroughId: string): Promise<void> {
+  return invoke("delete_week_walkthrough", { walkthroughId });
 }
 
 /** Ask a question grounded in the subject's indexed sources (RAG Q&A).
@@ -600,6 +680,8 @@ export function upsertEvent(event: {
   start_at: string;
   end_at: string;
   kind: EventKind;
+  kind_label?: string | null;
+  recurrence_group_id?: string | null;
   status?: EventStatus;
 }): Promise<CalendarEvent> {
   return invoke<CalendarEvent>("upsert_event", {
@@ -609,8 +691,14 @@ export function upsertEvent(event: {
     startAt: event.start_at,
     endAt: event.end_at,
     kind: event.kind,
+    kindLabel: event.kind_label,
+    recurrenceGroupId: event.recurrence_group_id,
     status: event.status,
   });
+}
+
+export function deleteEventGroup(groupId: string): Promise<void> {
+  return invoke<void>("delete_event_group", { groupId });
 }
 
 /** Drag-drop reschedule: change only the times. */

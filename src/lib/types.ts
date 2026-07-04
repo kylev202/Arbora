@@ -284,7 +284,7 @@ export type ChatMessageResponse = {
 };
 
 // ── Calendar + todos (redesign slice D) ───────────────────────────────────
-export type EventKind = "lecture" | "study" | "deadline" | "custom";
+export type EventKind = "lecture" | "study" | "deadline" | "custom" | "class";
 export type EventStatus = "planned" | "done" | "moved";
 
 /** A timetable event. Times are naive local ISO ("YYYY-MM-DDTHH:MM") — a study
@@ -297,8 +297,10 @@ export type CalendarEvent = {
   start_at: string;
   end_at: string;
   kind: EventKind;
+  kind_label: string | null;
   status: EventStatus;
   origin: "user" | "ai";
+  recurrence_group_id: string | null;
 };
 
 export type TodoSource = "setup" | "ai" | "user";
@@ -330,6 +332,33 @@ export type SubjectPath = {
   stages: PathStage[];
   todos_done_today: number;
   todos_total_today: number;
+};
+
+// ── Week walkthrough / journey (guided week session) ──────────────────────
+/** One lesson checkpoint of the week journey. The note is AI-generated and
+ * staged; `reviewed` flips when the user keeps it on first read (the inline
+ * review gate, law #2). `completed_at` marks the checkpoint done. */
+export type WalkthroughLesson = {
+  id: string;
+  lesson_index: number;
+  title: string;
+  content: string; // Markdown
+  reviewed: boolean;
+  completed_at: string | null;
+  source_refs: SourceRef[];
+};
+
+/** The week's guided journey: an overview note + small lesson checkpoints.
+ * At most one per week; regenerating replaces it and resets progress. */
+export type WeekWalkthrough = {
+  id: string;
+  subject_id: string;
+  week_id: string;
+  overview: string; // Markdown
+  overview_refs: SourceRef[];
+  reviewed: boolean;
+  completed_at: string | null;
+  lessons: WalkthroughLesson[];
 };
 
 // ── Pet companion (redesign slice B) ──────────────────────────────────────

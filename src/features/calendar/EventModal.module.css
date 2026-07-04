@@ -22,31 +22,67 @@
 }
 
 .select {
+  width: 100%;
   padding: var(--space-2) var(--space-3);
+  padding-right: var(--space-8); /* room for the chevron */
   min-height: 40px;
   font-family: inherit;
   font-size: var(--text-base);
   color: var(--color-text);
-  background: var(--glass-bg);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--glass-bg-strong);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 256 256' fill='%237c8a7d'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-out);
+}
+.select:hover {
+  border-color: var(--color-text-muted);
 }
 .select:focus {
   border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
 }
 
-.doneRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
+/* Repeat sub-fields — nested inset so they read as belonging to the toggle. */
+.repeatFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  animation: repeatReveal var(--motion-base) var(--ease-growth);
+}
+
+@keyframes repeatReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .error {
   font-size: var(--text-sm);
   color: var(--color-warning);
+}
+
+.deleteGroup {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .footer {

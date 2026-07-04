@@ -195,6 +195,53 @@ class GradeGen(BaseModel):
     feedback: str = Field(min_length=1, max_length=500)
 
 
+# ── Week walkthrough (guided week session) ──────────────────────────────────
+# One overview note + a few small lesson notes for an outline week, generated
+# together so a big week becomes a guided journey. The core persists everything
+# reviewed = 0; the user approves each note inline on first read (law #2). Same
+# ADR-0004 posture: the model returns content + verbatim excerpts; the pipeline
+# attaches authoritative citations from the chunks that ground them.
+
+
+class ChunkKey(BaseModel):
+    """Identity of one core-owned chunk, echoed back so the core can later
+    scope practice questions to the exact chunks a lesson was built from."""
+
+    source_id: str
+    chunk_index: int
+
+
+class WalkthroughLessonOut(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    content: str = Field(min_length=20)
+    source_refs: list[SourceRef] = Field(min_length=1)
+    chunk_refs: list[ChunkKey] = Field(min_length=1)
+
+
+class WalkthroughResult(BaseModel):
+    overview: str = Field(min_length=20)
+    overview_refs: list[SourceRef] = Field(min_length=1)
+    lessons: list[WalkthroughLessonOut] = Field(min_length=1)
+
+
+# LLM-facing flat gen schemas (citations attached by the pipeline, ADR-0004).
+# A walkthrough note synthesises several passages, so it carries a short list
+# of excerpts instead of one — each must still ground verbatim in a passage.
+
+Excerpt = Annotated[str, Field(min_length=1, max_length=200)]
+
+
+class WalkthroughOverviewGen(BaseModel):
+    content: str = Field(min_length=20)
+    excerpts: list[Excerpt] = Field(min_length=1, max_length=4)
+
+
+class WalkthroughLessonGen(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    content: str = Field(min_length=20)
+    excerpts: list[Excerpt] = Field(min_length=1, max_length=3)
+
+
 # ── Syllabus outline extraction (slice 4) ───────────────────────────────────
 # Structured extraction from the user's *own* syllabus, confirmed before commit
 # (ADR-0006). This is editable schedule metadata, not a study claim, so per-item

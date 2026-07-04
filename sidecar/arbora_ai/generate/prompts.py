@@ -60,6 +60,45 @@ def note_prompt(chunk: Chunk) -> str:
     )
 
 
+_MULTI_RULES = (
+    "Use ONLY the passages below. Do not add any fact that is not stated in them. "
+    "Each excerpt MUST be copied word-for-word from one passage (a real substring), "
+    "max 200 characters."
+)
+
+
+def _multi_ctx(chunks: list[Chunk]) -> str:
+    return "\n\n".join(f'PASSAGE {i}:\n"""\n{c.text}\n"""' for i, c in enumerate(chunks, start=1))
+
+
+def walkthrough_overview_prompt(chunks: list[Chunk], week_title: str) -> str:
+    topic = f' on "{week_title}"' if week_title else ""
+    return (
+        f"You write a short overview of one week of a university course{topic}. "
+        f"{_MULTI_RULES}\n\n"
+        f"{_multi_ctx(chunks)}\n\n"
+        "Write the week's overview note:\n"
+        "- content: Markdown. A few short paragraphs or bullet groups: what the week "
+        "covers, the main ideas, and how they connect. Plain, friendly language.\n"
+        "- excerpts: 2-4 exact phrases copied from the passages that support the overview.\n"
+        "Return only the JSON object."
+    )
+
+
+def walkthrough_lesson_prompt(chunks: list[Chunk], lesson_number: int, lesson_total: int) -> str:
+    return (
+        f"You write one small lesson note — part {lesson_number} of {lesson_total} of a "
+        f"week's study journey. {_MULTI_RULES}\n\n"
+        f"{_multi_ctx(chunks)}\n\n"
+        "Write ONE focused lesson from these passages:\n"
+        "- title: a short name for what this lesson teaches (a few words).\n"
+        "- content: Markdown. Explain the concept simply, then a few bullet points with "
+        "the key facts from the passages.\n"
+        "- excerpts: 1-3 exact phrases copied from the passages that support the lesson.\n"
+        "Return only the JSON object."
+    )
+
+
 def brief_point_prompt(chunk: Chunk, assignment_title: str) -> str:
     return (
         f"You are helping a student prepare for an assignment: {assignment_title}. {_RULES}\n\n"

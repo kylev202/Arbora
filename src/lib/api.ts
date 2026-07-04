@@ -84,7 +84,17 @@ export const api = {
 
   // ── Practice tests (subject view redesign) ──
   generateTest: ipc.generateTest,
+  generateLessonTest: ipc.generateLessonTest,
   gradeTestAnswer: ipc.gradeTestAnswer,
+
+  // ── Week walkthrough / journey (guided week session) ──
+  generateWeekWalkthrough: ipc.generateWeekWalkthrough,
+  getWeekWalkthrough: ipc.getWeekWalkthrough,
+  approveWalkthroughOverview: ipc.approveWalkthroughOverview,
+  approveWalkthroughLesson: ipc.approveWalkthroughLesson,
+  completeWalkthroughLesson: ipc.completeWalkthroughLesson,
+  completeWalkthrough: ipc.completeWalkthrough,
+  deleteWeekWalkthrough: ipc.deleteWeekWalkthrough,
 
   // ── Phase 6 — RAG Q&A ──
   chatMessage: ipc.chatMessage,
@@ -99,6 +109,7 @@ export const api = {
   moveEvent: ipc.moveEvent,
   setEventStatus: ipc.setEventStatus,
   deleteEvent: ipc.deleteEvent,
+  deleteEventGroup: ipc.deleteEventGroup,
   listTodos: ipc.listTodos,
   createTodo: ipc.createTodo,
   setTodoDone: ipc.setTodoDone,

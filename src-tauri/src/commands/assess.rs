@@ -62,6 +62,26 @@ async fn fetch_test_chunks(
     rows.map_err(|e| e.to_string())
 }
 
+/// Chunks a walkthrough lesson was built from (keys recorded at generation
+/// time, see `walkthrough.rs`) — the journey's practice questions are scoped to
+/// exactly the material the lesson taught.
+async fn fetch_lesson_chunks(
+    pool: &SqlitePool,
+    lesson_id: &str,
+) -> Result<Vec<ChunkForTest>, String> {
+    sqlx::query_as::<_, ChunkForTest>(
+        "SELECT c.source_id, c.text, c.page, c.timestamp_ms, c.chunk_index
+         FROM walkthrough_lesson_chunks lc
+         JOIN chunks c ON c.source_id = lc.source_id AND c.chunk_index = lc.chunk_index
+         WHERE lc.lesson_id = ?1
+         ORDER BY c.source_id, c.chunk_index",
+    )
+    .bind(lesson_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+}
+
 // ── Sidecar job shapes ──────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -117,6 +137,63 @@ pub async fn generate_test(
         .json(&json!({
             "job_id": job_id, "subject_id": subject_id, "types": types,
             "chunks": chunk_json, "llm_config": { "provider": "ollama" }, "preset": preset,
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("TEST_FAILED: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("TEST_FAILED: {e}"))?;
+
+    let pool = pool.inner().clone();
+    let job = job_id.clone();
+    tauri::async_runtime::spawn(async move {
+        poll_test(app, pool, base, token, job).await;
+    });
+
+    Ok(JobHandle { job_id })
+}
+
+/// Journey checkpoint questions: one item per requested kind, built only from
+/// the chunks the lesson was generated from. Same ephemeral posture and
+/// `test:*` events as `generate_test` — items are shown once, never persisted.
+#[tauri::command]
+pub async fn generate_lesson_test(
+    app: AppHandle,
+    pool: State<'_, SqlitePool>,
+    sidecar: State<'_, Sidecar>,
+    subject_id: String,
+    lesson_id: String,
+    types: Vec<String>,
+) -> Result<JobHandle, String> {
+    let chunks = fetch_lesson_chunks(pool.inner(), &lesson_id).await?;
+    if chunks.is_empty() {
+        return Err("NO_CHUNKS".to_string());
+    }
+    let base = sidecar
+        .base_url()
+        .filter(|_| sidecar.is_ready())
+        .ok_or("SIDECAR_UNAVAILABLE")?;
+    let token = sidecar.token().to_string();
+    let preset = fetch_preset(pool.inner()).await;
+    let job_id = Uuid::new_v4().to_string();
+
+    let chunk_json: Vec<_> = chunks
+        .iter()
+        .map(|c| {
+            json!({
+                "source_id": c.source_id, "text": c.text,
+                "page": c.page, "timestamp_ms": c.timestamp_ms, "chunk_index": c.chunk_index,
+            })
+        })
+        .collect();
+
+    reqwest::Client::new()
+        .post(format!("{base}/test/generate"))
+        .header("X-Arbora-Token", &token)
+        .json(&json!({
+            "job_id": job_id, "subject_id": subject_id, "types": types,
+            "count_per_type": 1, "chunks": chunk_json,
+            "llm_config": { "provider": "ollama" }, "preset": preset,
         }))
         .send()
         .await
@@ -310,6 +387,23 @@ mod tests {
         let pool = seeded_pool().await;
         let chunks = fetch_test_chunks(&pool, "s1", None).await.unwrap();
         assert_eq!(chunks.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn lesson_chunks_follow_recorded_keys() {
+        let pool = seeded_pool().await;
+        sqlx::query("INSERT INTO week_walkthroughs (id,subject_id,week_id,overview,reviewed,created_at) VALUES ('wt1','s1','w1','o',0,'t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO walkthrough_lessons (id,walkthrough_id,lesson_index,title,content,reviewed) VALUES ('l1','wt1',0,'T','c',0)")
+            .execute(&pool).await.unwrap();
+        // The lesson was built from src1's chunk 0 only — src2's chunk stays out.
+        sqlx::query("INSERT INTO walkthrough_lesson_chunks (lesson_id,source_id,chunk_index) VALUES ('l1','src1',0)")
+            .execute(&pool).await.unwrap();
+
+        let chunks = fetch_lesson_chunks(&pool, "l1").await.unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].text, "week one text");
+        assert!(fetch_lesson_chunks(&pool, "nope").await.unwrap().is_empty());
     }
 
     #[tokio::test]

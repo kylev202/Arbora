@@ -15,6 +15,7 @@ from ..jobs import Job
 from ..llm.provider import LLMUnavailableError, get_provider
 from . import generate_from_chunks
 from .brief import generate_brief
+from .walkthrough import generate_walkthrough
 
 
 def _location(c: dict[str, Any]) -> dict[str, Any]:
@@ -89,3 +90,35 @@ def run_assignment_brief(
 
     job.result = {"content": content, "source_refs": [r.model_dump() for r in refs]}
     job.meta["items_generated"] = len(refs)
+
+
+def run_walkthrough(
+    job: Job,
+    *,
+    chunks: list[dict[str, Any]],
+    week_title: str,
+    llm_config: dict[str, Any],
+) -> None:
+    """Generate the week walkthrough (overview + lesson notes) and store the
+    WalkthroughResult in `job.result`. Same job/progress shape as `run_generate`;
+    the core stages every note reviewed=0 for the inline gate (law #2)."""
+    provider = get_provider(llm_config)
+    if not provider.health():
+        raise LLMUnavailableError("LLM_UNAVAILABLE: provider not reachable")
+
+    rebuilt = _rebuild(chunks)
+
+    job.step = "generating"
+    job.progress = 0.02
+    job.meta["items_generated"] = 0
+
+    def on_progress(done: int, total: int, accepted: int) -> None:
+        job.progress = 0.02 + 0.96 * (done / total) if total else 1.0
+        job.meta["items_generated"] = accepted
+
+    result, _stats = generate_walkthrough(
+        provider, rebuilt, week_title=week_title, progress_cb=on_progress
+    )
+
+    job.result = result.model_dump()
+    job.meta["items_generated"] = 1 + len(result.lessons)
