@@ -4,8 +4,11 @@ import styles from "./Disclaimer.module.css";
 
 export type DisclaimerProps = {
   children?: ReactNode;
-  /** "banner" spans full width (S-05 top); "note" is inline (S-04). */
-  variant?: "banner" | "note";
+  /**
+   * "banner" spans full width (S-05 top); "note" is inline (S-04);
+   * "subtle" is a quiet caption (e.g. below a chat input).
+   */
+  variant?: "banner" | "note" | "subtle";
 };
 
 /**

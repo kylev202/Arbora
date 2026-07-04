@@ -294,8 +294,6 @@ export function PetPanel({
         <div ref={bottomRef} />
       </div>
 
-      <Disclaimer>AI can be wrong. Check the sources.</Disclaimer>
-
       <form
         className={styles.inputRow}
         onSubmit={(e) => {
@@ -322,6 +320,8 @@ export function PetPanel({
           <ArrowRight weight="bold" aria-hidden="true" />
         </button>
       </form>
+
+      <Disclaimer variant="subtle">AI can be wrong. Check the sources.</Disclaimer>
     </div>
   );
 }

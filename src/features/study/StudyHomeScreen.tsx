@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowRight,
+  CaretLeft,
+  CaretRight,
   Check,
   Circle,
   Compass,
@@ -109,26 +111,11 @@ export function StudyHomeScreen() {
           Every week stays open — revisit any of them, at your pace.
         </p>
 
-        <div className={styles.weekChips} role="tablist" aria-label="Weeks">
-          {stages.map((s) => {
-            const isSelected = s.week_id === selected.week_id;
-            return (
-              <button
-                key={s.week_id}
-                type="button"
-                role="tab"
-                aria-selected={isSelected}
-                className={`${styles.weekChip} ${isSelected ? styles.weekChipActive : ""}`}
-                onClick={() => setSelectedWeekId(s.week_id)}
-              >
-                <span className={styles.weekChipTitle}>Week {s.week_number}</span>
-                <span className={styles.weekChipMeta}>
-                  {s.total_cards === 0 ? "No material" : `${s.mastered_cards}/${s.total_cards}`}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <WeekGallery
+          stages={stages}
+          selectedWeekId={selected.week_id}
+          onSelect={setSelectedWeekId}
+        />
 
         <h3 className={styles.selectedWeekTitle}>
           Week {selected.week_number}
@@ -138,6 +125,157 @@ export function StudyHomeScreen() {
       </section>
 
       <NotesSection subjectId={subjectId} />
+    </div>
+  );
+}
+
+// Card geometry — must match .galleryCard width and .galleryTrack gap in CSS.
+const CARD_W = 176;
+const CARD_GAP = 16;
+
+/**
+ * Self-paced weeks as an exhibition gallery: the selected week sits centred and
+ * full-strength, its neighbours fanning out to either side, dimmer and smaller
+ * the further they are. Two arrows step the focus; clicking any card brings it
+ * to the centre. The centred week's materials render below. Deliberately not the
+ * top-nav pattern — this is a browse-a-shelf feel, not a section switcher.
+ */
+function WeekGallery({
+  stages,
+  selectedWeekId,
+  onSelect,
+}: {
+  stages: PathStage[];
+  selectedWeekId: string;
+  onSelect: (id: string) => void;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportW, setViewportW] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const measure = () => setViewportW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const activeIndex = Math.max(
+    0,
+    stages.findIndex((s) => s.week_id === selectedWeekId),
+  );
+  const step = CARD_W + CARD_GAP;
+  const clamp = (i: number) => Math.min(stages.length - 1, Math.max(0, i));
+
+  const go = (dir: -1 | 1) => onSelect(stages[clamp(activeIndex + dir)].week_id);
+
+  // Drag to browse the shelf: the track follows the pointer, then snaps to the
+  // nearest week on release. A moved-past-threshold drag suppresses the trailing
+  // click so it doesn't also select the card under the pointer.
+  const drag = useRef({ startX: 0, active: false, moved: false });
+  const suppressClick = useRef(false);
+  const [dragDX, setDragDX] = useState(0);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    drag.current = { startX: e.clientX, active: true, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current.active) return;
+    const dx = e.clientX - drag.current.startX;
+    if (Math.abs(dx) > 4) drag.current.moved = true;
+    setDragDX(dx);
+  };
+  const endDrag = (e: React.PointerEvent) => {
+    if (!drag.current.active) return;
+    const dx = e.clientX - drag.current.startX;
+    drag.current.active = false;
+    suppressClick.current = drag.current.moved;
+    setDragDX(0);
+    const shift = Math.round(-dx / step);
+    if (shift !== 0) onSelect(stages[clamp(activeIndex + shift)].week_id);
+  };
+
+  const offset = viewportW / 2 - (activeIndex * step + CARD_W / 2) + dragDX;
+  const dragging = drag.current.active;
+
+  return (
+    <div className={styles.gallery}>
+      <button
+        type="button"
+        className={styles.galleryArrow}
+        onClick={() => go(-1)}
+        disabled={activeIndex === 0}
+        aria-label="Previous week"
+      >
+        <CaretLeft weight="bold" aria-hidden="true" />
+      </button>
+
+      <div
+        className={styles.galleryViewport}
+        ref={viewportRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <div
+          className={styles.galleryTrack}
+          role="tablist"
+          aria-label="Weeks"
+          style={{
+            transform: `translateX(${offset}px)`,
+            transition: dragging ? "none" : undefined,
+            cursor: dragging ? "grabbing" : "grab",
+          }}
+        >
+          {stages.map((s, i) => {
+            const distance = Math.abs(i - activeIndex);
+            const isActive = i === activeIndex;
+            return (
+              <button
+                key={s.week_id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                className={`${styles.galleryCard} ${isActive ? styles.galleryCardActive : ""}`}
+                style={{
+                  opacity: Math.max(0.14, 1 - distance * 0.42),
+                  scale: String(Math.max(0.8, 1 - distance * 0.09)),
+                }}
+                onClick={() => {
+                  if (suppressClick.current) {
+                    suppressClick.current = false;
+                    return;
+                  }
+                  onSelect(s.week_id);
+                }}
+              >
+                <span className={styles.galleryCardWeek}>Week {s.week_number}</span>
+                {s.title && <span className={styles.galleryCardTitle}>{s.title}</span>}
+                <span className={styles.galleryCardMeta}>
+                  {s.total_cards === 0
+                    ? "No material"
+                    : `${s.mastered_cards}/${s.total_cards} mastered`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className={styles.galleryArrow}
+        onClick={() => go(1)}
+        disabled={activeIndex === stages.length - 1}
+        aria-label="Next week"
+      >
+        <CaretRight weight="bold" aria-hidden="true" />
+      </button>
     </div>
   );
 }
