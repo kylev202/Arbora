@@ -25,6 +25,16 @@
   margin-bottom: var(--space-2);
 }
 
+.subjectPick {
+  width: 100%;
+  max-width: 20rem;
+  text-align: left;
+}
+.subjectPick .dropHint {
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}
+
 .status {
   display: flex;
   flex-direction: column;

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { CheckCircle, FileArrowUp, FilePlus, WarningCircle } from "@phosphor-icons/react";
-import { Button, Modal, ProgressBar } from "../../components";
+import { Button, Modal, ProgressBar, Select } from "../../components";
 import { api } from "../../lib/api";
 import { onIngestDone, onIngestError, onIngestProgress } from "../../lib/ipc";
-import type { Source } from "../../lib/types";
+import type { Source, Subject } from "../../lib/types";
 import styles from "./AddSourceModal.module.css";
 
 type Phase = "pick" | "processing" | "done" | "error";
@@ -36,11 +36,18 @@ export function AddSourceModal({
   open,
   onClose,
   subjectId,
+  folderId,
+  subjects,
   onAdded,
 }: {
   open: boolean;
   onClose: () => void;
-  subjectId: string;
+  /** Fixed subject (subject view). Omit to let the user pick from `subjects`. */
+  subjectId?: string;
+  /** Drive folder to file the new source into, if any. */
+  folderId?: string;
+  /** Subject choices, shown as a picker when `subjectId` is not fixed. */
+  subjects?: Subject[];
   onAdded: (source: Source) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("pick");
@@ -48,7 +55,11 @@ export function AddSourceModal({
   const [step, setStep] = useState("");
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
+  const [subjectChoice, setSubjectChoice] = useState(subjectId ?? "");
   const sourceIdRef = useRef<string | null>(null);
+
+  // A subject is only pickable when one isn't fixed (adding from a user folder).
+  const needsSubjectPick = !subjectId;
 
   // Reset whenever the modal opens.
   useEffect(() => {
@@ -58,9 +69,10 @@ export function AddSourceModal({
       setStep("");
       setFileName("");
       setError("");
+      setSubjectChoice(subjectId ?? "");
       sourceIdRef.current = null;
     }
-  }, [open]);
+  }, [open, subjectId]);
 
   // Live ingest updates for the source created in this modal.
   useEffect(() => {
@@ -88,6 +100,8 @@ export function AddSourceModal({
   }, []);
 
   async function choose() {
+    const sid = subjectId ?? subjectChoice;
+    if (!sid) return; // need a subject before a file can be indexed
     const selected = await openDialog({ multiple: false, filters: FILE_FILTERS });
     if (typeof selected !== "string") return; // cancelled
     setFileName(selected.split(/[\\/]/).pop() ?? selected);
@@ -95,7 +109,7 @@ export function AddSourceModal({
     setProgress(0);
     setStep("parsing");
     try {
-      const source = await api.addSource(subjectId, selected);
+      const source = await api.addSource(sid, selected, folderId ?? null);
       sourceIdRef.current = source.id;
       onAdded(source);
       await api.ingestSource(source.id);
@@ -127,7 +141,24 @@ export function AddSourceModal({
           <FileArrowUp className={styles.dropIcon} aria-hidden="true" />
           <p className={styles.dropText}>Choose a PDF, Word doc, slides, text, audio, or video file</p>
           <p className={styles.dropHint}>Arbora indexes it so every generated item can cite it.</p>
-          <Button variant="primary" icon={<FilePlus weight="bold" />} onClick={choose}>
+          {needsSubjectPick && (
+            <div className={styles.subjectPick}>
+              <Select
+                label="Subject"
+                value={subjectChoice}
+                placeholder="Pick a subject…"
+                options={(subjects ?? []).map((s) => ({ value: s.id, label: s.name }))}
+                onChange={setSubjectChoice}
+              />
+              <p className={styles.dropHint}>Files stay scoped to a subject so citations stay accurate.</p>
+            </div>
+          )}
+          <Button
+            variant="primary"
+            icon={<FilePlus weight="bold" />}
+            onClick={choose}
+            disabled={needsSubjectPick && !subjectChoice}
+          >
             Choose file
           </Button>
         </div>

@@ -30,11 +30,13 @@ pub struct Source {
     pub chunk_count: Option<i64>,
     pub error: Option<String>,
     pub week_id: Option<String>,
+    /// Optional Drive folder (organization only — never affects AI scoping).
+    pub folder_id: Option<String>,
     pub added_at: String,
 }
 
 const COLS: &str = "SELECT id, subject_id, type AS kind, title, file_path, ingest_state, \
-    page_count, chunk_count, ingest_error AS error, week_id, created_at AS added_at FROM sources";
+    page_count, chunk_count, ingest_error AS error, week_id, folder_id, created_at AS added_at FROM sources";
 
 /// Map a file extension to a source type, mirroring the sidecar's `detect_type`.
 fn detect_type(file_path: &str) -> Result<&'static str, String> {
@@ -74,7 +76,12 @@ async fn list(pool: &SqlitePool, subject_id: &str) -> Result<Vec<Source>, String
         .map_err(|e| e.to_string())
 }
 
-async fn insert(pool: &SqlitePool, subject_id: &str, file_path: &str) -> Result<Source, String> {
+async fn insert(
+    pool: &SqlitePool,
+    subject_id: &str,
+    file_path: &str,
+    folder_id: Option<&str>,
+) -> Result<Source, String> {
     let kind = detect_type(file_path)?;
     let title = Path::new(file_path)
         .file_stem()
@@ -83,14 +90,15 @@ async fn insert(pool: &SqlitePool, subject_id: &str, file_path: &str) -> Result<
         .unwrap_or_else(|| file_path.to_string());
     let id = Uuid::new_v4().to_string();
     sqlx::query(
-        "INSERT INTO sources (id, subject_id, type, file_path, title, ingest_state, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, 'queued', strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+        "INSERT INTO sources (id, subject_id, type, file_path, title, folder_id, ingest_state, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'queued', strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
     )
     .bind(&id)
     .bind(subject_id)
     .bind(kind)
     .bind(file_path)
     .bind(&title)
+    .bind(folder_id)
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -215,8 +223,16 @@ pub async fn add_source(
     pool: State<'_, SqlitePool>,
     subject_id: String,
     file_path: String,
+    folder_id: Option<String>,
 ) -> Result<Source, String> {
-    insert(pool.inner(), &subject_id, &file_path).await
+    insert(pool.inner(), &subject_id, &file_path, folder_id.as_deref()).await
+}
+
+/// One source row by id — used by the reader to resolve the original file path
+/// and type for the raw-file preview.
+#[tauri::command]
+pub async fn get_source(pool: State<'_, SqlitePool>, id: String) -> Result<Source, String> {
+    fetch_source(pool.inner(), &id).await
 }
 
 /// Rename a source's display title. Pure SQLite; returns the updated row.
@@ -389,6 +405,244 @@ async fn fail(app: &AppHandle, pool: &SqlitePool, source_id: &str, job_id: &str,
     );
 }
 
+// ── Source text viewer + annotations (Drive page) ──────────────────────────
+
+/// One chunk of a source's extracted text, for the in-app viewer. This is the
+/// same text the citations point at, so clicking a citation can scroll to and
+/// highlight a phrase within it (law #1 — grounding stays visible, no new AI).
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct SourceChunk {
+    pub page: Option<i64>,
+    pub timestamp_ms: Option<i64>,
+    pub text: String,
+}
+
+/// A user highlight (`note` None) or comment (`note` Some) on a source.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct Annotation {
+    pub id: String,
+    pub source_id: String,
+    pub page: Option<i64>,
+    pub quote: String,
+    pub note: Option<String>,
+    pub color: String,
+    pub created_at: String,
+}
+
+const ANNOTATION_COLS: &str =
+    "SELECT id, source_id, page, quote, note, color, created_at FROM source_annotations";
+
+async fn source_chunks(pool: &SqlitePool, source_id: &str) -> Result<Vec<SourceChunk>, String> {
+    sqlx::query_as::<_, SourceChunk>(
+        "SELECT page, timestamp_ms, text FROM chunks WHERE source_id = ?1 ORDER BY chunk_index",
+    )
+    .bind(source_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+async fn list_annotations_db(
+    pool: &SqlitePool,
+    source_id: &str,
+) -> Result<Vec<Annotation>, String> {
+    sqlx::query_as::<_, Annotation>(&format!(
+        "{ANNOTATION_COLS} WHERE source_id = ?1 ORDER BY created_at"
+    ))
+    .bind(source_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+async fn add_annotation(
+    pool: &SqlitePool,
+    source_id: &str,
+    page: Option<i64>,
+    quote: &str,
+    note: Option<String>,
+    color: Option<String>,
+) -> Result<Annotation, String> {
+    let quote = quote.trim();
+    if quote.is_empty() {
+        return Err("annotation needs a highlighted phrase".to_string());
+    }
+    let id = Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO source_annotations (id, source_id, page, quote, note, color, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6,'gold'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+    )
+    .bind(&id)
+    .bind(source_id)
+    .bind(page)
+    .bind(quote)
+    .bind(note)
+    .bind(color)
+    .execute(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    sqlx::query_as::<_, Annotation>(&format!("{ANNOTATION_COLS} WHERE id = ?1"))
+        .bind(&id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Extracted text of a source, chunk by chunk, for the in-app viewer.
+#[tauri::command]
+pub async fn get_source_chunks(
+    pool: State<'_, SqlitePool>,
+    source_id: String,
+) -> Result<Vec<SourceChunk>, String> {
+    source_chunks(pool.inner(), &source_id).await
+}
+
+#[tauri::command]
+pub async fn list_annotations(
+    pool: State<'_, SqlitePool>,
+    source_id: String,
+) -> Result<Vec<Annotation>, String> {
+    list_annotations_db(pool.inner(), &source_id).await
+}
+
+#[tauri::command]
+pub async fn create_annotation(
+    pool: State<'_, SqlitePool>,
+    source_id: String,
+    page: Option<i64>,
+    quote: String,
+    note: Option<String>,
+    color: Option<String>,
+) -> Result<Annotation, String> {
+    add_annotation(pool.inner(), &source_id, page, &quote, note, color).await
+}
+
+#[tauri::command]
+pub async fn delete_annotation(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
+    sqlx::query("DELETE FROM source_annotations WHERE id = ?1")
+        .bind(&id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ── Drive folders (user-managed source organization) ───────────────────────
+
+/// A user-created Drive folder. Subject-independent: it only groups files for
+/// browsing and never influences retrieval (files keep their `subject_id`).
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct SourceFolder {
+    pub id: String,
+    pub parent_id: Option<String>,
+    pub name: String,
+    pub created_at: String,
+}
+
+const FOLDER_COLS: &str = "SELECT id, parent_id, name, created_at FROM source_folders";
+
+async fn fetch_folder(pool: &SqlitePool, id: &str) -> Result<SourceFolder, String> {
+    sqlx::query_as::<_, SourceFolder>(&format!("{FOLDER_COLS} WHERE id = ?1"))
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "FOLDER_NOT_FOUND".to_string())
+}
+
+/// The whole folder tree (flat; the UI nests by `parent_id`).
+#[tauri::command]
+pub async fn list_source_folders(pool: State<'_, SqlitePool>) -> Result<Vec<SourceFolder>, String> {
+    sqlx::query_as::<_, SourceFolder>(&format!("{FOLDER_COLS} ORDER BY created_at"))
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn create_source_folder(
+    pool: State<'_, SqlitePool>,
+    name: String,
+    parent_id: Option<String>,
+) -> Result<SourceFolder, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("folder name cannot be empty".to_string());
+    }
+    let id = Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO source_folders (id, parent_id, name, created_at)
+         VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+    )
+    .bind(&id)
+    .bind(parent_id)
+    .bind(name)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| e.to_string())?;
+    fetch_folder(pool.inner(), &id).await
+}
+
+#[tauri::command]
+pub async fn rename_source_folder(
+    pool: State<'_, SqlitePool>,
+    id: String,
+    name: String,
+) -> Result<SourceFolder, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("folder name cannot be empty".to_string());
+    }
+    sqlx::query("UPDATE source_folders SET name = ?2 WHERE id = ?1")
+        .bind(&id)
+        .bind(name)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+    fetch_folder(pool.inner(), &id).await
+}
+
+/// Delete a folder (and its subfolders, by cascade). Files inside are detached,
+/// never deleted (the `folder_id` FK is `ON DELETE SET NULL`).
+#[tauri::command]
+pub async fn delete_source_folder(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
+    sqlx::query("DELETE FROM source_folders WHERE id = ?1")
+        .bind(&id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Files assigned to a folder (across all subjects), for the Drive view.
+#[tauri::command]
+pub async fn list_folder_sources(
+    pool: State<'_, SqlitePool>,
+    folder_id: String,
+) -> Result<Vec<Source>, String> {
+    sqlx::query_as::<_, Source>(&format!("{COLS} WHERE folder_id = ?1 ORDER BY created_at"))
+        .bind(&folder_id)
+        .fetch_all(pool.inner())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Move a file into a folder (or out of any folder when `folder_id` is null).
+#[tauri::command]
+pub async fn set_source_folder(
+    pool: State<'_, SqlitePool>,
+    source_id: String,
+    folder_id: Option<String>,
+) -> Result<Source, String> {
+    sqlx::query("UPDATE sources SET folder_id = ?2 WHERE id = ?1")
+        .bind(&source_id)
+        .bind(folder_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
+    fetch_source(pool.inner(), &source_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -425,7 +679,9 @@ mod tests {
     async fn source_lifecycle() {
         let pool = mem_pool().await;
 
-        let src = insert(&pool, "subj1", "/docs/Genetics.pdf").await.unwrap();
+        let src = insert(&pool, "subj1", "/docs/Genetics.pdf", None)
+            .await
+            .unwrap();
         assert_eq!(src.kind, "pdf");
         assert_eq!(src.title, "Genetics");
         assert_eq!(src.ingest_state, "queued");
@@ -498,5 +754,126 @@ mod tests {
             .execute(pool)
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn viewer_chunks_and_annotations() {
+        let pool = mem_pool().await;
+        let src = insert(&pool, "subj1", "/docs/Notes.pdf", None)
+            .await
+            .unwrap();
+        insert_chunks(
+            &pool,
+            &src.id,
+            "subj1",
+            &[
+                ChunkRow {
+                    text: "Mitochondria are the powerhouse.".into(),
+                    page: Some(1),
+                    timestamp_ms: None,
+                    faiss_id: 0,
+                    chunk_index: 0,
+                },
+                ChunkRow {
+                    text: "Ribosomes build proteins.".into(),
+                    page: Some(2),
+                    timestamp_ms: None,
+                    faiss_id: 1,
+                    chunk_index: 1,
+                },
+            ],
+        )
+        .await
+        .unwrap();
+
+        // Chunks come back in reading order for the viewer.
+        let chunks = source_chunks(&pool, &src.id).await.unwrap();
+        assert_eq!(chunks.len(), 2);
+        assert_eq!(chunks[0].page, Some(1));
+        assert!(chunks[0].text.contains("powerhouse"));
+
+        // Highlight + comment lifecycle.
+        assert!(add_annotation(&pool, &src.id, Some(1), "   ", None, None)
+            .await
+            .is_err());
+        let hi = add_annotation(&pool, &src.id, Some(1), "powerhouse", None, None)
+            .await
+            .unwrap();
+        assert_eq!(hi.color, "gold");
+        assert!(hi.note.is_none());
+        add_annotation(
+            &pool,
+            &src.id,
+            Some(2),
+            "proteins",
+            Some("key term".into()),
+            Some("mint".into()),
+        )
+        .await
+        .unwrap();
+
+        let anns = list_annotations_db(&pool, &src.id).await.unwrap();
+        assert_eq!(anns.len(), 2);
+
+        sqlx::query("DELETE FROM source_annotations WHERE id = ?1")
+            .bind(&hi.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(list_annotations_db(&pool, &src.id).await.unwrap().len(), 1);
+
+        // Annotations cascade when the source is deleted.
+        delete_source_db(&pool, &src.id).await;
+        assert!(list_annotations_db(&pool, &src.id)
+            .await
+            .unwrap()
+            .is_empty());
+    }
+
+    #[tokio::test]
+    async fn folder_tree_and_detach_on_delete() {
+        let pool = mem_pool().await;
+
+        // A folder + a subfolder nested under it.
+        sqlx::query(
+            "INSERT INTO source_folders (id, parent_id, name, created_at)
+             VALUES ('f1', NULL, 'Readings', 't'), ('f2', 'f1', 'Week 1', 't')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // A file assigned to the subfolder keeps its subject.
+        let src = insert(&pool, "subj1", "/docs/Paper.pdf", Some("f2"))
+            .await
+            .unwrap();
+        assert_eq!(src.folder_id.as_deref(), Some("f2"));
+        assert_eq!(
+            folder_sources(&pool, "f2").await.len(),
+            1,
+            "file shows up in its folder"
+        );
+
+        // Deleting the parent cascades the subfolder but only DETACHES the file.
+        sqlx::query("DELETE FROM source_folders WHERE id = 'f1'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let (folders,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM source_folders")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(folders, 0, "subfolder cascaded with its parent");
+        let after = fetch_source(&pool, &src.id).await.unwrap();
+        assert_eq!(after.folder_id, None, "file detached, not deleted");
+    }
+
+    // Mirrors the list_folder_sources command body (the command needs Tauri State).
+    async fn folder_sources(pool: &SqlitePool, folder_id: &str) -> Vec<Source> {
+        sqlx::query_as::<_, Source>(&format!("{COLS} WHERE folder_id = ?1 ORDER BY created_at"))
+            .bind(folder_id)
+            .fetch_all(pool)
+            .await
+            .unwrap()
     }
 }

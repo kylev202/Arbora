@@ -24,15 +24,25 @@ def _fake_embed(texts: list[str]) -> np.ndarray:
 
 
 class FakeChatProvider(LLMProvider):
-    def __init__(self, answer: str = "The answer is [1].", indices: list[int] | None = None):
+    def __init__(
+        self,
+        answer: str = "The answer is [1].",
+        indices: list[int] | None = None,
+        grounded: bool = True,
+    ):
         self._answer = answer
         self._indices = indices or [1]
+        self._grounded = grounded
 
     def health(self) -> bool:
         return True
 
     def generate(self, prompt: str, schema=None, temperature: float = 0.1) -> dict:
-        return {"answer": self._answer, "used_passage_indices": self._indices}
+        return {
+            "answer": self._answer,
+            "used_passage_indices": self._indices,
+            "grounded": self._grounded,
+        }
 
 
 def _build_index(tmp_path, subject_id: str, chunks: list[dict]) -> None:
@@ -112,6 +122,25 @@ def test_answer_question_invalid_indices_uses_fallback(tmp_path, monkeypatch):
 
     assert len(refs) == 1
     assert refs[0].source_id == "src1"
+
+
+def test_answer_question_ungrounded_returns_insufficient_message(tmp_path, monkeypatch):
+    """When the passages don't cover the question, return the standard 'add more
+    sources' reply with no citation (never a fabricated answer or source)."""
+    monkeypatch.setattr("arbora_ai.chat.session.embed_texts", _fake_embed)
+
+    from arbora_ai.chat.session import INSUFFICIENT_CONTEXT_MESSAGE, answer_question
+
+    chunks = [
+        {"faiss_id": 0, "source_id": "src1", "text": "Unrelated content.", "page": 1, "timestamp_ms": None},
+    ]
+    _build_index(tmp_path, "subj1", chunks)
+    provider = FakeChatProvider(answer="I don't have that.", indices=[], grounded=False)
+
+    answer, refs = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
+
+    assert answer == INSUFFICIENT_CONTEXT_MESSAGE
+    assert refs == []
 
 
 def test_answer_question_no_chunks_raises(tmp_path, monkeypatch):

@@ -1,0 +1,264 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+.heading {
+  font-family: var(--font-display);
+}
+
+.board {
+  display: flex;
+  gap: var(--space-4);
+  align-items: stretch;
+  height: calc(100vh - 14rem);
+  min-height: 30rem;
+}
+.boardFull {
+  overflow: hidden;
+}
+
+/* ── Collapsible side panels: slide out to the left, back in from the left. ── */
+.sidebar {
+  display: flex;
+  gap: var(--space-4);
+  width: 30rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition:
+    width var(--motion-base) var(--ease-out),
+    opacity var(--motion-base) var(--ease-out);
+}
+.sidebarClosed {
+  width: 0;
+  gap: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Folder rail ── */
+.rail {
+  width: 13rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+.railItem {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.railItem:hover {
+  background: var(--color-surface-alt);
+}
+.railActive {
+  background: var(--color-primary-soft);
+}
+.railBtn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+.railActive .railBtn {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+.railIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+.railLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Note list ── */
+.listPane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  overflow: hidden;
+}
+.listHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-3);
+}
+.listTitle {
+  font-size: var(--text-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.noteList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.noteItem {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.noteItem:hover {
+  background: var(--color-surface-alt);
+}
+.noteActive {
+  background: var(--color-primary-soft);
+}
+.noteTitle {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notePreview {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Editor island (Apple-glass card that floats above the workspace) ── */
+.editorPane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Full screen: lift the island out and center it over a dimmed backdrop. */
+.editorFull {
+  position: fixed;
+  top: var(--space-6);
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(64rem, calc(100vw - 2 * var(--space-6)));
+  z-index: var(--z-modal); /* above the floating TopBar (--z-nav) and pet */
+  animation: editor-zoom var(--motion-slow) var(--ease-spring) both;
+}
+@keyframes editor-zoom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) - 1); /* just under the lifted editor */
+  background: var(--color-overlay);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: fade var(--motion-base) var(--ease-out) both;
+}
+
+.editorHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.titleInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+.titleInput:focus {
+  outline: none;
+}
+.editorPlaceholderTitle {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+}
+.editorActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.editorActions > :first-child {
+  width: 10rem;
+}
+
+@media (max-width: 960px) {
+  .board {
+    flex-direction: column;
+    height: auto;
+  }
+  .sidebar {
+    flex-direction: column;
+    width: auto;
+  }
+  .sidebarClosed {
+    height: 0;
+  }
+  .rail {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .listPane {
+    max-height: 20rem;
+  }
+  .editorPane {
+    min-height: 30rem;
+  }
+}

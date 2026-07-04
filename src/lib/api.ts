@@ -18,9 +18,22 @@ export const api = {
   // ── Slice 1 — Sources + ingest (live) ──
   listSources: ipc.listSources,
   addSource: ipc.addSource,
+  getSource: ipc.getSource,
   renameSource: ipc.renameSource,
   deleteSource: ipc.deleteSource,
   ingestSource: ipc.ingestSource,
+  getSourceChunks: ipc.getSourceChunks,
+  listAnnotations: ipc.listAnnotations,
+  createAnnotation: ipc.createAnnotation,
+  deleteAnnotation: ipc.deleteAnnotation,
+
+  // ── Drive folders (user-managed source organization) ──
+  listSourceFolders: ipc.listSourceFolders,
+  createSourceFolder: ipc.createSourceFolder,
+  renameSourceFolder: ipc.renameSourceFolder,
+  deleteSourceFolder: ipc.deleteSourceFolder,
+  listFolderSources: ipc.listFolderSources,
+  setSourceFolder: ipc.setSourceFolder,
 
   // ── Slice 2 — Generate + review gate (live) ──
   generateContent: ipc.generateContent,
@@ -112,8 +125,22 @@ export const api = {
   deleteEventGroup: ipc.deleteEventGroup,
   listTodos: ipc.listTodos,
   createTodo: ipc.createTodo,
+  updateTodo: ipc.updateTodo,
   setTodoDone: ipc.setTodoDone,
   deleteTodo: ipc.deleteTodo,
+
+  // ── Notes app (OneNote-style user notes) ──
+  listNoteFolders: ipc.listNoteFolders,
+  createNoteFolder: ipc.createNoteFolder,
+  renameNoteFolder: ipc.renameNoteFolder,
+  deleteNoteFolder: ipc.deleteNoteFolder,
+  listUserNotes: ipc.listUserNotes,
+  getNote: ipc.getNote,
+  createNote: ipc.createNote,
+  updateNote: ipc.updateNote,
+  moveNote: ipc.moveNote,
+  deleteNote: ipc.deleteNote,
+  createQuickNote: ipc.createQuickNote,
 
   // ── Redesign slice E — AI week scheduler (proposals via review) ──
   proposeSchedule: ipc.proposeSchedule,

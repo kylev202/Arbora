@@ -1,0 +1,157 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal); /* above the floating TopBar (--z-nav) and pet */
+  background: var(--color-overlay);
+  /* Blur the app (incl. the TopBar behind the card) away behind it. */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  animation: fade var(--motion-base) var(--ease-out) both;
+}
+
+/* Centered reader card, inset from the window edges. */
+.drawer {
+  width: min(72rem, 100%);
+  height: 100%;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: viewer-pop var(--motion-slow) var(--ease-spring) both;
+}
+
+/* Same spring "pop" the app's Modal uses (dialog-in). */
+@keyframes viewer-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.title {
+  font-size: var(--text-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Single full-size surface — the raw file fills it, no re-flow. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* PDF / text embed: fills the drawer. */
+.frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: none;
+  background: var(--color-surface);
+}
+
+/* Image / audio / video sit centered on a calm backdrop. */
+.mediaWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  overflow: auto;
+  background: rgba(20, 30, 24, 0.12);
+}
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.audio {
+  width: min(32rem, 100%);
+}
+.video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-5) var(--space-6);
+}
+
+/* ── Extracted-text fallback (docx / pptx) ── */
+.fallback {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+.fallbackNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.chunk {
+  margin-bottom: var(--space-5);
+}
+.chunkLoc {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-1);
+}
+.chunkText {
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+  max-width: 46rem;
+}
+
+/* Temporary citation flash: bright, then fades. */
+.flash {
+  background: var(--color-primary-soft);
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+  animation: cite-flash 2.6s var(--ease-out) forwards;
+}
+@keyframes cite-flash {
+  0% {
+    background: rgba(201, 162, 39, 0.75);
+  }
+  30% {
+    background: rgba(201, 162, 39, 0.55);
+  }
+  100% {
+    background: transparent;
+  }
+}

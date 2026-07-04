@@ -14,7 +14,9 @@ Law posture:
   - Law #1: SourceRefs are built from chunk metadata (not model output), so
     citations are authoritative. If the model cites no valid passage, the
     top-ranked chunk is used as a fallback citation (the answer may still be
-    useful even without explicit index markers).
+    useful even without explicit index markers). If the model reports the
+    passages don't answer the question (grounded=false), a standard "add more
+    sources" reply is returned with no citation — never a fabricated answer.
   - Law #2: Q&A is ephemeral conversation, not a deck item — no review gate.
   - Law #3: local-only; provider in this path is always Ollama.
 """
@@ -33,12 +35,21 @@ from ..schemas.output import PageLocation, SourceRef, TimestampLocation
 MAX_RETRIES = 2
 DEFAULT_K = 6
 
+# Standard reply when the retrieved passages don't cover the question. Returned
+# verbatim with no citations, so a "lack of information" answer never fabricates
+# an answer or attaches a misleading citation.
+INSUFFICIENT_CONTEXT_MESSAGE = (
+    "I couldn't find enough in your sources to answer that. Try adding more "
+    "sources on this topic, then ask again."
+)
+
 
 class ChatAnswerGen(BaseModel):
     """Flat schema the LLM fills under constrained decoding."""
 
     answer: str = Field(min_length=1, max_length=2000)
     used_passage_indices: list[int]  # 1-based indices into the numbered passages
+    grounded: bool = True  # False when the passages don't answer the question
 
 
 def _qa_prompt(question: str, passages: list[dict]) -> str:
@@ -46,13 +57,15 @@ def _qa_prompt(question: str, passages: list[dict]) -> str:
     return (
         "You are a study assistant. Answer the student's question using ONLY "
         "the numbered passages provided below. Use inline markers like [1], [2] "
-        "to cite which passages support your answer. "
-        "If the passages don't contain enough to answer, say so clearly.\n\n"
+        "to cite which passages support your answer. Do not use outside knowledge. "
+        "If the passages don't contain enough information to answer the question, "
+        'set "grounded" to false (a short note in "answer" is fine).\n\n'
         f"PASSAGES:\n{body}\n\n"
         f"QUESTION: {question}\n\n"
         "Return a JSON object with:\n"
         '- "answer": your answer as plain text with inline [N] citation markers\n'
         '- "used_passage_indices": list of the passage numbers you cited (e.g. [1, 2])\n'
+        '- "grounded": true if the passages answer the question, false if they lack the information\n'
         "Return only the JSON object."
     )
 
@@ -117,6 +130,11 @@ def answer_question(
 
     if gen is None:
         raise ValueError("model failed to produce a structured answer")
+
+    # The passages don't cover the question — return the standard "add more
+    # sources" reply with no citation (never fabricate an answer or a source).
+    if not gen.grounded:
+        return INSUFFICIENT_CONTEXT_MESSAGE, []
 
     # Map 1-based indices → SourceRefs; deduplicate by source_id
     seen: set[str] = set()

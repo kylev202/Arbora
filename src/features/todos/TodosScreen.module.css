@@ -1,0 +1,208 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+.heading {
+  font-family: var(--font-display);
+}
+
+/* rail · list · detail — the detail column collapses when nothing is selected. */
+.board {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr) 20rem;
+  gap: var(--space-4);
+  align-items: start;
+}
+.board:not(:has(.detail)) {
+  grid-template-columns: 15rem minmax(0, 1fr);
+}
+
+/* ── Left rail ── */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  position: sticky;
+  top: var(--space-4);
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.railItem:hover {
+  background: var(--color-surface-alt);
+}
+.railActive {
+  background: var(--color-primary-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+
+.railIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+.railLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.railCount {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Task list ── */
+.listPane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  min-height: 24rem;
+}
+
+.addRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.addRow > :first-child {
+  flex: 1;
+}
+
+.todoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.todo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.todo:hover {
+  background: var(--color-surface-alt);
+}
+.selected {
+  background: var(--color-primary-soft);
+}
+
+.check {
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  cursor: pointer;
+}
+.checkOpen {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--color-text-muted);
+}
+.checkDone {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--color-primary);
+}
+
+.todoBody {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+.todoTitle {
+  color: var(--color-text);
+}
+.done .todoTitle {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.todoMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.aiTag {
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+
+/* ── Detail pane ── */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  position: sticky;
+  top: var(--space-4);
+}
+.detailHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detailHeading {
+  font-size: var(--text-base);
+}
+.hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: calc(var(--space-2) * -1);
+}
+
+@media (max-width: 900px) {
+  .board,
+  .board:not(:has(.detail)) {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .detail {
+    position: static;
+  }
+}

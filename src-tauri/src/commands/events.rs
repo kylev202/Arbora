@@ -201,7 +201,10 @@ pub async fn upsert_event(
 }
 
 #[tauri::command]
-pub async fn delete_event_group(pool: State<'_, SqlitePool>, group_id: String) -> Result<(), String> {
+pub async fn delete_event_group(
+    pool: State<'_, SqlitePool>,
+    group_id: String,
+) -> Result<(), String> {
     sqlx::query("DELETE FROM calendar_events WHERE recurrence_group_id = ?1")
         .bind(&group_id)
         .execute(pool.inner())

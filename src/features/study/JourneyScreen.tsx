@@ -27,7 +27,7 @@ import type {
   WeekWalkthrough,
 } from "../../lib/types";
 import { ItemRunner } from "../test/ItemRunner";
-import { JourneyOutline, type JourneyStep } from "./JourneyPanel";
+import { JourneyTrack, type JourneyStep } from "./JourneyPanel";
 import styles from "./JourneyScreen.module.css";
 
 function errorMessage(raw: string): string {
@@ -213,13 +213,13 @@ export function JourneyScreen() {
       )}
 
       {phase === "journey" && wt && (
-        <div className={styles.layout}>
-          <nav className={styles.rail} aria-label="Journey steps">
-            <JourneyOutline walkthrough={wt} current={step} onJump={setStep} />
+        <div className={styles.journey}>
+          <div className={styles.trackBar}>
             <button type="button" className={styles.rebuild} onClick={() => void rebuild()}>
               Rebuild this journey
             </button>
-          </nav>
+            <JourneyTrack walkthrough={wt} current={step} onJump={setStep} />
+          </div>
 
           <section className={styles.stage}>
             {step.kind === "overview" && (

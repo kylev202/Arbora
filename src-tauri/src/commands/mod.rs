@@ -13,6 +13,7 @@ pub mod events;
 pub mod generate;
 pub mod map;
 pub mod model;
+pub mod notes;
 pub mod outline;
 pub mod path;
 pub mod pet;

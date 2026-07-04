@@ -12,6 +12,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  Annotation,
   AssignmentBrief,
   CalendarEvent,
   Card,
@@ -27,6 +28,7 @@ import type {
   Grade,
   GradeSummary,
   Note,
+  NoteFolder,
   Outline,
   ParsedDeadline,
   ParsedOutline,
@@ -40,6 +42,8 @@ import type {
   ReviewItem,
   Settings,
   Source,
+  SourceChunk,
+  SourceFolder,
   StudyStats,
   StudyWindow,
   StudyWindowInput,
@@ -51,6 +55,8 @@ import type {
   TestItem,
   TestKind,
   Todo,
+  TodoRepeat,
+  UserNote,
   UserProfile,
   Week,
   WeekWalkthrough,
@@ -130,9 +136,19 @@ export function listSources(subjectId: string): Promise<Source[]> {
   return invoke<Source[]>("list_sources", { subjectId });
 }
 
-/** Register a file as a source (type auto-detected); returns the queued row. */
-export function addSource(subjectId: string, filePath: string): Promise<Source> {
-  return invoke<Source>("add_source", { subjectId, filePath });
+/** Register a file as a source (type auto-detected); returns the queued row.
+ * `folderId` optionally files it into a Drive folder. */
+export function addSource(
+  subjectId: string,
+  filePath: string,
+  folderId?: string | null,
+): Promise<Source> {
+  return invoke<Source>("add_source", { subjectId, filePath, folderId: folderId ?? null });
+}
+
+/** One source row by id (resolves the original file path + type for the reader). */
+export function getSource(id: string): Promise<Source> {
+  return invoke<Source>("get_source", { id });
 }
 
 /** Rename a source's display title; returns the updated row. */
@@ -163,6 +179,68 @@ export function onIngestDone(handler: (e: IngestDone) => void): Promise<Unlisten
 }
 export function onIngestError(handler: (e: IngestError) => void): Promise<UnlistenFn> {
   return listen<IngestError>("ingest:error", (e) => handler(e.payload));
+}
+
+// ── Source viewer + annotations (Drive page) ───────────────────────────────
+
+/** A source's extracted text, chunk by chunk, for the in-app viewer. */
+export function getSourceChunks(sourceId: string): Promise<SourceChunk[]> {
+  return invoke<SourceChunk[]>("get_source_chunks", { sourceId });
+}
+
+export function listAnnotations(sourceId: string): Promise<Annotation[]> {
+  return invoke<Annotation[]>("list_annotations", { sourceId });
+}
+
+/** Add a highlight (`note` omitted) or comment on a source's text. */
+export function createAnnotation(a: {
+  source_id: string;
+  page?: number | null;
+  quote: string;
+  note?: string | null;
+  color?: string | null;
+}): Promise<Annotation> {
+  return invoke<Annotation>("create_annotation", {
+    sourceId: a.source_id,
+    page: a.page ?? null,
+    quote: a.quote,
+    note: a.note ?? null,
+    color: a.color ?? null,
+  });
+}
+
+export function deleteAnnotation(id: string): Promise<void> {
+  return invoke<void>("delete_annotation", { id });
+}
+
+// ── Drive folders (user-managed source organization) ───────────────────────
+
+/** The whole Drive folder tree (flat; the UI nests by `parent_id`). */
+export function listSourceFolders(): Promise<SourceFolder[]> {
+  return invoke<SourceFolder[]>("list_source_folders");
+}
+
+export function createSourceFolder(name: string, parentId?: string | null): Promise<SourceFolder> {
+  return invoke<SourceFolder>("create_source_folder", { name, parentId: parentId ?? null });
+}
+
+export function renameSourceFolder(id: string, name: string): Promise<SourceFolder> {
+  return invoke<SourceFolder>("rename_source_folder", { id, name });
+}
+
+/** Delete a folder (subfolders cascade; files inside are detached, not deleted). */
+export function deleteSourceFolder(id: string): Promise<void> {
+  return invoke<void>("delete_source_folder", { id });
+}
+
+/** Files assigned to a folder, across all subjects. */
+export function listFolderSources(folderId: string): Promise<Source[]> {
+  return invoke<Source[]>("list_folder_sources", { folderId });
+}
+
+/** Move a file into a folder, or out of any folder when `folderId` is null. */
+export function setSourceFolder(sourceId: string, folderId: string | null): Promise<Source> {
+  return invoke<Source>("set_source_folder", { sourceId, folderId });
 }
 
 // ── Generate + review gate (Slice 2) ───────────────────────────────────────
@@ -736,12 +814,81 @@ export function createTodo(todo: {
   });
 }
 
+/** Update a todo's editable fields (Todos manager detail pane). `null` clears a
+ * field; clearing `due` also removes its mirrored calendar event. */
+export function updateTodo(todo: {
+  id: string;
+  subject_id?: string | null;
+  title: string;
+  notes?: string | null;
+  due?: string | null;
+  repeat?: TodoRepeat | null;
+}): Promise<Todo> {
+  return invoke<Todo>("update_todo", {
+    id: todo.id,
+    subjectId: todo.subject_id ?? null,
+    title: todo.title,
+    notes: todo.notes ?? null,
+    due: todo.due ?? null,
+    repeat: todo.repeat ?? null,
+  });
+}
+
 export function setTodoDone(id: string, done: boolean): Promise<Todo> {
   return invoke<Todo>("set_todo_done", { id, done });
 }
 
 export function deleteTodo(id: string): Promise<void> {
   return invoke<void>("delete_todo", { id });
+}
+
+// ── Notes app (OneNote-style user notes) ───────────────────────────────────
+
+/** All note folders (Quick notes, then subject folders, then user folders).
+ * Auto-ensures the Quick + per-subject folders server-side. */
+export function listNoteFolders(): Promise<NoteFolder[]> {
+  return invoke<NoteFolder[]>("list_note_folders");
+}
+
+export function createNoteFolder(name: string, parentId?: string | null): Promise<NoteFolder> {
+  return invoke<NoteFolder>("create_note_folder", { name, parentId: parentId ?? null });
+}
+
+export function renameNoteFolder(id: string, name: string): Promise<NoteFolder> {
+  return invoke<NoteFolder>("rename_note_folder", { id, name });
+}
+
+export function deleteNoteFolder(id: string): Promise<void> {
+  return invoke<void>("delete_note_folder", { id });
+}
+
+export function listUserNotes(folderId: string): Promise<UserNote[]> {
+  return invoke<UserNote[]>("list_user_notes", { folderId });
+}
+
+export function getNote(id: string): Promise<UserNote> {
+  return invoke<UserNote>("get_note", { id });
+}
+
+export function createNote(folderId: string, title?: string | null): Promise<UserNote> {
+  return invoke<UserNote>("create_note", { folderId, title: title ?? null });
+}
+
+export function updateNote(id: string, title: string, content: string): Promise<UserNote> {
+  return invoke<UserNote>("update_note", { id, title, content });
+}
+
+export function moveNote(id: string, folderId: string): Promise<UserNote> {
+  return invoke<UserNote>("move_note", { id, folderId });
+}
+
+export function deleteNote(id: string): Promise<void> {
+  return invoke<void>("delete_note", { id });
+}
+
+/** Save a quick capture from the top-bar popover into the Quick notes folder. */
+export function createQuickNote(content: string, title?: string | null): Promise<UserNote> {
+  return invoke<UserNote>("create_quick_note", { content, title: title ?? null });
 }
 
 // ── AI week scheduler (redesign slice E) ───────────────────────────────────

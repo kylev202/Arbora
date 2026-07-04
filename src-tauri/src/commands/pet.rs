@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tauri::State;
 
-use super::chat::{self, ChatCitation, LocationOut};
+use super::chat::{self, ChatCitation};
 use crate::sidecar::Sidecar;
 
 #[derive(Serialize)]
@@ -36,16 +36,8 @@ struct RouteResp {
 }
 
 #[derive(Deserialize)]
-struct HelpRef {
-    section: i64,
-    title: String,
-    excerpt: String,
-}
-
-#[derive(Deserialize)]
 struct HelpResp {
     answer: String,
-    refs: Vec<HelpRef>,
 }
 
 #[tauri::command]
@@ -92,7 +84,10 @@ pub async fn pet_message(
         },
         "schedule" => Ok(PetReply::ScheduleRequest),
         "app_help" => {
-            // Domain B: grounded in the packaged help KB; refs cite KB sections.
+            // Domain B: grounded in the packaged help KB. The KB still cites its
+            // sections server-side, but app-help answers are shown WITHOUT citation
+            // chips — only answers drawn from the user's own material carry visible
+            // citations. The KB refs are intentionally dropped here.
             let resp = reqwest::Client::new()
                 .post(format!("{base}/pet/help"))
                 .header("X-Arbora-Token", sidecar.token())
@@ -109,19 +104,9 @@ pub async fn pet_message(
                 .json()
                 .await
                 .map_err(|e| format!("PET_FAILED: {e}"))?;
-            let citations = help
-                .refs
-                .into_iter()
-                .map(|r| ChatCitation {
-                    source_id: "app-help".to_string(),
-                    source_title: format!("App guide: {}", r.title),
-                    location: LocationOut::Page { page: r.section },
-                    excerpt: r.excerpt,
-                })
-                .collect();
             Ok(PetReply::Answer {
                 answer: help.answer,
-                citations,
+                citations: Vec::new(),
             })
         }
         _ => Ok(PetReply::Refusal),

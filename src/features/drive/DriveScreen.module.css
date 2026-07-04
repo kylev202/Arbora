@@ -1,0 +1,295 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
+.heading {
+  font-family: var(--font-display);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ── Left rail (folders) ── */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  position: sticky;
+  top: var(--space-4);
+}
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.railItem:hover {
+  background: var(--color-surface-alt);
+}
+.railActive {
+  background: var(--color-primary-soft);
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+.railIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+.railLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Folder tree ── */
+.folderRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-1);
+  border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.folderRow:hover {
+  background: var(--color-surface-alt);
+}
+/* A file is being dragged over this folder/subject — it's the drop target. */
+.dropTarget {
+  background: var(--color-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.caret {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.caret:disabled {
+  cursor: default;
+}
+.caretIcon {
+  width: 0.75rem;
+  height: 0.75rem;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.caretOpen {
+  transform: rotate(90deg);
+}
+
+.folderBtn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+.railActive .folderBtn {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-medium);
+}
+
+/* A single compact control (⋮ for folders, + for subjects), kept in flow so the
+   name truncates just before it — never under it — and never reserves the width
+   of three buttons. */
+.folderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+/* ── Folder ⋮ menu (portaled) ── */
+.menu {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), var(--glass-highlight);
+  animation: menu-pop var(--motion-fast) var(--ease-out);
+}
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.menuItem:hover {
+  background: var(--color-surface-alt);
+}
+.menuItem svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.menuDanger {
+  color: var(--color-danger, #b5524a);
+}
+
+/* ── Files ── */
+.filesPane {
+  padding: var(--space-4);
+  min-height: 24rem;
+}
+
+.fileList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Subfolder entry shown inside the pane — a chevron marks it as an openable folder. */
+.dirRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.dirRow:hover {
+  background: var(--color-surface-alt);
+}
+.dirName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dirChevron {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.file:hover {
+  background: var(--color-surface-alt);
+}
+
+.fileMain {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+.fileMain:disabled {
+  cursor: default;
+}
+.fileTitle {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fileMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.metaError {
+  color: var(--color-danger, #b5524a);
+}
+
+.fileSelect {
+  width: 9rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+  }
+  .fileSelect {
+    display: none;
+  }
+}

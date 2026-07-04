@@ -90,7 +90,38 @@ export type Source = {
   error?: string;
   /** Week this material is assigned to, or null/undefined if unassigned. */
   week_id?: string | null;
+  /** Drive folder this file is organized into, or null when loose. Organization
+   * only — never affects AI scoping (that's `subject_id`). */
+  folder_id?: string | null;
   added_at: string;
+};
+
+/** A user-created Drive folder (nestable). Subject-independent — it groups files
+ * for browsing only, mirroring the OneNote-style note folder tree. */
+export type SourceFolder = {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  created_at: string;
+};
+
+/** One chunk of a source's extracted text, for the in-app Drive viewer. Same
+ * text citations point at, so a citation click can highlight within it. */
+export type SourceChunk = {
+  page: number | null;
+  timestamp_ms: number | null;
+  text: string;
+};
+
+/** A user highlight (`note === null`) or comment on a source's text. */
+export type Annotation = {
+  id: string;
+  source_id: string;
+  page: number | null;
+  quote: string;
+  note: string | null;
+  color: string;
+  created_at: string;
 };
 
 // ── Generated content (post-review = approved) ───────────────────────────
@@ -305,6 +336,7 @@ export type CalendarEvent = {
 };
 
 export type TodoSource = "setup" | "ai" | "user";
+export type TodoRepeat = "daily" | "weekly" | "monthly";
 
 export type Todo = {
   id: string;
@@ -315,6 +347,34 @@ export type Todo = {
   kind: string;
   done: boolean;
   source: TodoSource;
+  notes: string | null;
+  repeat: TodoRepeat | null;
+  /** Calendar event auto-created to mirror `due`, or null when there's no due date. */
+  linked_event_id: string | null;
+};
+
+// ── User-authored notes (OneNote-style Notes app) ─────────────────────────
+export type NoteFolderKind = "subject" | "user" | "quick";
+
+export type NoteFolder = {
+  id: string;
+  subject_id: string | null;
+  parent_id: string | null;
+  name: string;
+  kind: NoteFolderKind;
+  created_at: string;
+};
+
+/** A user's own note (TipTap HTML in `content`) — no review gate, distinct from
+ * the AI-generated `Note`. */
+export type UserNote = {
+  id: string;
+  folder_id: string;
+  subject_id: string | null;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
 };
 
 // ── Learning path (redesign slice F) ──────────────────────────────────────

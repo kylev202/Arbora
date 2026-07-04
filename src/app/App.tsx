@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppRoutes } from "./router";
 import { OnboardingModal } from "../features/onboarding/OnboardingModal";
 import { Pet } from "../features/pet/Pet";
+import { SourceViewerProvider } from "../features/drive/SourceViewerProvider";
 
 const ONBOARDED_KEY = "arbora.onboarded";
 
@@ -15,11 +16,11 @@ function App() {
   }
 
   return (
-    <>
+    <SourceViewerProvider>
       <AppRoutes />
       {!onboarding && <Pet />}
       <OnboardingModal open={onboarding} onFinish={finishOnboarding} />
-    </>
+    </SourceViewerProvider>
   );
 }
 

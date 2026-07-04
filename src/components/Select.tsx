@@ -8,6 +8,8 @@ export type SelectOption<T extends string> = { value: T; label: string };
 
 export type SelectProps<T extends string> = {
   label?: string;
+  /** Accessible name when no visible `label` is wanted (keeps the control named). */
+  "aria-label"?: string;
   value: T;
   options: SelectOption<T>[];
   onChange: (value: T) => void;
@@ -27,6 +29,7 @@ const ROW = 40; // approx option height, for the flip-height estimate
  */
 export function Select<T extends string>({
   label,
+  "aria-label": ariaLabel,
   value,
   options,
   onChange,
@@ -140,6 +143,7 @@ export function Select<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        aria-label={label ? undefined : ariaLabel}
         aria-labelledby={label ? `${rootId}-label ${rootId}` : undefined}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={onTriggerKeyDown}
@@ -158,6 +162,7 @@ export function Select<T extends string>({
             id={listId}
             role="listbox"
             tabIndex={-1}
+            aria-label={label ? undefined : ariaLabel}
             aria-labelledby={label ? `${rootId}-label` : undefined}
             aria-activedescendant={`${listId}-opt-${active}`}
             className={`${styles.popover} ${coords.up ? styles.up : styles.down}`}

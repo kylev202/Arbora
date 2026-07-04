@@ -9,6 +9,9 @@ import { JourneyScreen } from "../features/study/JourneyScreen";
 import { TestScreen } from "../features/test/TestScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { CalendarScreen } from "../features/calendar/CalendarScreen";
+import { TodosScreen } from "../features/todos/TodosScreen";
+import { DriveScreen } from "../features/drive/DriveScreen";
+import { NotesScreen } from "../features/notes/NotesScreen";
 import { KnowledgeMapScreen } from "../features/map/KnowledgeMapScreen";
 import { InterleavedStudyScreen } from "../features/study/InterleavedStudyScreen";
 import { WorkspaceLayout } from "./shell/WorkspaceLayout";
@@ -25,6 +28,9 @@ export function AppRoutes() {
       <Route path="/" element={<HomeScreen />} />
       <Route path="/interleaved" element={<InterleavedStudyScreen />} />
       <Route path="/calendar" element={<CalendarScreen />} />
+      <Route path="/todos" element={<TodosScreen />} />
+      <Route path="/drive" element={<DriveScreen />} />
+      <Route path="/notes" element={<NotesScreen />} />
       <Route path="/settings" element={<SettingsScreen />} />
 
       <Route path="/subject/:subjectId" element={<WorkspaceLayout />}>

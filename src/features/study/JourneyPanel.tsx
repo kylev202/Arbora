@@ -29,6 +29,27 @@ export function journeyCta(wt: WeekWalkthrough): string {
   return started ? "Continue the journey" : "Start the journey";
 }
 
+type JourneyItem = { step: JourneyStep; label: string; hint: string; done: boolean };
+
+/** The journey's ordered checkpoints: overview, one per lesson, then recall. */
+function journeyItems(wt: WeekWalkthrough): JourneyItem[] {
+  return [
+    { step: { kind: "overview" }, label: "Overview", hint: "the week at a glance", done: wt.reviewed },
+    ...wt.lessons.map((l, i) => ({
+      step: { kind: "lesson", index: i } as JourneyStep,
+      label: l.title,
+      hint: `lesson ${i + 1}`,
+      done: l.completed_at !== null,
+    })),
+    {
+      step: { kind: "recall" },
+      label: "Recall practice",
+      hint: "flashcards grow your tree",
+      done: wt.completed_at !== null,
+    },
+  ];
+}
+
 /**
  * The journey's checkpoint list: overview, one step per lesson, recall. Done
  * steps get a check, never a grade — progress only ever accumulates. With
@@ -44,26 +65,7 @@ export function JourneyOutline({
   current?: JourneyStep | null;
   onJump?: (step: JourneyStep) => void;
 }) {
-  const items: { step: JourneyStep; label: string; hint: string; done: boolean }[] = [
-    {
-      step: { kind: "overview" },
-      label: "Overview",
-      hint: "the week at a glance",
-      done: walkthrough.reviewed,
-    },
-    ...walkthrough.lessons.map((l, i) => ({
-      step: { kind: "lesson", index: i } as JourneyStep,
-      label: l.title,
-      hint: `lesson ${i + 1}`,
-      done: l.completed_at !== null,
-    })),
-    {
-      step: { kind: "recall" },
-      label: "Recall practice",
-      hint: "flashcards grow your tree",
-      done: walkthrough.completed_at !== null,
-    },
-  ];
+  const items = journeyItems(walkthrough);
 
   return (
     <ol className={styles.outline} aria-label="Journey steps">
@@ -97,6 +99,51 @@ export function JourneyOutline({
             ) : (
               <span className={styles.stepButton}>{inner}</span>
             )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * Horizontal checkpoint track for the guided session: one dot per step
+ * (overview · a lesson each · recall), joined in a line. Dots are clickable to
+ * move between steps; a step's title stays hidden until its dot is hovered or
+ * focused, so the track stays slim and the note keeps the full width. Done steps
+ * carry a check and fill the line behind them — progress only accumulates.
+ */
+export function JourneyTrack({
+  walkthrough,
+  current,
+  onJump,
+}: {
+  walkthrough: WeekWalkthrough;
+  current: JourneyStep;
+  onJump: (step: JourneyStep) => void;
+}) {
+  const items = journeyItems(walkthrough);
+  return (
+    <ol className={styles.track} aria-label="Journey steps">
+      {items.map((item, i) => {
+        const isCurrent = stepsEqual(item.step, current);
+        const prevDone = i > 0 && items[i - 1].done;
+        return (
+          <li key={i} className={`${styles.trackStep} ${prevDone ? styles.trackFilled : ""}`}>
+            <button
+              type="button"
+              className={`${styles.dot} ${item.done ? styles.dotDone : ""} ${
+                isCurrent ? styles.dotCurrent : ""
+              }`}
+              aria-current={isCurrent ? "step" : undefined}
+              aria-label={`${item.label} — ${item.hint}`}
+              onClick={() => onJump(item.step)}
+            >
+              {item.done && <Check weight="bold" />}
+            </button>
+            <span className={styles.tip} aria-hidden="true">
+              {item.label}
+            </span>
           </li>
         );
       })}

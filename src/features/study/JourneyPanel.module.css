@@ -87,3 +87,109 @@ button.stepButton:hover {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
+
+/* ── Horizontal track (guided session) ── */
+.track {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  /* bottom room reserves a home for the hover title below the line */
+  padding: var(--space-2) var(--space-1) var(--space-8);
+  list-style: none;
+}
+
+.trackStep {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* connector from the previous dot into this one */
+.trackStep:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 10px; /* centre of the 22px dot */
+  left: -50%;
+  right: 50%;
+  height: 2px;
+  background: var(--color-path-upcoming);
+  z-index: 0;
+}
+.trackFilled::before {
+  background: var(--color-primary);
+}
+
+.dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--color-path-upcoming);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-on-primary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+.dot:hover {
+  transform: scale(1.18);
+  border-color: var(--color-primary);
+}
+.dotDone {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.dotCurrent {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+/* title, revealed on hover / keyboard focus in the reserved space below */
+.tip {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 148px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  text-align: center;
+  color: var(--color-text);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.dot:hover + .tip,
+.dot:focus-visible + .tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* keep the two end labels from spilling past the track edges */
+.trackStep:first-child .tip {
+  left: 0;
+  transform: none;
+  text-align: left;
+}
+.trackStep:last-child .tip {
+  left: auto;
+  right: 0;
+  transform: none;
+  text-align: right;
+}

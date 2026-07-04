@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { CalendarBlank, Gear, House, Tree } from "@phosphor-icons/react";
+import { CalendarBlank, Gear, HardDrives, House, ListChecks, NotePencil, Tree } from "@phosphor-icons/react";
 import { IconButton } from "../../components";
+import { QuickNoteModal } from "../../features/notes/QuickNoteModal";
 import styles from "./TopBar.module.css";
 
 type NavDef = { to: string; label: string; end?: boolean };
@@ -15,6 +16,7 @@ type NavDef = { to: string; label: string; end?: boolean };
 export function TopBar({ breadcrumb, hideNav }: { breadcrumb?: ReactNode; hideNav?: boolean }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [quickNote, setQuickNote] = useState(false);
 
   const navDefs: NavDef[] = [
     { to: "/", label: "Home", end: true },
@@ -165,8 +167,13 @@ export function TopBar({ breadcrumb, hideNav }: { breadcrumb?: ReactNode; hideNa
       )}
 
       <div className={styles.right}>
+        <IconButton label="Tasks" icon={<ListChecks />} onClick={() => navigate("/todos")} />
+        <IconButton label="Drive" icon={<HardDrives />} onClick={() => navigate("/drive")} />
+        <IconButton label="Quick note" icon={<NotePencil />} onClick={() => setQuickNote(true)} />
         <IconButton label="Settings" icon={<Gear />} onClick={() => navigate("/settings")} />
       </div>
+
+      <QuickNoteModal open={quickNote} onClose={() => setQuickNote(false)} />
     </header>
   );
 }
