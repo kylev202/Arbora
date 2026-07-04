@@ -9,6 +9,7 @@ import {
   Compass,
   GraduationCap,
   Lightning,
+  Notebook,
   Plant,
   Play,
   Timer,
@@ -18,6 +19,7 @@ import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import type { CardState, PathStage } from "../../lib/types";
 import { WeekMaterials } from "./WeekMaterials";
+import { NoteMarkdown } from "./NoteMarkdown";
 import { JourneyOutline, journeyCta, journeyUrl } from "./JourneyPanel";
 import styles from "./StudyHomeScreen.module.css";
 
@@ -280,19 +282,28 @@ function WeekGallery({
   );
 }
 
-/** Approved notes, tucked in a quiet disclosure — reference, not a task. */
+/** Every grounded note from this subject's sources, tucked in a quiet
+ * disclosure — reference, not a task. Each note is rendered as real structure
+ * (heading, summary, bullets, section breaks) and kept clearly apart from the
+ * next; every note carries its citations. */
 function NotesSection({ subjectId }: { subjectId: string }) {
   const notes = useAsync(() => api.listNotes(subjectId), [subjectId]);
   if (!notes.data || notes.data.length === 0) return null;
   return (
     <details className={styles.notes}>
       <summary className={styles.notesSummary}>
-        Notes ({notes.data.length})
+        <Notebook weight="duotone" className={styles.notesIcon} aria-hidden="true" />
+        <span className={styles.notesLabel}>Notes</span>
+        <span className={styles.notesCount}>{notes.data.length}</span>
+        <CaretRight weight="bold" className={styles.notesCaret} aria-hidden="true" />
       </summary>
+      <p className={styles.notesHint}>
+        Everything Arbora noted from your sources — grounded and cited.
+      </p>
       <div className={styles.notesList}>
         {notes.data.map((n) => (
           <article key={n.id} className={styles.note}>
-            <div className={styles.noteContent}>{n.content}</div>
+            <NoteMarkdown content={n.content} />
             <div className={styles.noteCitations}>
               {n.source_refs.map((ref, i) => (
                 <CitationChip key={i} source={ref} />

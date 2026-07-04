@@ -16,6 +16,16 @@ _RULES = (
     "max 200 characters."
 )
 
+# Shared Markdown house style for all generated notes, so they render as clean,
+# consistent structure (headings, bullets, section breaks) rather than a wall of
+# text or raw symbols.
+_NOTE_STYLE = (
+    "Formatting: write clean Markdown. Use `## ` for section headings and `- ` for "
+    "bullet points; use `**bold**` only to mark a key term. Do not use `#` (single) "
+    "headings, tables, or images. Keep every statement grounded in the source "
+    "material — do not invent facts, examples, or numbers to fill the structure."
+)
+
 
 def _ctx(chunk: Chunk) -> str:
     return f'PASSAGE:\n"""\n{chunk.text}\n"""'
@@ -50,12 +60,17 @@ def quiz_prompt(chunk: Chunk) -> str:
 
 def note_prompt(chunk: Chunk) -> str:
     return (
-        f"You write concise study notes. {_RULES}\n\n"
+        f"You write clear, well-structured study notes. {_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
-        "Write ONE short note summarising the passage:\n"
-        "- content: Markdown, outline style (a few bullet points), at least 20 characters.\n"
+        "Write ONE study note on the passage as Markdown, in order:\n"
+        "1. A `## ` heading naming the topic of the passage (a few words).\n"
+        "2. A one-sentence summary of what the passage covers (plain text, no heading).\n"
+        "3. A few `- ` bullets on the key points, using `**bold**` to mark key terms.\n"
+        "Return a JSON object with:\n"
+        "- content: the structured Markdown note above, at least 20 characters.\n"
         '- format: "outline".\n'
         "- excerpt: an exact phrase copied from the passage.\n"
+        f"{_NOTE_STYLE}\n"
         "Return only the JSON object."
     )
 
@@ -69,17 +84,6 @@ _MULTI_RULES = (
 
 def _multi_ctx(chunks: list[Chunk]) -> str:
     return "\n\n".join(f'PASSAGE {i}:\n"""\n{c.text}\n"""' for i, c in enumerate(chunks, start=1))
-
-
-# Shared Markdown house style for walkthrough notes, so overview and lesson
-# notes render as clean, consistent structure (headings, bullets, section
-# breaks) rather than a wall of text or raw symbols.
-_NOTE_STYLE = (
-    "Formatting: write clean Markdown. Use `## ` for section headings and `- ` for "
-    "bullet points; use `**bold**` only to mark a key term. Do not use `#` (single) "
-    "headings, tables, or images. Keep every statement grounded in the passages — do "
-    "not invent facts, examples, or numbers to fill the structure."
-)
 
 
 def walkthrough_overview_prompt(chunks: list[Chunk], week_title: str) -> str:
