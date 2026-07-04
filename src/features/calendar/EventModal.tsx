@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Checkbox, Input, Modal } from "../../components";
+import { Button, Checkbox, DatePicker, Input, Modal, Select, TimePicker } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import type { CalendarEvent, EventKind } from "../../lib/types";
@@ -12,6 +12,8 @@ const KINDS: { value: EventKind; label: string }[] = [
   { value: "deadline", label: "Deadline" },
   { value: "custom", label: "Other" },
 ];
+
+const EVENT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
 
 type RepeatFreq = "daily" | "weekly" | "monthly";
 
@@ -58,6 +60,7 @@ export function EventModal({
   const [subjectId, setSubjectId] = useState("");
   const [kind, setKind] = useState<EventKind>("study");
   const [kindLabel, setKindLabel] = useState("");
+  const [color, setColor] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [start, setStart] = useState("18:00");
   const [end, setEnd] = useState("19:00");
@@ -76,6 +79,7 @@ export function EventModal({
       setSubjectId(event.subject_id ?? "");
       setKind(event.kind);
       setKindLabel(event.kind_label ?? "");
+      setColor(event.color);
       setDate(event.start_at.split("T")[0]);
       setStart(event.start_at.split("T")[1]);
       setEnd(event.end_at.split("T")[1]);
@@ -85,6 +89,7 @@ export function EventModal({
       setSubjectId("");
       setKind("study");
       setKindLabel("");
+      setColor(null);
       setDate(draft.date);
       setStart(draft.start);
       setEnd(draft.end);
@@ -114,6 +119,7 @@ export function EventModal({
             end_at: `${d}T${end}`,
             kind,
             kind_label: kindLabelValue,
+            color,
             recurrence_group_id: groupId,
           });
           onSaved(saved);
@@ -128,6 +134,7 @@ export function EventModal({
           end_at: `${date}T${end}`,
           kind,
           kind_label: kindLabelValue,
+          color,
           status: event ? (done ? "done" : "planned") : undefined,
         });
         onSaved(saved);
@@ -200,36 +207,24 @@ export function EventModal({
           placeholder="e.g. Review week 3"
         />
         <div className={styles.pair}>
-          <label className={styles.field}>
-            <span className={styles.label}>Subject</span>
-            <select
-              className={styles.select}
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
-            >
-              <option value="">None</option>
-              {subjects.status === "loaded" &&
-                subjects.data.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className={styles.label}>Type</span>
-            <select
-              className={styles.select}
-              value={kind}
-              onChange={(e) => setKind(e.target.value as EventKind)}
-            >
-              {KINDS.map((k) => (
-                <option key={k.value} value={k.value}>
-                  {k.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            label="Subject"
+            value={subjectId}
+            placeholder="None"
+            onChange={setSubjectId}
+            options={[
+              { value: "", label: "None" },
+              ...(subjects.status === "loaded"
+                ? subjects.data.map((s) => ({ value: s.id, label: s.name }))
+                : []),
+            ]}
+          />
+          <Select
+            label="Type"
+            value={kind}
+            onChange={(v) => setKind(v as EventKind)}
+            options={KINDS}
+          />
         </div>
         {kind === "custom" && (
           <Input
@@ -239,10 +234,33 @@ export function EventModal({
             placeholder="e.g. Office hours, Club meeting…"
           />
         )}
-        <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <fieldset className={styles.colors}>
+          <legend className={styles.colorsLegend}>Colour</legend>
+          <div className={styles.colorRow}>
+            <button
+              type="button"
+              className={`${styles.colorSwatch} ${styles.colorDefault} ${color === null ? styles.colorActive : ""}`}
+              aria-label="Default (colour by type)"
+              aria-pressed={color === null}
+              onClick={() => setColor(null)}
+            />
+            {EVENT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`${styles.colorSwatch} ${c === color ? styles.colorActive : ""}`}
+                style={{ backgroundColor: c }}
+                aria-label={`Colour ${c}`}
+                aria-pressed={c === color}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
+        </fieldset>
+        <DatePicker label="Date" value={date} onChange={setDate} />
         <div className={styles.pair}>
-          <Input label="From" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-          <Input label="Until" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <TimePicker label="From" value={start} onChange={setStart} />
+          <TimePicker label="Until" value={end} onChange={setEnd} />
         </div>
         {!event && (
           <>
@@ -253,23 +271,21 @@ export function EventModal({
             />
             {repeat && (
               <div className={styles.repeatFields}>
-                <label className={styles.field}>
-                  <span className={styles.label}>Frequency</span>
-                  <select
-                    className={styles.select}
-                    value={repeatFreq}
-                    onChange={(e) => setRepeatFreq(e.target.value as RepeatFreq)}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </label>
-                <Input
+                <Select
+                  label="Frequency"
+                  value={repeatFreq}
+                  onChange={(v) => setRepeatFreq(v as RepeatFreq)}
+                  options={[
+                    { value: "daily", label: "Daily" },
+                    { value: "weekly", label: "Weekly" },
+                    { value: "monthly", label: "Monthly" },
+                  ]}
+                />
+                <DatePicker
                   label="Repeat until"
-                  type="date"
                   value={repeatUntil}
-                  onChange={(e) => setRepeatUntil(e.target.value)}
+                  onChange={setRepeatUntil}
+                  min={date}
                 />
               </div>
             )}

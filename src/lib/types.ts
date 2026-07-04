@@ -298,6 +298,7 @@ export type CalendarEvent = {
   end_at: string;
   kind: EventKind;
   kind_label: string | null;
+  color: string | null; // hex accent override; null = colour by kind
   status: EventStatus;
   origin: "user" | "ai";
   recurrence_group_id: string | null;

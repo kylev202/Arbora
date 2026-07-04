@@ -10,48 +10,6 @@
   gap: var(--space-3);
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.label {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-}
-
-.select {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  padding-right: var(--space-8); /* room for the chevron */
-  min-height: 40px;
-  font-family: inherit;
-  font-size: var(--text-base);
-  color: var(--color-text);
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: var(--glass-bg-strong);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 256 256' fill='%237c8a7d'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right var(--space-3) center;
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  transition:
-    border-color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-base) var(--ease-out);
-}
-.select:hover {
-  border-color: var(--color-text-muted);
-}
-.select:focus {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-glow);
-}
-
 /* Repeat sub-fields — nested inset so they read as belonging to the toggle. */
 .repeatFields {
   display: grid;
@@ -73,6 +31,58 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Colour swatches — mirrors the subject accent picker. */
+.colors {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.colorsLegend {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-2);
+}
+
+.colorRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+}
+.colorSwatch:hover {
+  border-color: var(--color-border-strong);
+}
+.colorActive,
+.colorActive:hover {
+  border-color: var(--color-text);
+}
+
+/* "Default" swatch reads as no override — surface fill with a subtle slash. */
+.colorDefault {
+  background: var(--color-surface-alt);
+  position: relative;
+}
+.colorDefault::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1px),
+    var(--color-border-strong) calc(50% - 1px),
+    var(--color-border-strong) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
 }
 
 .error {

@@ -16,13 +16,14 @@ pub struct CalendarEvent {
     pub end_at: String,
     pub kind: String,
     pub kind_label: Option<String>,
+    pub color: Option<String>,
     pub status: String,
     pub origin: String,
     pub recurrence_group_id: Option<String>,
 }
 
 const COLS: &str =
-    "SELECT id, subject_id, title, start_at, end_at, kind, kind_label, status, origin, recurrence_group_id FROM calendar_events";
+    "SELECT id, subject_id, title, start_at, end_at, kind, kind_label, color, status, origin, recurrence_group_id FROM calendar_events";
 
 async fn fetch(pool: &SqlitePool, id: &str) -> Result<CalendarEvent, String> {
     sqlx::query_as::<_, CalendarEvent>(&format!("{COLS} WHERE id = ?1"))
@@ -66,6 +67,7 @@ async fn upsert(
     end_at: String,
     kind: String,
     kind_label: Option<String>,
+    color: Option<String>,
     recurrence_group_id: Option<String>,
     status: Option<String>,
 ) -> Result<CalendarEvent, String> {
@@ -83,7 +85,7 @@ async fn upsert(
             sqlx::query(
                 "UPDATE calendar_events
                  SET subject_id = ?2, title = ?3, start_at = ?4, end_at = ?5, kind = ?6,
-                     kind_label = ?7, status = COALESCE(?8, status)
+                     kind_label = ?7, color = ?8, status = COALESCE(?9, status)
                  WHERE id = ?1",
             )
             .bind(&id)
@@ -93,6 +95,7 @@ async fn upsert(
             .bind(&end_at)
             .bind(&kind)
             .bind(&kind_label)
+            .bind(&color)
             .bind(status)
             .execute(pool)
             .await
@@ -103,9 +106,9 @@ async fn upsert(
             let id = Uuid::new_v4().to_string();
             sqlx::query(
                 "INSERT INTO calendar_events
-                   (id, subject_id, title, start_at, end_at, kind, kind_label, recurrence_group_id,
-                    status, origin, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, COALESCE(?9,'planned'), 'user',
+                   (id, subject_id, title, start_at, end_at, kind, kind_label, color,
+                    recurrence_group_id, status, origin, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(?10,'planned'), 'user',
                          strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
             )
             .bind(&id)
@@ -115,6 +118,7 @@ async fn upsert(
             .bind(&end_at)
             .bind(&kind)
             .bind(&kind_label)
+            .bind(&color)
             .bind(&recurrence_group_id)
             .bind(status)
             .execute(pool)
@@ -176,6 +180,7 @@ pub async fn upsert_event(
     end_at: String,
     kind: String,
     kind_label: Option<String>,
+    color: Option<String>,
     recurrence_group_id: Option<String>,
     status: Option<String>,
 ) -> Result<CalendarEvent, String> {
@@ -188,6 +193,7 @@ pub async fn upsert_event(
         end_at,
         kind,
         kind_label,
+        color,
         recurrence_group_id,
         status,
     )
@@ -269,6 +275,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .await
         .unwrap();
@@ -284,6 +291,7 @@ mod tests {
             "2026-07-20T15:00".into(),
             "custom".into(),
             Some("Doctor appointment".into()),
+            None,
             None,
             None,
         )
@@ -347,6 +355,7 @@ mod tests {
             "2026-07-06T18:00".into(),
             "2026-07-06T20:00".into(),
             "study".into(),
+            None,
             None,
             None,
             None,

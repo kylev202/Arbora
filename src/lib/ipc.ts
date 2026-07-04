@@ -681,6 +681,7 @@ export function upsertEvent(event: {
   end_at: string;
   kind: EventKind;
   kind_label?: string | null;
+  color?: string | null;
   recurrence_group_id?: string | null;
   status?: EventStatus;
 }): Promise<CalendarEvent> {
@@ -692,6 +693,7 @@ export function upsertEvent(event: {
     endAt: event.end_at,
     kind: event.kind,
     kindLabel: event.kind_label,
+    color: event.color,
     recurrenceGroupId: event.recurrence_group_id,
     status: event.status,
   });

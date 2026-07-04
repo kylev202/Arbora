@@ -188,6 +188,8 @@
   display: flex;
   overflow-y: auto;
   flex: 1;
+  /* Room for the first hour label, which sits half a line above its cell. */
+  padding-top: var(--space-2);
 }
 
 .gutter {
@@ -231,7 +233,9 @@
   pointer-events: none;
 }
 
-/* One event block. Colors by kind — deadline is earth gold, never red. */
+/* One event block. Colors by kind — deadline is earth gold, never red.
+   Fills mix against the *solid* surface (not the translucent glass one) so
+   blocks read clearly against the frosted grid, with a thicker accent edge. */
 .event {
   position: absolute;
   left: 4px;
@@ -239,38 +243,51 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: var(--space-1) var(--space-2);
+  gap: 1px;
+  padding: 3px var(--space-2) 3px calc(var(--space-2) - 1px);
   border: 1px solid;
+  border-left-width: 3px;
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   font-family: inherit;
-  font-size: var(--text-xs);
+  /* Text scales with the viewport so it stays legible at any resolution,
+     while min/max keep it readable and inside the block. */
+  font-size: clamp(0.7rem, 0.58rem + 0.35vw, 0.9rem);
+  line-height: 1.25;
   text-align: left;
   overflow: hidden;
   cursor: grab;
   touch-action: none;
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+.event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  z-index: 3;
 }
 .event:active {
   cursor: grabbing;
 }
 
 .study {
-  background: color-mix(in srgb, var(--color-event-study) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-event-study) 22%, var(--color-surface-solid));
   border-color: var(--color-event-study);
   color: var(--color-text);
 }
 .lecture {
-  background: color-mix(in srgb, var(--color-event-lecture) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-event-lecture) 24%, var(--color-surface-solid));
   border-color: var(--color-event-lecture);
   color: var(--color-text);
 }
 .deadline {
-  background: color-mix(in srgb, var(--color-event-deadline) 20%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-event-deadline) 28%, var(--color-surface-solid));
   border-color: var(--color-event-deadline);
   color: var(--color-text);
 }
 .custom {
-  background: var(--color-surface-alt);
+  background: color-mix(in srgb, var(--color-event-custom) 18%, var(--color-surface-solid));
   border-color: var(--color-event-custom);
   color: var(--color-text);
 }
@@ -289,15 +306,29 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-weight: var(--weight-medium);
+  width: 100%;
+  font-weight: var(--weight-semibold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+}
+/* Keep the done check from being squeezed out by a long title. */
+.eventTitle svg {
+  flex-shrink: 0;
+}
+/* The title text itself takes the ellipsis; the icon stays whole. */
+.eventTitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eventTime {
+  max-width: 100%;
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Month view ────────────────────────────────────────────────────────── */

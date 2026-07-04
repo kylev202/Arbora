@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CaretLeft, CaretRight, Check, Sparkle } from "@phosphor-icons/react";
 import { Button } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
@@ -20,8 +20,8 @@ import {
 import { EventModal, type EventDraft } from "./EventModal";
 import styles from "./CalendarScreen.module.css";
 
-const DAY_START_HOUR = 7;
-const DAY_END_HOUR = 23;
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
 const PX_PER_HOUR = 48;
 const PX_PER_MIN = PX_PER_HOUR / 60;
 const SNAP_MIN = 30;
@@ -29,6 +29,16 @@ const DRAG_THRESHOLD = 5;
 
 type View = "week" | "month";
 type ModalState = { event: CalendarEvent | null; draft: EventDraft | null } | null;
+
+/** Per-event colour override, mirroring the kind-based CSS (tinted fill +
+ * solid border). Returns {} when the event has no colour so the kind class wins. */
+function eventColorStyle(color: string | null): CSSProperties {
+  if (!color) return {};
+  return {
+    background: `color-mix(in srgb, ${color} 24%, var(--color-surface-solid))`,
+    borderColor: color,
+  };
+}
 
 /** Minutes since the top of the visible grid (clamped). */
 function minutesIntoDay(iso: string): number {
@@ -49,6 +59,7 @@ export function CalendarScreen() {
   const [planNote, setPlanNote] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     event: CalendarEvent;
     startX: number;
@@ -71,6 +82,15 @@ export function CalendarScreen() {
       .catch(() => setEvents([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, anchor.getTime(), refreshTick]);
+
+  // Open the day scrolled to roughly the current time — with the full 24h grid,
+  // landing on empty midnight would be useless.
+  useEffect(() => {
+    if (view !== "week" || !scrollRef.current) return;
+    const n = new Date();
+    const mins = n.getHours() * 60 + n.getMinutes() - DAY_START_HOUR * 60;
+    scrollRef.current.scrollTop = Math.max(0, mins * PX_PER_MIN - 120);
+  }, [view]);
 
   // ── AI week planner (proposals only until accepted — law #2) ─────────────
 
@@ -293,7 +313,7 @@ export function CalendarScreen() {
                 </div>
               ))}
             </div>
-            <div className={styles.weekScroll}>
+            <div className={styles.weekScroll} ref={scrollRef}>
               <div className={styles.gutter}>
                 {hours.map((h) => (
                   <div key={h} className={styles.hourLabel}>
@@ -338,7 +358,8 @@ export function CalendarScreen() {
                             key={ev.id}
                             type="button"
                             className={`${styles.event} ${styles[ev.kind]} ${ev.status === "done" ? styles.done : ""} ${preview ? styles.dragging : ""}`}
-                            style={{ top, height }}
+                            style={{ top, height, ...eventColorStyle(ev.color) }}
+                            title={`${ev.title}\n${fmtTime(startIso)} – ${fmtTime(endIso)}`}
                             onClick={(e) => e.stopPropagation()}
                             onPointerDown={(e) => onEventPointerDown(e, ev)}
                             onPointerMove={onEventPointerMove}
@@ -346,7 +367,7 @@ export function CalendarScreen() {
                           >
                             <span className={styles.eventTitle}>
                               {ev.status === "done" && <Check weight="bold" aria-label="Done" />}
-                              {ev.title}
+                              <span className={styles.eventTitleText}>{ev.title}</span>
                             </span>
                             <span className={styles.eventTime}>
                               {fmtTime(startIso)} – {fmtTime(endIso)}
@@ -377,7 +398,12 @@ export function CalendarScreen() {
                   >
                     <span className={styles.monthDay}>{d.getDate()}</span>
                     {dayEvents.slice(0, 3).map((ev) => (
-                      <span key={ev.id} className={`${styles.monthEvent} ${styles[ev.kind]}`}>
+                      <span
+                        key={ev.id}
+                        className={`${styles.monthEvent} ${styles[ev.kind]}`}
+                        style={eventColorStyle(ev.color)}
+                        title={ev.title}
+                      >
                         {ev.title}
                       </span>
                     ))}
