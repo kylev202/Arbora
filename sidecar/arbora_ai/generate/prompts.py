@@ -71,15 +71,32 @@ def _multi_ctx(chunks: list[Chunk]) -> str:
     return "\n\n".join(f'PASSAGE {i}:\n"""\n{c.text}\n"""' for i, c in enumerate(chunks, start=1))
 
 
+# Shared Markdown house style for walkthrough notes, so overview and lesson
+# notes render as clean, consistent structure (headings, bullets, section
+# breaks) rather than a wall of text or raw symbols.
+_NOTE_STYLE = (
+    "Formatting: write clean Markdown. Use `## ` for section headings and `- ` for "
+    "bullet points; use `**bold**` only to mark a key term. Do not use `#` (single) "
+    "headings, tables, or images. Keep every statement grounded in the passages — do "
+    "not invent facts, examples, or numbers to fill the structure."
+)
+
+
 def walkthrough_overview_prompt(chunks: list[Chunk], week_title: str) -> str:
     topic = f' on "{week_title}"' if week_title else ""
     return (
-        f"You write a short overview of one week of a university course{topic}. "
-        f"{_MULTI_RULES}\n\n"
+        f"You write a clear, well-structured overview of one week of a university "
+        f"course{topic}. {_MULTI_RULES}\n\n"
         f"{_multi_ctx(chunks)}\n\n"
-        "Write the week's overview note:\n"
-        "- content: Markdown. A few short paragraphs or bullet groups: what the week "
-        "covers, the main ideas, and how they connect. Plain, friendly language.\n"
+        "Write the week's overview note as Markdown with this structure, in order:\n"
+        "1. A one- or two-sentence summary of what the week is about (plain text, no heading).\n"
+        "2. Two or three `## ` sections covering the main ideas and how they connect — a "
+        "short sentence or two then `- ` bullets in each.\n"
+        "3. A final `## Key takeaways` section: 2-4 bullets of what to remember.\n"
+        "Do not repeat the week title as a heading.\n"
+        f"{_NOTE_STYLE}\n"
+        "Return a JSON object with:\n"
+        "- content: the structured Markdown note above.\n"
         "- excerpts: 2-4 exact phrases copied from the passages that support the overview.\n"
         "Return only the JSON object."
     )
@@ -87,14 +104,19 @@ def walkthrough_overview_prompt(chunks: list[Chunk], week_title: str) -> str:
 
 def walkthrough_lesson_prompt(chunks: list[Chunk], lesson_number: int, lesson_total: int) -> str:
     return (
-        f"You write one small lesson note — part {lesson_number} of {lesson_total} of a "
-        f"week's study journey. {_MULTI_RULES}\n\n"
+        f"You write one small, well-structured lesson note — part {lesson_number} of "
+        f"{lesson_total} of a week's study journey. {_MULTI_RULES}\n\n"
         f"{_multi_ctx(chunks)}\n\n"
-        "Write ONE focused lesson from these passages:\n"
+        "Write ONE focused lesson from these passages. Return a JSON object with:\n"
         "- title: a short name for what this lesson teaches (a few words).\n"
-        "- content: Markdown. Explain the concept simply, then a few bullet points with "
-        "the key facts from the passages.\n"
+        "- content: structured Markdown, in order:\n"
+        "    1. A one-sentence summary of the lesson (plain text, no heading).\n"
+        "    2. A `## Key ideas` section: a short explanation then 2-5 `- ` bullets of the "
+        "key facts from the passages.\n"
+        "    3. A `## Takeaway` section: one or two bullets on what matters most.\n"
+        "  Do not repeat the title as a heading.\n"
         "- excerpts: 1-3 exact phrases copied from the passages that support the lesson.\n"
+        f"{_NOTE_STYLE}\n"
         "Return only the JSON object."
     )
 

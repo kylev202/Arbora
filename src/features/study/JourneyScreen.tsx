@@ -28,6 +28,7 @@ import type {
 } from "../../lib/types";
 import { ItemRunner } from "../test/ItemRunner";
 import { JourneyTrack, type JourneyStep } from "./JourneyPanel";
+import { NoteMarkdown } from "./NoteMarkdown";
 import styles from "./JourneyScreen.module.css";
 
 function errorMessage(raw: string): string {
@@ -259,7 +260,7 @@ export function JourneyScreen() {
 function NoteBody({ content, refs }: { content: string; refs: SourceRef[] }) {
   return (
     <>
-      <div className={styles.noteBody}>{content}</div>
+      <NoteMarkdown content={content} />
       <div className={styles.citations}>
         {refs.map((r, i) => (
           <CitationChip key={i} source={r} />
@@ -302,13 +303,12 @@ function OverviewStep({
   return (
     <article className={styles.note} aria-label="Week overview">
       <h2 className={styles.noteTitle}>The week at a glance</h2>
+      <NoteBody content={wt.overview} refs={wt.overview_refs} />
       {!wt.reviewed && (
-        <Disclaimer>
-          AI-written draft from your sources. Read it, check the citations, and keep it if it's
-          right — it isn't part of your journey until you do.
+        <Disclaimer variant="subtle">
+          AI-written from your sources — check the citations before you keep it.
         </Disclaimer>
       )}
-      <NoteBody content={wt.overview} refs={wt.overview_refs} />
       <div className={styles.actionRow}>
         {wt.reviewed ? (
           <Button variant="primary" icon={<ArrowRight />} onClick={onContinue}>
@@ -414,13 +414,12 @@ function LessonStep({
           Lesson {position} of {total}
         </p>
         <h2 className={styles.noteTitle}>{lesson.title}</h2>
+        <NoteBody content={lesson.content} refs={lesson.source_refs} />
         {!lesson.reviewed && (
-          <Disclaimer>
-            AI-written draft from your sources. Read it, check the citations, and keep it if it's
-            right — it isn't part of your journey until you do.
+          <Disclaimer variant="subtle">
+            AI-written from your sources — check the citations before you keep it.
           </Disclaimer>
         )}
-        <NoteBody content={lesson.content} refs={lesson.source_refs} />
         <div className={styles.actionRow}>
           <Button variant="primary" disabled={busy} onClick={() => void startPractice()}>
             {lesson.reviewed ? "Practice this lesson" : "Keep this note & practice"}

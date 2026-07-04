@@ -94,7 +94,7 @@ button.stepButton:hover {
   align-items: flex-start;
   margin: 0;
   /* bottom room reserves a home for the hover title below the line */
-  padding: var(--space-2) var(--space-1) var(--space-8);
+  padding: var(--space-3) var(--space-2) var(--space-8);
   list-style: none;
 }
 
@@ -109,10 +109,11 @@ button.stepButton:hover {
 .trackStep:not(:first-child)::before {
   content: "";
   position: absolute;
-  top: 10px; /* centre of the 22px dot */
+  top: 11px; /* centre of the 24px dot */
   left: -50%;
   right: 50%;
   height: 2px;
+  border-radius: var(--radius-full);
   background: var(--color-path-upcoming);
   z-index: 0;
 }
@@ -126,21 +127,22 @@ button.stepButton:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 2px solid var(--color-path-upcoming);
   border-radius: var(--radius-full);
-  background: var(--color-surface);
+  background: var(--color-surface-solid);
   color: var(--color-on-primary);
   font-size: var(--text-xs);
   cursor: pointer;
   transition:
-    transform var(--motion-fast) var(--ease-spring),
-    border-color var(--motion-fast) var(--ease-standard);
+    transform var(--motion-base) var(--ease-spring),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 .dot:hover {
-  transform: scale(1.18);
+  transform: scale(1.15);
   border-color: var(--color-primary);
 }
 .dotDone {
@@ -149,26 +151,31 @@ button.stepButton:hover {
 }
 .dotCurrent {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--color-primary-soft);
+  box-shadow:
+    0 0 0 4px var(--color-primary-soft),
+    var(--shadow-sm);
 }
 
-/* title, revealed on hover / keyboard focus in the reserved space below */
+/* Title, revealed on hover / keyboard focus: a floating glass pill that
+   extends sideways (never wraps downward) so the whole title shows, lifted
+   clear above the note by the track layer's stacking context. */
 .tip {
   position: absolute;
   top: calc(100% + var(--space-2));
   left: 50%;
   transform: translateX(-50%);
-  max-width: 148px;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  z-index: 2;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
   background: var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
   font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   line-height: var(--leading-tight);
-  text-align: center;
+  white-space: nowrap;
   color: var(--color-text);
   opacity: 0;
   visibility: hidden;
@@ -181,7 +188,7 @@ button.stepButton:hover {
   visibility: visible;
 }
 
-/* keep the two end labels from spilling past the track edges */
+/* Anchor the two end labels inside the track so they can't spill off-screen. */
 .trackStep:first-child .tip {
   left: 0;
   transform: none;

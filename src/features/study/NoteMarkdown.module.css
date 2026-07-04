@@ -1,0 +1,66 @@
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  line-height: var(--leading-normal);
+}
+
+/* Section heading — a hairline rule above it reads as a section break
+   (dropped when the heading is the note's very first block). */
+.h1 {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text);
+}
+.h1:not(:first-child) {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Sub-heading — quieter, for deeper nesting. */
+.h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+
+.p {
+  margin: 0;
+}
+
+.list {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.list li {
+  padding-left: var(--space-1);
+}
+.list li::marker {
+  color: var(--color-primary);
+}
+
+.rule {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.note strong {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+}
