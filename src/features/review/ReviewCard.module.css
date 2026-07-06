@@ -9,7 +9,7 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md), var(--glass-highlight);
-  animation: pop var(--motion-slow) var(--ease-spring) both;
+  animation: pop var(--motion-slow) var(--ease-out) both;
 }
 
 .header {

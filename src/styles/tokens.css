@@ -28,13 +28,13 @@
   --color-accent-warm: #d9a520; /* gold — "learning", unripe fruit (fills) */
 
   --color-bg: #edf3ee; /* pale sage — under the aurora layers */
-  --color-surface: rgba(255, 255, 255, 0.6); /* default glass pane */
+  --color-surface: rgba(255, 255, 255, 0.68); /* default glass pane */
   --color-surface-solid: #ffffff; /* opaque escape hatch (inputs, print, HC) */
   --color-surface-alt: rgba(47, 82, 60, 0.07); /* inset tint on glass */
   --color-border: rgba(47, 82, 60, 0.14); /* soft dividers on glass */
   --color-border-strong: #7c8a7d; /* >=3:1 control edges (WCAG 1.4.11) */
   --color-text: #1d241e;
-  --color-text-muted: #5f6b60; /* 4.9:1 on light glass */
+  --color-text-muted: #525c52; /* darker grey-green — AA on light glass with headroom over the drifting aurora */
 
   --color-success: #2f7d54;
   --color-info: #3f6b95; /* muted blue — neutral (5.6:1 on white) */
@@ -51,9 +51,9 @@
   --color-overlay: rgba(16, 24, 18, 0.4);
 
   /* ── A1b · Glass (the material) ───────────────────────────────────── */
-  --glass-bg: rgba(255, 255, 255, 0.55); /* cards, panels */
-  --glass-bg-strong: rgba(255, 255, 255, 0.78); /* modals, bars, popovers */
-  --glass-bg-soft: rgba(255, 255, 255, 0.32); /* nested / decorative panes */
+  --glass-bg: rgba(255, 255, 255, 0.64); /* cards, panels */
+  --glass-bg-strong: rgba(255, 255, 255, 0.84); /* modals, bars, popovers */
+  --glass-bg-soft: rgba(255, 255, 255, 0.4); /* nested / decorative panes */
   --glass-border: rgba(255, 255, 255, 0.65); /* light catching the edge */
   --glass-blur: blur(20px) saturate(160%);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
@@ -170,13 +170,13 @@
   --color-accent-warm: #dcbb4e;
 
   --color-bg: #0e130f; /* deep forest night — under the aurora */
-  --color-surface: rgba(28, 38, 31, 0.55);
+  --color-surface: rgba(28, 38, 31, 0.64);
   --color-surface-solid: #1b231d;
   --color-surface-alt: rgba(255, 255, 255, 0.06);
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-strong: #83907f; /* >=3:1 control edges on dark */
   --color-text: #e9efe9;
-  --color-text-muted: #a4b2a5;
+  --color-text-muted: #b0bdb0; /* lifted for headroom over the drifting aurora */
 
   --color-success: #7cc497;
   --color-info: #8fb0c9;
@@ -192,9 +192,9 @@
   --color-focus: #7cc497;
   --color-overlay: rgba(0, 0, 0, 0.6);
 
-  --glass-bg: rgba(24, 33, 27, 0.55);
-  --glass-bg-strong: rgba(21, 29, 24, 0.82);
-  --glass-bg-soft: rgba(30, 41, 34, 0.35);
+  --glass-bg: rgba(24, 33, 27, 0.64);
+  --glass-bg-strong: rgba(21, 29, 24, 0.88);
+  --glass-bg-soft: rgba(30, 41, 34, 0.42);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
   --aurora-a: rgba(58, 158, 102, 0.28); /* emerald glow */

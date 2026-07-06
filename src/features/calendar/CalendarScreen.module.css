@@ -229,7 +229,6 @@
   gap: 4px;
   padding: 2px var(--space-2);
   border: 1px solid;
-  border-left-width: 3px;
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: clamp(0.7rem, 0.58rem + 0.35vw, 0.85rem);
@@ -313,7 +312,7 @@
 
 /* One event block. Colors by kind — deadline is earth gold, never red.
    Fills mix against the *solid* surface (not the translucent glass one) so
-   blocks read clearly against the frosted grid, with a thicker accent edge. */
+   blocks read clearly against the frosted grid. */
 .event {
   position: absolute;
   left: 0;
@@ -322,9 +321,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
-  padding: 3px var(--space-2) 3px calc(var(--space-2) - 1px);
+  padding: 3px var(--space-2);
   border: 1px solid;
-  border-left-width: 3px;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   font-family: inherit;

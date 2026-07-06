@@ -1,10 +1,12 @@
 import { Plus, X } from "@phosphor-icons/react";
-import { Button, IconButton, TimePicker } from "../../components";
+import { Button, IconButton, Select, TimePicker } from "../../components";
 import type { StudyWindowInput } from "../../lib/types";
 import styles from "./StudyWindowsEditor.module.css";
 
 /** weekday 0 = Monday … 6 = Sunday (matches the study_windows schema). */
 export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const WEEKDAY_OPTIONS = WEEKDAYS.map((d, di) => ({ value: String(di), label: d }));
 
 /** True when every window ends after it starts (the backend rejects the rest). */
 export function validWindows(windows: StudyWindowInput[]): boolean {
@@ -31,18 +33,14 @@ export function StudyWindowsEditor({
       {windows.map((w, i) => (
         <div key={i}>
           <div className={styles.windowRow}>
-            <select
-              className={styles.control}
-              aria-label="Day of week"
-              value={w.weekday}
-              onChange={(e) => patch(i, { weekday: Number(e.target.value) })}
-            >
-              {WEEKDAYS.map((d, di) => (
-                <option key={d} value={di}>
-                  {d}
-                </option>
-              ))}
-            </select>
+            <div className={styles.control}>
+              <Select
+                aria-label="Day of week"
+                value={String(w.weekday)}
+                onChange={(v) => patch(i, { weekday: Number(v) })}
+                options={WEEKDAY_OPTIONS}
+              />
+            </div>
             <div className={styles.time}>
               <TimePicker
                 id={`window-${i}-from`}

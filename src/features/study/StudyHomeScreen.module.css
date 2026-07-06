@@ -372,9 +372,6 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm), var(--glass-highlight);
-  /* a quiet growth-hued spine marks where one note begins */
-  border-left: 3px solid var(--color-primary-soft);
-  transition: border-color var(--motion-fast) var(--ease-standard);
 }
 .note:hover {
   transform: translateY(-2px);

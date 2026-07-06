@@ -21,10 +21,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: viewer-pop var(--motion-slow) var(--ease-spring) both;
+  animation: viewer-pop var(--motion-slow) var(--ease-out) both;
 }
 
-/* Same spring "pop" the app's Modal uses (dialog-in). */
+/* Same "pop" entrance the app's Modal uses (dialog-in). */
 @keyframes viewer-pop {
   from {
     opacity: 0;

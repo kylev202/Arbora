@@ -179,7 +179,7 @@
   transform: translateX(-50%);
   width: min(64rem, calc(100vw - 2 * var(--space-6)));
   z-index: var(--z-modal); /* above the floating TopBar (--z-nav) and pet */
-  animation: editor-zoom var(--motion-slow) var(--ease-spring) both;
+  animation: editor-zoom var(--motion-slow) var(--ease-out) both;
 }
 @keyframes editor-zoom {
   from {

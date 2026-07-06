@@ -71,7 +71,6 @@
   padding: var(--space-1);
   background: var(--color-surface-alt);
   border-radius: var(--radius-full);
-  touch-action: none;
 }
 
 /* Sliding active pill — springs between the two primary nav items. */
@@ -128,13 +127,6 @@
 .navActive,
 .navActive:hover {
   color: var(--color-on-primary);
-  transform: none;
-  cursor: grab;
-}
-.grabbing .navActive {
-  cursor: grabbing;
-}
-.grabbing .navItem:hover {
   transform: none;
 }
 

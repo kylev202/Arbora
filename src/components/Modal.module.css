@@ -24,7 +24,7 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg), var(--glass-highlight);
-  animation: dialog-in var(--motion-slow) var(--ease-spring);
+  animation: dialog-in var(--motion-slow) var(--ease-out);
 }
 .md {
   max-width: var(--modal-width);
