@@ -4,10 +4,12 @@ Read this first. It's how an agent works in this repo like a senior engineer wou
 match the lifecycle phase, reach for the right skill, respect the laws, verify before
 trusting. Keep it short and current — if it drifts from reality, fix it.
 
-> **What Arbora is:** a local-first desktop study app. It turns a user's own
-> documents and lectures into **grounded, cited** notes / flashcards / quizzes, then
-> schedules review with FSRS. Tauri 2 · React · Python AI sidecar · SQLite + FAISS ·
-> Ollama (local) or BYO key.
+> **What Arbora is:** a local-first, all-in-one study assistant for students —
+> especially university students. It turns a user's own documents and lectures into
+> **grounded, cited** notes / flashcards / quizzes, then schedules review with FSRS.
+> Tauri 2 · React · Python AI sidecar · SQLite + FAISS · Ollama (local) or BYO key.
+> Its calm, accessibility-first design (see [ADR-0010](./docs/adr/0010-broaden-audience-comprehensive-study-platform.md))
+> benefits every student, not just one audience.
 
 ## The three immutable laws (never violate)
 

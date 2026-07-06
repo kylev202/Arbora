@@ -2,7 +2,7 @@
 
 # Arbora 🌳
 
-**A local-first study space that turns your documents and lectures into grounded, cited notes, flashcards, and quizzes — then schedules your review with FSRS.**
+**A local-first, all-in-one study assistant for students — especially university students. Turns your documents and lectures into grounded, cited notes, flashcards, and quizzes, then schedules your review with FSRS.**
 
 Tauri 2 · React · Python AI sidecar · SQLite + FAISS · Ollama (local)
 
@@ -12,7 +12,7 @@ Tauri 2 · React · Python AI sidecar · SQLite + FAISS · Ollama (local)
 
 ---
 
-> **Status:** 🌳 Phase 8 — Video ingestion. Full study loop wired end-to-end; multi-subject Q&A, knowledge map, interleaving, diagrams, ADHD focus mode, and video lecture support.
+> **Status:** 🌳 Phase 8 — Video ingestion. Full study loop wired end-to-end; multi-subject Q&A, knowledge map, interleaving, diagrams, focus mode, and video lecture support.
 
 ## What it does
 

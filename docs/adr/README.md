@@ -31,3 +31,4 @@ between layers. Routine work does not need one.
 | [0007](./0007-disable-webview-drag-drop.md) | Disable WebView2 drag-drop so the file picker can't crash | Accepted |
 | [0008](./0008-three-page-subject-view.md) | Three-page subject view; in-app flashcards replace Anki export; ephemeral cited tests | Accepted |
 | [0009](./0009-week-walkthrough-journey.md) | Guided week journey — persisted overview + lesson notes, inline review, mixed practice | Accepted |
+| [0010](./0010-broaden-audience-comprehensive-study-platform.md) | Broaden positioning to a comprehensive study platform for all students | Accepted |
