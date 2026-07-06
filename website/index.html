@@ -11,24 +11,62 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <!-- Mark the document as JS-enabled so scroll-reveal never hides content
+         when scripts are off. -->
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
     <style>
       :root {
+        /* Aurora Canopy — the app's tokens, light "Aurora Day". */
         --paper: #edf3ee;
         --paper-2: rgba(255, 255, 255, 0.64);
         --paper-3: rgba(255, 255, 255, 0.4);
         --ink: #1d241e;
         --ink-soft: #525c52;
         --line: rgba(47, 82, 60, 0.14);
+        --line-strong: #7c8a7d;
         --forest: #2f7d54;
         --forest-deep: #276b47;
+        --radius-sm: 8px;
         --radius: 14px;
+        --radius-lg: 18px;
+        --radius-full: 9999px;
         --maxw: 1080px;
+
+        /* Glass — the material. */
+        --glass-bg: rgba(255, 255, 255, 0.64);
+        --glass-bg-strong: rgba(255, 255, 255, 0.84);
+        --glass-border: rgba(255, 255, 255, 0.65);
+        --glass-blur: blur(20px) saturate(160%);
+        --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+
+        /* Aurora light layers. */
         --aurora-a: rgba(85, 179, 120, 0.3);
         --aurora-b: rgba(217, 165, 32, 0.18);
         --aurora-c: rgba(74, 123, 166, 0.18);
+
+        /* Ambient depth — glass floats, it doesn't sit. */
+        --shadow-sm: 0 1px 3px rgba(23, 42, 30, 0.07);
+        --shadow-md: 0 6px 20px rgba(23, 42, 30, 0.09);
+        --shadow-lg: 0 16px 40px rgba(23, 42, 30, 0.13);
+        --shadow-glow: 0 0 0 1px rgba(47, 125, 84, 0.18),
+          0 4px 20px rgba(47, 125, 84, 0.22);
+
+        /* Motion. */
+        --motion-fast: 140ms;
+        --motion-base: 220ms;
+        --motion-slow: 560ms;
+        --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+        --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+        --ease-spring: cubic-bezier(0.3, 1.32, 0.45, 1);
+        --rise-distance: 16px;
+
+        /* Type voices — Fraunces (emotional) + Space Grotesk (structural). */
+        --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
       }
       * {
         box-sizing: border-box;
@@ -36,10 +74,10 @@
       html {
         scroll-behavior: smooth;
         color-scheme: light;
+        background: var(--paper);
       }
       body {
         margin: 0;
-        background: var(--paper);
         color: var(--ink);
         font-family:
           "Inter",
@@ -51,11 +89,14 @@
         position: relative;
         overflow-x: hidden;
       }
+
+      /* ── Aurora canopy: two slow-drifting light layers behind everything ──
+         Oversized fixed panes animated with transform only (cheap, GPU). */
       body::before,
       body::after {
         content: "";
         position: fixed;
-        inset: -20%;
+        inset: -30%;
         z-index: -1;
         pointer-events: none;
       }
@@ -63,12 +104,15 @@
         background:
           radial-gradient(42% 34% at 22% 22%, var(--aurora-a), transparent 70%),
           radial-gradient(36% 30% at 78% 16%, var(--aurora-b), transparent 70%);
+        animation: aurora-drift-a 46s var(--ease-standard) infinite alternate;
       }
       body::after {
         background:
           radial-gradient(44% 38% at 68% 82%, var(--aurora-c), transparent 70%),
           radial-gradient(30% 26% at 12% 74%, var(--aurora-a), transparent 70%);
+        animation: aurora-drift-b 58s var(--ease-standard) infinite alternate;
       }
+
       h1,
       h2,
       h3 {
@@ -76,9 +120,16 @@
         font-weight: 500;
         line-height: 1.12;
         letter-spacing: -0.01em;
+        text-wrap: balance;
+      }
+      p {
+        text-wrap: pretty;
       }
       a {
         color: inherit;
+      }
+      section[id] {
+        scroll-margin-top: 84px;
       }
       .wrap {
         max-width: var(--maxw);
@@ -86,15 +137,22 @@
         padding: 0 24px;
       }
 
+      :focus-visible {
+        outline: 2px solid var(--forest);
+        outline-offset: 3px;
+        border-radius: var(--radius-sm);
+      }
+
       /* ── Header ── */
       header {
         position: sticky;
         top: 0;
         z-index: 10;
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
-        background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        background: color-mix(in srgb, var(--glass-bg-strong) 90%, transparent);
         border-bottom: 1px solid var(--line);
+        box-shadow: var(--glass-highlight);
       }
       .nav {
         display: flex;
@@ -103,28 +161,59 @@
         height: 64px;
       }
       .brand {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 9px;
         font-family: "Fraunces", serif;
         font-size: 20px;
         font-weight: 600;
+        text-decoration: none;
+        color: var(--ink);
       }
-      .brand svg {
+      .brand-mark {
         color: var(--forest);
+        animation: float-y 6s var(--ease-standard) infinite;
+        transition: filter var(--motion-base) var(--ease-out);
+      }
+      .brand:hover .brand-mark {
+        filter: drop-shadow(
+          0 2px 7px color-mix(in srgb, var(--forest) 55%, transparent)
+        );
       }
       .nav-links {
         display: flex;
         gap: 22px;
         align-items: center;
+        font-family: var(--font-head);
         font-size: 15px;
         color: var(--ink-soft);
       }
       .nav-links a {
         text-decoration: none;
+        transition: color var(--motion-fast) var(--ease-out);
+      }
+      .nav-links a:not(.gh) {
+        position: relative;
+      }
+      /* Animated underline grows from the left on hover. */
+      .nav-links a:not(.gh)::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -5px;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--forest);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform var(--motion-base) var(--ease-out);
       }
       .nav-links a:hover {
         color: var(--ink);
+      }
+      .nav-links a:not(.gh):hover::after {
+        transform: scaleX(1);
       }
       @media (max-width: 640px) {
         .nav-links a:not(.gh) {
@@ -136,38 +225,63 @@
       .btn {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 9px;
         padding: 13px 22px;
         border-radius: 11px;
+        font-family: var(--font-head);
         font-weight: 600;
         font-size: 15px;
         text-decoration: none;
         border: 1px solid transparent;
         cursor: pointer;
         transition:
-          transform 0.12s ease,
-          box-shadow 0.12s ease;
+          transform var(--motion-base) var(--ease-spring),
+          box-shadow var(--motion-base) var(--ease-out),
+          background-color var(--motion-fast) var(--ease-standard),
+          border-color var(--motion-fast) var(--ease-standard);
+      }
+      .btn-arrow {
+        transition: transform var(--motion-base) var(--ease-spring);
       }
       .btn-primary {
         background: var(--forest);
         color: #fff;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-      }
-      .btn-primary:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 18px
-          color-mix(in srgb, var(--forest) 40%, transparent);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          var(--shadow-sm);
       }
       .btn-primary span {
         color: #fff;
       }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        background: var(--forest-deep);
+        border-color: var(--forest-deep);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          var(--shadow-glow);
+      }
+      .btn-primary:hover .btn-arrow {
+        transform: translateY(3px);
+      }
+      .btn-primary:active {
+        transform: translateY(0) scale(0.97);
+      }
       .btn-ghost {
-        background: transparent;
-        border-color: var(--line);
+        background: var(--paper-2);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        border-color: var(--line-strong);
         color: var(--ink);
+        box-shadow: var(--glass-highlight);
       }
       .btn-ghost:hover {
-        border-color: var(--ink-soft);
+        transform: translateY(-2px);
+        background: var(--glass-bg-strong);
+        box-shadow: var(--glass-highlight), var(--shadow-md);
+      }
+      .btn-ghost:active {
+        transform: translateY(0) scale(0.98);
       }
 
       /* ── Hero ── */
@@ -179,6 +293,7 @@
       }
       .eyebrow {
         display: inline-block;
+        font-family: var(--font-head);
         font-size: 13px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -221,6 +336,22 @@
       .dl-sub a:hover {
         text-decoration: underline;
       }
+      /* Hero enters on load — staggered rise, above the fold (no JS needed). */
+      .hero .eyebrow {
+        animation: rise var(--motion-slow) var(--ease-out) both;
+      }
+      .hero h1 {
+        animation: rise var(--motion-slow) var(--ease-out) 90ms both;
+      }
+      .hero .lead {
+        animation: rise var(--motion-slow) var(--ease-out) 180ms both;
+      }
+      .hero .cta {
+        animation: rise var(--motion-slow) var(--ease-out) 270ms both;
+      }
+      .hero .dl-sub {
+        animation: fade var(--motion-base) var(--ease-out) 420ms both;
+      }
 
       /* ── Section scaffolding ── */
       section {
@@ -232,6 +363,9 @@
         margin: 0 auto 44px;
       }
       .section-head h2 {
+        font-family: var(--font-head);
+        font-weight: 600;
+        letter-spacing: -0.02em;
         font-size: clamp(28px, 4vw, 40px);
         margin: 0 0 14px;
       }
@@ -258,12 +392,24 @@
           grid-template-columns: 1fr;
         }
       }
+      /* A pane of real glass — frosted, edge-lit, floating. */
       .card {
-        background: var(--paper-2);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
+        background: var(--glass-bg);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
         padding: 28px;
-        box-shadow: 0 6px 20px rgba(23, 42, 30, 0.07);
+        box-shadow: var(--shadow-md), var(--glass-highlight);
+        transition:
+          transform var(--motion-base) var(--ease-spring),
+          box-shadow var(--motion-base) var(--ease-out),
+          border-color var(--motion-base) var(--ease-out);
+      }
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg), var(--glass-highlight);
+        border-color: color-mix(in srgb, var(--forest) 45%, var(--glass-border));
       }
       .card .ico {
         width: 40px;
@@ -274,6 +420,13 @@
         background: color-mix(in srgb, var(--forest) 16%, transparent);
         color: var(--forest-deep);
         margin-bottom: 16px;
+        transition:
+          transform var(--motion-base) var(--ease-spring),
+          background var(--motion-base) var(--ease-out);
+      }
+      .card:hover .ico {
+        transform: scale(1.1) rotate(-5deg);
+        background: color-mix(in srgb, var(--forest) 24%, transparent);
       }
       .card h3 {
         font-size: 20px;
@@ -293,11 +446,17 @@
         display: flex;
         gap: 20px;
         align-items: flex-start;
-        padding: 22px 0;
+        padding: 22px var(--space, 16px);
+        margin-inline: -16px;
+        border-radius: var(--radius);
         border-bottom: 1px solid var(--line);
+        transition: background var(--motion-base) var(--ease-out);
       }
       .step:last-child {
         border-bottom: 0;
+      }
+      .step:hover {
+        background: color-mix(in srgb, var(--forest) 6%, transparent);
       }
       .step .num {
         counter-increment: step;
@@ -311,9 +470,20 @@
         font-weight: 600;
         color: var(--forest-deep);
         border: 1.5px solid rgba(79, 120, 97, 0.4);
+        transition:
+          transform var(--motion-base) var(--ease-spring),
+          background var(--motion-base) var(--ease-out),
+          color var(--motion-base) var(--ease-out),
+          border-color var(--motion-base) var(--ease-out);
       }
       .step .num::before {
         content: counter(step);
+      }
+      .step:hover .num {
+        transform: scale(1.1);
+        background: var(--forest);
+        color: #fff;
+        border-color: var(--forest);
       }
       .step h3 {
         margin: 4px 0 6px;
@@ -327,6 +497,8 @@
       /* ── Requirements strip ── */
       .req {
         background: var(--paper-3);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
         border-top: 1px solid var(--line);
         border-bottom: 1px solid var(--line);
       }
@@ -336,6 +508,10 @@
       .req .item h3 {
         font-size: 16px;
         margin: 0 0 6px;
+        transition: color var(--motion-fast) var(--ease-out);
+      }
+      .req .item:hover h3 {
+        color: var(--forest-deep);
       }
       .req .item p {
         margin: 0;
@@ -360,6 +536,7 @@
       .foot a {
         color: var(--ink-soft);
         text-decoration: none;
+        transition: color var(--motion-fast) var(--ease-out);
       }
       .foot a:hover {
         color: var(--ink);
@@ -371,12 +548,131 @@
         text-align: center;
         margin-top: 10px;
       }
+
+      /* ════════════════════════════════════════════════════════════════
+         Motion library — entrances, transform/opacity only.
+         ════════════════════════════════════════════════════════════════ */
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(var(--rise-distance));
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes float-y {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+      @keyframes aurora-drift-a {
+        from {
+          transform: translate3d(-4%, -3%, 0) rotate(-2deg) scale(1);
+        }
+        to {
+          transform: translate3d(5%, 4%, 0) rotate(3deg) scale(1.08);
+        }
+      }
+      @keyframes aurora-drift-b {
+        from {
+          transform: translate3d(3%, 4%, 0) rotate(2deg) scale(1.06);
+        }
+        to {
+          transform: translate3d(-5%, -3%, 0) rotate(-3deg) scale(1);
+        }
+      }
+
+      /* Scroll reveal. Blocks (section heads, steps, items) rise into place;
+         hover-lifted cards fade only, so their entrance never fights the hover
+         transform. Hidden state is gated behind .js so content is never lost. */
+      .js [data-reveal],
+      .js [data-reveal-fade] {
+        opacity: 0;
+        transition:
+          opacity var(--motion-slow) var(--ease-out),
+          transform var(--motion-slow) var(--ease-out);
+      }
+      .js [data-reveal] {
+        transform: translateY(var(--rise-distance));
+      }
+      .js [data-reveal].in,
+      .js [data-reveal-fade].in {
+        opacity: 1;
+        transform: none;
+      }
+      /* Staggered cascades within a row. */
+      .js .grid > [data-reveal-fade]:nth-child(2) {
+        transition-delay: 90ms;
+      }
+      .js .grid > [data-reveal-fade]:nth-child(3) {
+        transition-delay: 180ms;
+      }
+      .js .req .grid > [data-reveal]:nth-child(2) {
+        transition-delay: 90ms;
+      }
+      .js .req .grid > [data-reveal]:nth-child(3) {
+        transition-delay: 180ms;
+      }
+      .js .steps > [data-reveal]:nth-child(2) {
+        transition-delay: 70ms;
+      }
+      .js .steps > [data-reveal]:nth-child(3) {
+        transition-delay: 140ms;
+      }
+      .js .steps > [data-reveal]:nth-child(4) {
+        transition-delay: 210ms;
+      }
+
+      /* ── Reduced motion: freeze everything, reveal instantly (a11y). ── */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+        .js [data-reveal],
+        .js [data-reveal-fade] {
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
     </style>
   </head>
   <body>
     <header>
       <div class="wrap nav">
-        <div class="brand">Arbora</div>
+        <a class="brand" href="#top" aria-label="Arbora — home">
+          <svg
+            class="brand-mark"
+            width="24"
+            height="24"
+            viewBox="0 0 256 256"
+            aria-hidden="true"
+          >
+            <path
+              fill="currentColor"
+              d="M128,187.85a72.44,72.44,0,0,0,8,4.62V232a8,8,0,0,1-16,0V192.47A72.44,72.44,0,0,0,128,187.85ZM198.1,62.59a76,76,0,0,0-140.2,0A71.71,71.71,0,0,0,16,127.8C15.9,166,48,199,86.14,200A72.22,72.22,0,0,0,120,192.47V156.94L76.42,135.16a8,8,0,1,1,7.16-14.32L120,139.06V88a8,8,0,0,1,16,0v27.06l36.42-18.22a8,8,0,1,1,7.16,14.32L136,132.94v59.53A72.17,72.17,0,0,0,168,200l1.82,0C208,199,240.11,166,240,127.8A71.71,71.71,0,0,0,198.1,62.59Z"
+            />
+          </svg>
+          <span>Arbora</span>
+        </a>
         <nav class="nav-links">
           <a href="#how">How it works</a>
           <a href="#trust">Trust</a>
@@ -387,7 +683,7 @@
     </header>
 
     <main>
-      <section class="hero">
+      <section class="hero" id="top">
         <div class="wrap">
           <span class="eyebrow">Local-first study assistant</span>
           <h1>Study from your own material — grounded and cited.</h1>
@@ -404,6 +700,22 @@
               href="https://github.com/kylev202/Arbora/releases"
             >
               <span id="download-label">Download Arbora</span>
+              <svg
+                class="btn-arrow"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 4v12" />
+                <path d="m7 11 5 5 5-5" />
+                <path d="M5 20h14" />
+              </svg>
             </a>
             <a class="btn btn-ghost" href="#how">See how it works</a>
           </div>
@@ -418,7 +730,7 @@
 
       <section id="trust">
         <div class="wrap">
-          <div class="section-head">
+          <div class="section-head" data-reveal>
             <h2>Built so you can trust what it makes</h2>
             <p>
               AI that helps you study is only useful if you can rely on it.
@@ -426,7 +738,7 @@
             </p>
           </div>
           <div class="grid grid-3">
-            <div class="card">
+            <div class="card" data-reveal-fade>
               <div class="ico">
                 <svg
                   width="20"
@@ -449,7 +761,7 @@
                 timestamp. No source, no item.
               </p>
             </div>
-            <div class="card">
+            <div class="card" data-reveal-fade>
               <div class="ico">
                 <svg
                   width="20"
@@ -469,7 +781,7 @@
                 set without your say-so.
               </p>
             </div>
-            <div class="card">
+            <div class="card" data-reveal-fade>
               <div class="ico">
                 <svg
                   width="20"
@@ -496,7 +808,7 @@
 
       <section id="how">
         <div class="wrap">
-          <div class="section-head">
+          <div class="section-head" data-reveal>
             <h2>From your files to lasting memory</h2>
             <p>
               Four calm steps — no pressure, no streak anxiety, and a tree that
@@ -504,7 +816,7 @@
             </p>
           </div>
           <div class="steps">
-            <div class="step">
+            <div class="step" data-reveal>
               <div class="num"></div>
               <div>
                 <h3>Add your material</h3>
@@ -515,7 +827,7 @@
                 </p>
               </div>
             </div>
-            <div class="step">
+            <div class="step" data-reveal>
               <div class="num"></div>
               <div>
                 <h3>Generate grounded study items</h3>
@@ -526,7 +838,7 @@
                 </p>
               </div>
             </div>
-            <div class="step">
+            <div class="step" data-reveal>
               <div class="num"></div>
               <div>
                 <h3>Review and approve</h3>
@@ -536,7 +848,7 @@
                 </p>
               </div>
             </div>
-            <div class="step">
+            <div class="step" data-reveal>
               <div class="num"></div>
               <div>
                 <h3>Remember it, calmly</h3>
@@ -553,7 +865,7 @@
 
       <section id="requirements" class="req">
         <div class="wrap">
-          <div class="section-head">
+          <div class="section-head" data-reveal>
             <h2>Runs on your machine</h2>
             <p>
               No account, no cloud. On first launch, Arbora sets up its local AI
@@ -561,21 +873,21 @@
             </p>
           </div>
           <div class="grid grid-3">
-            <div class="item">
+            <div class="item" data-reveal>
               <h3>Windows &amp; macOS</h3>
               <p>
                 Windows 10/11 (64-bit) or macOS on Apple Silicon. One installer,
                 then just open it.
               </p>
             </div>
-            <div class="item">
+            <div class="item" data-reveal>
               <h3>~8 GB RAM and up</h3>
               <p>
                 Works on modest hardware with a smaller model; more memory
                 unlocks larger, sharper models.
               </p>
             </div>
-            <div class="item">
+            <div class="item" data-reveal>
               <h3>A few GB of disk</h3>
               <p>
                 For the local AI engine and model. The one-time setup download
@@ -588,20 +900,36 @@
 
       <section style="text-align: center">
         <div class="wrap">
-          <div class="section-head" style="margin-bottom: 28px">
+          <div class="section-head" data-reveal style="margin-bottom: 28px">
             <h2>Start studying from your own notes</h2>
             <p>
               Download Arbora, open it, and let the one-time setup handle the
               rest.
             </p>
           </div>
-          <div class="cta">
+          <div class="cta" data-reveal>
             <a
               class="btn btn-primary"
               id="download-2"
               href="https://github.com/kylev202/Arbora/releases"
             >
               <span id="download-label-2">Download Arbora</span>
+              <svg
+                class="btn-arrow"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 4v12" />
+                <path d="m7 11 5 5 5-5" />
+                <path d="M5 20h14" />
+              </svg>
             </a>
           </div>
           <p class="note" id="first-run-note">
@@ -622,6 +950,36 @@
         </span>
       </div>
     </footer>
+
+    <script>
+      // Reveal-on-scroll: fade/rise each [data-reveal|data-reveal-fade] as it
+      // enters the viewport. Falls back to showing everything immediately when
+      // IntersectionObserver is unavailable or the visitor prefers reduced motion.
+      (function () {
+        const els = document.querySelectorAll(
+          "[data-reveal], [data-reveal-fade]",
+        );
+        const reduce = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        if (!("IntersectionObserver" in window) || reduce) {
+          els.forEach((el) => el.classList.add("in"));
+          return;
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { rootMargin: "0px 0px -10% 0px", threshold: 0.12 },
+        );
+        els.forEach((el) => io.observe(el));
+      })();
+    </script>
 
     <script>
       // Point the download buttons at the right installer for the visitor's OS,
