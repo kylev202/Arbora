@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arbora — grounded, cited study material from your own notes</title>
+    <meta
+      name="description"
+      content="Arbora turns your own documents and lectures into grounded, cited notes, flashcards, and quizzes — then helps you remember them with calm spaced repetition. Local-first, runs on your device."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #fbf9f4;
+        --paper-2: #f4f0e7;
+        --ink: #211d17;
+        --ink-soft: #5c5347;
+        --line: #e5ddcf;
+        --forest: #4a7c59;
+        --forest-deep: #3a6347;
+        --radius: 14px;
+        --maxw: 1080px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #17150f;
+          --paper-2: #1f1c15;
+          --ink: #f2ece0;
+          --ink-soft: #b6ac99;
+          --line: #2e2a20;
+          --forest: #7fb08c;
+          --forest-deep: #6fa07c;
+        }
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 500; line-height: 1.12; letter-spacing: -0.01em; }
+      a { color: inherit; }
+      .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+      /* ── Header ── */
+      header {
+        position: sticky; top: 0; z-index: 10;
+        backdrop-filter: blur(10px);
+        background: color-mix(in srgb, var(--paper) 82%, transparent);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-family: "Fraunces", serif; font-size: 20px; font-weight: 600; }
+      .brand svg { color: var(--forest); }
+      .nav-links { display: flex; gap: 22px; align-items: center; font-size: 15px; color: var(--ink-soft); }
+      .nav-links a { text-decoration: none; }
+      .nav-links a:hover { color: var(--ink); }
+      @media (max-width: 640px) { .nav-links a:not(.gh) { display: none; } }
+
+      /* ── Buttons ── */
+      .btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 13px 22px; border-radius: 11px; font-weight: 600; font-size: 15px;
+        text-decoration: none; border: 1px solid transparent; cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+      }
+      .btn-primary { background: var(--forest); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+      @media (prefers-color-scheme: dark) { .btn-primary { color: #10140f; } }
+      .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px color-mix(in srgb, var(--forest) 40%, transparent); }
+      .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+      .btn-ghost:hover { border-color: var(--ink-soft); }
+
+      /* ── Hero ── */
+      .hero { padding: 88px 0 72px; text-align: center; position: relative; overflow: hidden; }
+      .eyebrow {
+        display: inline-block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--forest-deep); background: color-mix(in srgb, var(--forest) 14%, transparent);
+        padding: 6px 14px; border-radius: 999px; margin-bottom: 24px; font-weight: 600;
+      }
+      .hero h1 { font-size: clamp(38px, 6vw, 66px); margin: 0 0 20px; max-width: 15ch; margin-inline: auto; }
+      .hero .lead { font-size: clamp(17px, 2.2vw, 21px); color: var(--ink-soft); max-width: 56ch; margin: 0 auto 34px; }
+      .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; align-items: center; }
+      .dl-sub { margin-top: 14px; font-size: 14px; color: var(--ink-soft); }
+      .dl-sub a { color: var(--forest-deep); text-decoration: none; font-weight: 500; }
+      .dl-sub a:hover { text-decoration: underline; }
+
+      /* ── Section scaffolding ── */
+      section { padding: 64px 0; }
+      .section-head { text-align: center; max-width: 56ch; margin: 0 auto 44px; }
+      .section-head h2 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 14px; }
+      .section-head p { color: var(--ink-soft); font-size: 17px; margin: 0; }
+
+      /* ── Cards / grids ── */
+      .grid { display: grid; gap: 20px; }
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid-4 { grid-template-columns: repeat(4, 1fr); }
+      @media (max-width: 860px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+      .card {
+        background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 28px;
+      }
+      .card .ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+        background: color-mix(in srgb, var(--forest) 16%, transparent); color: var(--forest-deep); margin-bottom: 16px; }
+      .card h3 { font-size: 20px; margin: 0 0 8px; }
+      .card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+      /* ── Steps ── */
+      .steps { counter-reset: step; }
+      .step { display: flex; gap: 20px; align-items: flex-start; padding: 22px 0; border-bottom: 1px solid var(--line); }
+      .step:last-child { border-bottom: 0; }
+      .step .num {
+        counter-increment: step; flex: none; width: 40px; height: 40px; border-radius: 50%;
+        display: grid; place-items: center; font-family: "Fraunces", serif; font-weight: 600;
+        color: var(--forest-deep); border: 1.5px solid color-mix(in srgb, var(--forest) 40%, transparent);
+      }
+      .step .num::before { content: counter(step); }
+      .step h3 { margin: 4px 0 6px; font-size: 20px; }
+      .step p { margin: 0; color: var(--ink-soft); }
+
+      /* ── Requirements strip ── */
+      .req { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+      .req .grid-3 { gap: 32px; }
+      .req .item h3 { font-size: 16px; margin: 0 0 6px; }
+      .req .item p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+      /* ── Footer ── */
+      footer { padding: 48px 0; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 14px; }
+      .foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+      .foot a { color: var(--ink-soft); text-decoration: none; }
+      .foot a:hover { color: var(--ink); }
+
+      .note { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <div class="brand">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2c-3 2.2-4.6 4.7-4.6 7.2 0 1.6.8 3 2.1 3.9L9 22h6l-.5-8.9c1.3-.9 2.1-2.3 2.1-3.9C16.6 6.7 15 4.2 12 2z" />
+          </svg>
+          Arbora
+        </div>
+        <nav class="nav-links">
+          <a href="#how">How it works</a>
+          <a href="#trust">Trust</a>
+          <a href="#requirements">Requirements</a>
+          <a class="gh" href="https://github.com/kylev202/Arbora">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap">
+          <span class="eyebrow">Local-first study assistant</span>
+          <h1>Study from your own material — grounded and cited.</h1>
+          <p class="lead">
+            Arbora turns your documents and lectures into notes, flashcards, and quizzes where every
+            item traces back to a source. Then it helps you remember them with calm spaced
+            repetition. Everything runs on your device.
+          </p>
+          <div class="cta">
+            <a class="btn btn-primary" id="download" href="https://github.com/kylev202/Arbora/releases">
+              <span id="download-label">Download Arbora</span>
+            </a>
+            <a class="btn btn-ghost" href="#how">See how it works</a>
+          </div>
+          <p class="dl-sub" id="download-sub">
+            Free &amp; open source ·
+            <a href="https://github.com/kylev202/Arbora/releases">All downloads</a>
+          </p>
+        </div>
+      </section>
+
+      <section id="trust">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Built so you can trust what it makes</h2>
+            <p>AI that helps you study is only useful if you can rely on it. Arbora is built on three rules it never breaks.</p>
+          </div>
+          <div class="grid grid-3">
+            <div class="card">
+              <div class="ico">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z"/><path d="M14 4v5h5"/></svg>
+              </div>
+              <h3>Grounded &amp; cited</h3>
+              <p>Every note, card, and quiz item is generated only from your retrieved sources and carries a citation to the exact page or timestamp. No source, no item.</p>
+            </div>
+            <div class="card">
+              <div class="ico">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <h3>You review before you trust</h3>
+              <p>AI output is staged, never silently added to your deck. You approve each item in a review gate — nothing enters your study set without your say-so.</p>
+            </div>
+            <div class="card">
+              <div class="ico">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              </div>
+              <h3>Local-first, private</h3>
+              <p>The core never sends your data off your device. It runs a local model through Ollama; using an online key is an explicit, optional opt-in.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>From your files to lasting memory</h2>
+            <p>Four calm steps — no pressure, no streak anxiety, and a tree that only ever grows.</p>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="num"></div>
+              <div>
+                <h3>Add your material</h3>
+                <p>Drop in PDFs, slides, documents, and lecture recordings or videos. Arbora transcribes and indexes them, subject by subject.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="num"></div>
+              <div>
+                <h3>Generate grounded study items</h3>
+                <p>Ask for notes, flashcards, and quizzes. Each one is drafted from your sources and comes with a citation you can click back to.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="num"></div>
+              <div>
+                <h3>Review and approve</h3>
+                <p>Skim the drafts in the review gate. Keep what's good, edit or reject the rest. Only approved items become part of your deck.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="num"></div>
+              <div>
+                <h3>Remember it, calmly</h3>
+                <p>Approved cards are scheduled with FSRS spaced repetition. Short, low-pressure sessions — and your tree keeps growing as you learn.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="requirements" class="req">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Runs on your machine</h2>
+            <p>No account, no cloud. On first launch, Arbora sets up its local AI engine and downloads a model sized for your computer.</p>
+          </div>
+          <div class="grid grid-3">
+            <div class="item">
+              <h3>Windows &amp; macOS</h3>
+              <p>Windows 10/11 (64-bit) or macOS on Apple Silicon. One installer, then just open it.</p>
+            </div>
+            <div class="item">
+              <h3>~8 GB RAM and up</h3>
+              <p>Works on modest hardware with a smaller model; more memory unlocks larger, sharper models.</p>
+            </div>
+            <div class="item">
+              <h3>A few GB of disk</h3>
+              <p>For the local AI engine and model. The one-time setup download runs entirely on your device.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="text-align:center">
+        <div class="wrap">
+          <div class="section-head" style="margin-bottom:28px">
+            <h2>Start studying from your own notes</h2>
+            <p>Download Arbora, open it, and let the one-time setup handle the rest.</p>
+          </div>
+          <div class="cta">
+            <a class="btn btn-primary" id="download-2" href="https://github.com/kylev202/Arbora/releases">
+              <span id="download-label-2">Download Arbora</span>
+            </a>
+          </div>
+          <p class="note" id="first-run-note">
+            First launch installs the local AI engine (Ollama) and downloads your model — a one-time
+            setup with a progress bar. After that, it works offline.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap foot">
+        <span>© Arbora · MIT-licensed · Your data stays on your device.</span>
+        <span>
+          <a href="https://github.com/kylev202/Arbora">GitHub</a> ·
+          <a href="https://github.com/kylev202/Arbora/releases">Releases</a>
+        </span>
+      </div>
+    </footer>
+
+    <script>
+      // Point the download buttons at the right installer for the visitor's OS,
+      // resolved from the latest GitHub Release. Falls back to the releases page
+      // (e.g. before the first release exists, or if the API is unreachable).
+      (function () {
+        const REPO = "kylev202/Arbora";
+        const RELEASES = "https://github.com/" + REPO + "/releases";
+
+        function detectOS() {
+          const s = (navigator.userAgent + " " + (navigator.platform || "")).toLowerCase();
+          if (s.includes("win")) return "windows";
+          if (s.includes("mac") || s.includes("iphone") || s.includes("ipad")) return "macos";
+          return "other";
+        }
+
+        function pickAsset(assets, os) {
+          const find = (test) => assets.find((a) => test(a.name.toLowerCase()));
+          if (os === "windows")
+            return (
+              find((n) => n.endsWith("-setup.exe")) ||
+              find((n) => n.endsWith(".exe")) ||
+              find((n) => n.endsWith(".msi"))
+            );
+          if (os === "macos") return find((n) => n.endsWith(".dmg"));
+          return null;
+        }
+
+        const os = detectOS();
+        const osLabel = os === "windows" ? "Windows" : os === "macos" ? "macOS" : null;
+
+        // Optimistic label update even before the API responds.
+        if (osLabel) {
+          document.getElementById("download-label").textContent = "Download for " + osLabel;
+          document.getElementById("download-label-2").textContent = "Download for " + osLabel;
+        }
+
+        fetch("https://api.github.com/repos/" + REPO + "/releases/latest", {
+          headers: { Accept: "application/vnd.github+json" },
+        })
+          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+          .then((data) => {
+            const asset = pickAsset(data.assets || [], os);
+            const ver = data.tag_name ? " (" + data.tag_name + ")" : "";
+            if (asset) {
+              for (const id of ["download", "download-2"]) {
+                const el = document.getElementById(id);
+                el.href = asset.browser_download_url;
+              }
+              document.getElementById("download-label").textContent =
+                "Download for " + osLabel + ver;
+              document.getElementById("download-label-2").textContent =
+                "Download for " + osLabel + ver;
+            }
+          })
+          .catch(() => {
+            /* No release yet — buttons keep pointing at the releases page. */
+          });
+      })();
+    </script>
+  </body>
+</html>
