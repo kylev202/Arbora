@@ -30,6 +30,10 @@ dev = [
     "pytest==9.1.1",
     "ruff==0.15.19",
 ]
+# Freezing the sidecar into a shippable binary (scripts/build_sidecar.py).
+build = [
+    "pyinstaller==6.16.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

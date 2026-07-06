@@ -74,18 +74,20 @@ pub fn run_lifecycle(app: AppHandle) {
     let state = app.state::<Sidecar>();
     let token = state.token().to_string();
     let data_dir = app.path().app_data_dir().ok();
+    let resource_dir = app.path().resource_dir().ok();
 
-    let (child, base_url) = match spawn_process(&token, data_dir.as_deref()) {
-        Ok(pair) => pair,
-        Err(err) => {
-            eprintln!("[arbora] sidecar failed to start: {err}");
-            let _ = app.emit(
-                "sidecar:status",
-                json!({ "state": "crashed", "error": err }),
-            );
-            return;
-        }
-    };
+    let (child, base_url) =
+        match spawn_process(&token, data_dir.as_deref(), resource_dir.as_deref()) {
+            Ok(pair) => pair,
+            Err(err) => {
+                eprintln!("[arbora] sidecar failed to start: {err}");
+                let _ = app.emit(
+                    "sidecar:status",
+                    json!({ "state": "crashed", "error": err }),
+                );
+                return;
+            }
+        };
 
     *state.child.lock().unwrap() = Some(child);
     *state.base_url.lock().unwrap() = Some(base_url.clone());
@@ -103,24 +105,31 @@ pub fn run_lifecycle(app: AppHandle) {
     }
 }
 
-fn spawn_process(token: &str, data_dir: Option<&Path>) -> Result<(Child, String), String> {
-    let dir = sidecar_dir();
-    let python = python_exe(&dir);
-
-    let mut cmd = Command::new(&python);
-    cmd.args(["-m", "arbora_ai.server"])
-        .current_dir(&dir)
-        .env("ARBORA_SIDECAR_TOKEN", token)
+fn spawn_process(
+    token: &str,
+    data_dir: Option<&Path>,
+    resource_dir: Option<&Path>,
+) -> Result<(Child, String), String> {
+    let (mut cmd, desc) = build_command(resource_dir);
+    cmd.env("ARBORA_SIDECAR_TOKEN", token)
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
     // FAISS indexes live under the app data dir; the sidecar writes them there.
     if let Some(dir) = data_dir {
         cmd.env("ARBORA_DATA_DIR", dir);
     }
+    #[cfg(windows)]
+    {
+        // The frozen sidecar is a console binary (Rust parses its stdout). Without
+        // CREATE_NO_WINDOW a console window flashes when the GUI app spawns it.
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("failed to spawn sidecar ({python:?}): {e}"))?;
+        .map_err(|e| format!("failed to spawn sidecar ({desc}): {e}"))?;
 
     let stdout = child.stdout.take().ok_or("sidecar stdout unavailable")?;
     let mut reader = BufReader::new(stdout);
@@ -168,8 +177,44 @@ fn wait_healthy(base_url: &str) -> bool {
     false
 }
 
+/// Build the launch command for the sidecar. Production prefers the frozen
+/// binary bundled as a Tauri resource; dev falls back to running the module from
+/// a Python interpreter. Returns the command plus a human label for error text.
+fn build_command(resource_dir: Option<&Path>) -> (Command, String) {
+    if let Some(bin) = resource_dir.and_then(packaged_sidecar_binary) {
+        let mut cmd = Command::new(&bin);
+        // Run from the bundle dir so relative lookups resolve inside it.
+        if let Some(parent) = bin.parent() {
+            cmd.current_dir(parent);
+        }
+        let desc = format!("{bin:?}");
+        return (cmd, desc);
+    }
+    let dir = sidecar_dir();
+    let python = python_exe(&dir);
+    let mut cmd = Command::new(&python);
+    cmd.args(["-m", "arbora_ai.server"]).current_dir(&dir);
+    (cmd, format!("{python:?}"))
+}
+
+/// The frozen sidecar binary bundled under the app's resource dir, if present.
+/// Built by `scripts/build_sidecar.py` into `src-tauri/binaries/` and shipped via
+/// `tauri.conf.json` `bundle.resources`.
+fn packaged_sidecar_binary(resource_dir: &Path) -> Option<PathBuf> {
+    let name = if cfg!(windows) {
+        "arbora-sidecar.exe"
+    } else {
+        "arbora-sidecar"
+    };
+    let path = resource_dir
+        .join("binaries")
+        .join("arbora-sidecar")
+        .join(name);
+    path.exists().then_some(path)
+}
+
 /// Locate the sidecar source directory. Dev default is the sibling `sidecar/`
-/// crate of this Rust core; bundling (Phase 5) will resolve a packaged path.
+/// crate of this Rust core; bundling resolves a packaged path via `build_command`.
 fn sidecar_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("ARBORA_SIDECAR_DIR") {
         return PathBuf::from(dir);

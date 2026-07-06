@@ -12,6 +12,10 @@ target/
 src-tauri/target/
 # Tauri generated bundles
 src-tauri/gen/
+# Frozen Python sidecar bundled into the app (built by scripts/build_sidecar.py)
+src-tauri/binaries/
+# PyInstaller work dir
+/build/
 
 # ── Python sidecar ──
 __pycache__/
