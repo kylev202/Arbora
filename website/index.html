@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Arbora — grounded, cited study material from your own notes</title>
+    <title>Arbora</title>
     <meta
       name="description"
       content="Arbora turns your own documents and lectures into grounded, cited notes, flashcards, and quizzes — then helps you remember them with calm spaced repetition. Local-first, runs on your device."
@@ -16,29 +16,22 @@
     />
     <style>
       :root {
-        --paper: #fbf9f4;
-        --paper-2: #f4f0e7;
-        --ink: #211d17;
-        --ink-soft: #5c5347;
-        --line: #e5ddcf;
-        --forest: #4a7c59;
-        --forest-deep: #3a6347;
+        --paper: #edf3ee;
+        --paper-2: rgba(255, 255, 255, 0.64);
+        --paper-3: rgba(255, 255, 255, 0.4);
+        --ink: #1d241e;
+        --ink-soft: #525c52;
+        --line: rgba(47, 82, 60, 0.14);
+        --forest: #2f7d54;
+        --forest-deep: #276b47;
         --radius: 14px;
         --maxw: 1080px;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --paper: #17150f;
-          --paper-2: #1f1c15;
-          --ink: #f2ece0;
-          --ink-soft: #b6ac99;
-          --line: #2e2a20;
-          --forest: #7fb08c;
-          --forest-deep: #6fa07c;
-        }
+        --aurora-a: rgba(85, 179, 120, 0.3);
+        --aurora-b: rgba(217, 165, 32, 0.18);
+        --aurora-c: rgba(74, 123, 166, 0.18);
       }
       * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
+      html { scroll-behavior: smooth; color-scheme: light; }
       body {
         margin: 0;
         background: var(--paper);
@@ -46,6 +39,26 @@
         font-family: "Inter", system-ui, -apple-system, sans-serif;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
+        position: relative;
+        overflow-x: hidden;
+      }
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: -20%;
+        z-index: -1;
+        pointer-events: none;
+      }
+      body::before {
+        background:
+          radial-gradient(42% 34% at 22% 22%, var(--aurora-a), transparent 70%),
+          radial-gradient(36% 30% at 78% 16%, var(--aurora-b), transparent 70%);
+      }
+      body::after {
+        background:
+          radial-gradient(44% 38% at 68% 82%, var(--aurora-c), transparent 70%),
+          radial-gradient(30% 26% at 12% 74%, var(--aurora-a), transparent 70%);
       }
       h1, h2, h3 { font-family: "Fraunces", Georgia, serif; font-weight: 500; line-height: 1.12; letter-spacing: -0.01em; }
       a { color: inherit; }
@@ -54,8 +67,9 @@
       /* ── Header ── */
       header {
         position: sticky; top: 0; z-index: 10;
+        -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background: color-mix(in srgb, var(--paper) 82%, transparent);
+        background: color-mix(in srgb, var(--paper-2) 82%, transparent);
         border-bottom: 1px solid var(--line);
       }
       .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
@@ -74,8 +88,8 @@
         transition: transform 0.12s ease, box-shadow 0.12s ease;
       }
       .btn-primary { background: var(--forest); color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
-      @media (prefers-color-scheme: dark) { .btn-primary { color: #10140f; } }
       .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px color-mix(in srgb, var(--forest) 40%, transparent); }
+      .btn-primary span { color: #fff; }
       .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
       .btn-ghost:hover { border-color: var(--ink-soft); }
 
@@ -107,6 +121,7 @@
       .card {
         background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--radius);
         padding: 28px;
+        box-shadow: 0 6px 20px rgba(23, 42, 30, 0.07);
       }
       .card .ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
         background: color-mix(in srgb, var(--forest) 16%, transparent); color: var(--forest-deep); margin-bottom: 16px; }
@@ -120,14 +135,14 @@
       .step .num {
         counter-increment: step; flex: none; width: 40px; height: 40px; border-radius: 50%;
         display: grid; place-items: center; font-family: "Fraunces", serif; font-weight: 600;
-        color: var(--forest-deep); border: 1.5px solid color-mix(in srgb, var(--forest) 40%, transparent);
+        color: var(--forest-deep); border: 1.5px solid rgba(79, 120, 97, 0.4);
       }
       .step .num::before { content: counter(step); }
       .step h3 { margin: 4px 0 6px; font-size: 20px; }
       .step p { margin: 0; color: var(--ink-soft); }
 
       /* ── Requirements strip ── */
-      .req { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+      .req { background: var(--paper-3); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
       .req .grid-3 { gap: 32px; }
       .req .item h3 { font-size: 16px; margin: 0 0 6px; }
       .req .item p { margin: 0; color: var(--ink-soft); font-size: 15px; }
@@ -145,9 +160,6 @@
     <header>
       <div class="wrap nav">
         <div class="brand">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2c-3 2.2-4.6 4.7-4.6 7.2 0 1.6.8 3 2.1 3.9L9 22h6l-.5-8.9c1.3-.9 2.1-2.3 2.1-3.9C16.6 6.7 15 4.2 12 2z" />
-          </svg>
           Arbora
         </div>
         <nav class="nav-links">
