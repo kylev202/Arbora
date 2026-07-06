@@ -106,6 +106,8 @@ pub fn run() {
             commands::model::model_ready,
             commands::model::download_model,
             ollama::ollama_status,
+            ollama::ollama_installed,
+            ollama::install_ollama,
             commands::events::list_events,
             commands::events::upsert_event,
             commands::events::move_event,

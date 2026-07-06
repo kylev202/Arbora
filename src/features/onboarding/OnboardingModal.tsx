@@ -13,7 +13,14 @@ import {
   RadioGroup,
   TimePicker,
 } from "../../components";
-import { onModelDone, onModelError, onModelProgress } from "../../lib/ipc";
+import {
+  onModelDone,
+  onModelError,
+  onModelProgress,
+  onOllamaInstallDone,
+  onOllamaInstallError,
+  onOllamaInstallProgress,
+} from "../../lib/ipc";
 import { api } from "../../lib/api";
 import type { AIPreset, StudyGoal, StudyWindowInput } from "../../lib/types";
 import { GOAL_OPTIONS, PRESET_OPTIONS, recommendedPreset } from "../settings/presets";
@@ -27,8 +34,9 @@ const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "
 
 type DownloadPhase =
   | { phase: "checking" }
-  | { phase: "idle"; ollamaRunning: boolean }
+  | { phase: "idle"; ollamaRunning: boolean; ollamaInstalled: boolean }
   | { phase: "ready" } // model already in the local store
+  | { phase: "installing"; progress: number; step: string } // fetching the Ollama engine
   | { phase: "downloading"; jobId: string; progress: number; step: string }
   | { phase: "done" }
   | { phase: "later" }
@@ -69,6 +77,7 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
   const [preset, setPreset] = useState<AIPreset>("medium");
   const presetTouched = useRef(false);
   const [download, setDownload] = useState<DownloadPhase>({ phase: "checking" });
+  const [recheck, setRecheck] = useState(0);
 
   const recommended = ramGb === null ? null : recommendedPreset(ramGb);
 
@@ -85,25 +94,34 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
       .catch(() => setRamGb(null));
   }, [open]);
 
-  // On the model step, check whether the chosen preset's model is already there.
+  // On the model step, check whether the model is present and — if not — whether
+  // the Ollama engine is installed/running, so we can offer install vs download.
+  // ollamaInstalled() is pure Rust, so it answers even while the sidecar starts.
   useEffect(() => {
     if (!open || step !== TOTAL_STEPS) return;
     let cancelled = false;
     setDownload({ phase: "checking" });
-    api
-      .modelReady(preset)
-      .then((r) => {
-        if (cancelled) return;
-        setDownload(r.ready ? { phase: "ready" } : { phase: "idle", ollamaRunning: r.ollama_running });
-      })
-      .catch(() => {
-        // Sidecar still starting: allow "Later" instead of blocking the finish.
-        if (!cancelled) setDownload({ phase: "idle", ollamaRunning: false });
-      });
+    Promise.allSettled([api.modelReady(preset), api.ollamaInstalled()]).then(([mr, inst]) => {
+      if (cancelled) return;
+      if (mr.status === "fulfilled" && mr.value.ready) {
+        setDownload({ phase: "ready" });
+        return;
+      }
+      const ollamaRunning = mr.status === "fulfilled" && mr.value.ollama_running;
+      const ollamaInstalled = ollamaRunning || (inst.status === "fulfilled" && inst.value);
+      setDownload({ phase: "idle", ollamaRunning, ollamaInstalled });
+    });
     return () => {
       cancelled = true;
     };
-  }, [open, step, preset]);
+  }, [open, step, preset, recheck]);
+
+  // Engine installed but daemon still coming up: poll until it's reachable.
+  useEffect(() => {
+    if (download.phase !== "idle" || download.ollamaRunning || !download.ollamaInstalled) return;
+    const t = setTimeout(() => setRecheck((n) => n + 1), 2000);
+    return () => clearTimeout(t);
+  }, [download]);
 
   // Download progress arrives as model:* events; filter by our job id.
   useEffect(() => {
@@ -129,6 +147,26 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
     return () => unsubs.forEach((u) => u());
   }, [open]);
 
+  // Ollama engine install progress (ollama-install:* events).
+  useEffect(() => {
+    if (!open) return;
+    const unsubs: UnlistenFn[] = [];
+    onOllamaInstallProgress((e) =>
+      setDownload((d) =>
+        d.phase === "installing" ? { ...d, progress: e.progress, step: e.step } : d,
+      ),
+    ).then((u) => unsubs.push(u));
+    onOllamaInstallDone(() => {
+      // Installed: re-check readiness — the daemon comes up, then we offer download.
+      setDownload({ phase: "checking" });
+      setRecheck((n) => n + 1);
+    }).then((u) => unsubs.push(u));
+    onOllamaInstallError((msg) =>
+      setDownload((d) => (d.phase === "installing" ? { phase: "error", message: msg } : d)),
+    ).then((u) => unsubs.push(u));
+    return () => unsubs.forEach((u) => u());
+  }, [open]);
+
   async function startDownload() {
     try {
       const { job_id } = await api.downloadModel(preset);
@@ -136,6 +174,20 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
     } catch (e) {
       setDownload({ phase: "error", message: String(e) });
     }
+  }
+
+  async function startInstall() {
+    setDownload({ phase: "installing", progress: 0, step: "downloading" });
+    try {
+      await api.installOllama();
+    } catch (e) {
+      setDownload({ phase: "error", message: String(e) });
+    }
+  }
+
+  function retrySetup() {
+    setDownload({ phase: "checking" });
+    setRecheck((n) => n + 1);
   }
 
   function changePreset(value: AIPreset) {
@@ -402,17 +454,50 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
           {download.phase === "later" && (
             <p className={styles.dlNote}>No problem, Arbora will offer the download when needed.</p>
           )}
-          {download.phase === "idle" && (
+          {download.phase === "installing" && (
             <>
-              {!download.ollamaRunning && (
-                <p className={styles.dlNote}>
-                  The local AI engine (Ollama) is not reachable yet. You can still finish and
-                  download the model later from Settings.
-                </p>
-              )}
+              <ProgressBar
+                value={download.progress}
+                label={
+                  download.step === "installing"
+                    ? "Installing the AI engine…"
+                    : "Downloading the AI engine…"
+                }
+              />
+              <p className={styles.dlNote}>
+                One-time setup — this can take a few minutes on the first run.
+              </p>
+            </>
+          )}
+          {download.phase === "idle" && download.ollamaRunning && (
+            <div className={styles.downloadActions}>
+              <Button variant="primary" onClick={startDownload}>
+                Download now
+              </Button>
+              <Button variant="ghost" onClick={() => setDownload({ phase: "later" })}>
+                Later
+              </Button>
+            </div>
+          )}
+          {download.phase === "idle" && !download.ollamaRunning && download.ollamaInstalled && (
+            <>
+              <p className={styles.dlNote}>Starting the AI engine…</p>
               <div className={styles.downloadActions}>
-                <Button variant="primary" onClick={startDownload} disabled={!download.ollamaRunning}>
-                  Download now
+                <Button variant="ghost" onClick={() => setDownload({ phase: "later" })}>
+                  Later
+                </Button>
+              </div>
+            </>
+          )}
+          {download.phase === "idle" && !download.ollamaRunning && !download.ollamaInstalled && (
+            <>
+              <p className={styles.dlNote}>
+                Arbora needs a local AI engine (Ollama) to turn your material into notes. It runs
+                entirely on your device — nothing is sent anywhere.
+              </p>
+              <div className={styles.downloadActions}>
+                <Button variant="primary" onClick={startInstall}>
+                  Install the AI engine
                 </Button>
                 <Button variant="ghost" onClick={() => setDownload({ phase: "later" })}>
                   Later
@@ -434,13 +519,13 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
           {download.phase === "error" && (
             <>
               <p className={styles.dlError} role="alert">
-                The download did not finish: {download.message}
+                Setup didn't finish: {download.message}
               </p>
               <p className={styles.dlNote}>
-                You can try again, pick a smaller preset above, or finish and download later.
+                You can try again, pick a smaller preset above, or finish and set up later.
               </p>
               <div className={styles.downloadActions}>
-                <Button variant="secondary" onClick={startDownload}>
+                <Button variant="secondary" onClick={retrySetup}>
                   Try again
                 </Button>
                 <Button variant="ghost" onClick={() => setDownload({ phase: "later" })}>

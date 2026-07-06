@@ -932,6 +932,33 @@ export function onOllamaStatus(handler: (e: OllamaEvent) => void): Promise<Unlis
   return listen<OllamaEvent>("ollama:status", (e) => handler(e.payload));
 }
 
+/** Whether the Ollama engine is installed on this machine (independent of
+ * whether the daemon is currently running). */
+export function ollamaInstalled(): Promise<boolean> {
+  return invoke<boolean>("ollama_installed");
+}
+
+/** Download and run Ollama's official installer. Resolves immediately; progress
+ * and completion arrive as `ollama-install:*` events. Once installed the daemon
+ * supervisor brings Ollama up on its own. */
+export function installOllama(): Promise<void> {
+  return invoke<void>("install_ollama");
+}
+
+export type OllamaInstallProgress = { progress: number; step: string };
+
+export function onOllamaInstallProgress(
+  handler: (e: OllamaInstallProgress) => void,
+): Promise<UnlistenFn> {
+  return listen<OllamaInstallProgress>("ollama-install:progress", (e) => handler(e.payload));
+}
+export function onOllamaInstallDone(handler: () => void): Promise<UnlistenFn> {
+  return listen("ollama-install:done", () => handler());
+}
+export function onOllamaInstallError(handler: (error: string) => void): Promise<UnlistenFn> {
+  return listen<{ error: string }>("ollama-install:error", (e) => handler(e.payload.error));
+}
+
 export function generateDiagram(subjectId: string, topic: string): Promise<DiagramResponse> {
   return invoke<DiagramResponse>("generate_diagram", { subjectId, topic });
 }

@@ -94,6 +94,8 @@ export const api = {
   getSystemInfo: ipc.getSystemInfo,
   modelReady: ipc.modelReady,
   downloadModel: ipc.downloadModel,
+  ollamaInstalled: ipc.ollamaInstalled,
+  installOllama: ipc.installOllama,
 
   // ── Practice tests (subject view redesign) ──
   generateTest: ipc.generateTest,

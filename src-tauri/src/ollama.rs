@@ -6,6 +6,8 @@
 //! Ownership rule: we only ever kill a daemon *we* spawned. A daemon the user
 //! runs themselves is theirs; we just use it.
 
+use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -139,9 +141,10 @@ fn daemon_up(client: &reqwest::blocking::Client) -> bool {
 }
 
 /// Spawn `ollama serve` with no console window and detached IO. Fails when the
-/// binary isn't installed/on PATH — the caller then reports "unavailable".
+/// binary isn't installed anywhere we look — the caller then reports "unavailable".
 fn spawn_daemon() -> Result<Child, String> {
-    let mut cmd = Command::new("ollama");
+    let bin = ollama_binary().ok_or("ollama not installed")?;
+    let mut cmd = Command::new(&bin);
     cmd.arg("serve").stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(windows)]
     {
@@ -150,6 +153,61 @@ fn spawn_daemon() -> Result<Child, String> {
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
     cmd.spawn().map_err(|e| e.to_string())
+}
+
+/// Resolve the ollama executable: an explicit override, then PATH, then the
+/// per-OS default install location. The last case matters right after a
+/// first-run install — the running process's PATH won't yet include Ollama.
+fn ollama_binary() -> Option<PathBuf> {
+    let exe = if cfg!(windows) {
+        "ollama.exe"
+    } else {
+        "ollama"
+    };
+
+    if let Ok(p) = std::env::var("ARBORA_OLLAMA") {
+        let p = PathBuf::from(p);
+        if p.exists() {
+            return Some(p);
+        }
+    }
+    if let Ok(path) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path) {
+            let cand = dir.join(exe);
+            if cand.exists() {
+                return Some(cand);
+            }
+        }
+    }
+    default_install_paths().into_iter().find(|p| p.exists())
+}
+
+/// Where each OS's official Ollama installer drops the executable.
+fn default_install_paths() -> Vec<PathBuf> {
+    #[cfg(windows)]
+    {
+        std::env::var("LOCALAPPDATA")
+            .map(|local| vec![PathBuf::from(local).join(r"Programs\Ollama\ollama.exe")])
+            .unwrap_or_default()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let mut v = vec![
+            PathBuf::from("/Applications/Ollama.app/Contents/Resources/ollama"),
+            PathBuf::from("/usr/local/bin/ollama"),
+        ];
+        if let Ok(home) = std::env::var("HOME") {
+            v.push(PathBuf::from(home).join("Applications/Ollama.app/Contents/Resources/ollama"));
+        }
+        v
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        vec![
+            PathBuf::from("/usr/local/bin/ollama"),
+            PathBuf::from("/usr/bin/ollama"),
+        ]
+    }
 }
 
 fn current_preset(app: &AppHandle) -> String {
@@ -186,4 +244,152 @@ pub fn ollama_status(state: tauri::State<'_, Ollama>) -> OllamaStatus {
     OllamaStatus {
         ready: state.is_ready(),
     }
+}
+
+// ── First-run install (auto-run Ollama's official installer) ───────────────
+
+/// Whether the Ollama executable is present anywhere we know to look.
+#[tauri::command]
+pub fn ollama_installed() -> bool {
+    ollama_binary().is_some()
+}
+
+/// Download and run Ollama's official installer, reporting progress as
+/// `ollama-install:*` events. Returns immediately; the work runs on a thread and
+/// the daemon supervisor (`run_lifecycle`) brings Ollama up once it's installed.
+#[tauri::command]
+pub fn install_ollama(app: AppHandle) -> Result<(), String> {
+    if ollama_binary().is_some() {
+        let _ = app.emit("ollama-install:done", json!({ "already": true }));
+        return Ok(());
+    }
+    std::thread::spawn(move || match do_install(&app) {
+        Ok(()) => {
+            let _ = app.emit("ollama-install:done", json!({}));
+        }
+        Err(err) => {
+            eprintln!("[arbora] ollama install failed: {err}");
+            let _ = app.emit("ollama-install:error", json!({ "error": err }));
+        }
+    });
+    Ok(())
+}
+
+#[cfg(windows)]
+const OLLAMA_INSTALLER_URL: &str = "https://ollama.com/download/OllamaSetup.exe";
+#[cfg(target_os = "macos")]
+const OLLAMA_INSTALLER_URL: &str = "https://ollama.com/download/Ollama-darwin.zip";
+#[cfg(all(unix, not(target_os = "macos")))]
+const OLLAMA_INSTALLER_URL: &str = "https://ollama.com/install.sh";
+
+fn do_install(app: &AppHandle) -> Result<(), String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(60 * 60)) // a large installer over a slow link
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let file_name = OLLAMA_INSTALLER_URL
+        .rsplit('/')
+        .next()
+        .unwrap_or("ollama-installer");
+    let installer = std::env::temp_dir().join(file_name);
+
+    download(&client, app, OLLAMA_INSTALLER_URL, &installer)?;
+
+    let _ = app.emit(
+        "ollama-install:progress",
+        json!({ "progress": 0.99, "step": "installing" }),
+    );
+    run_installer(&installer)
+}
+
+/// Stream a URL to `dest`, emitting the download fraction as progress events.
+fn download(
+    client: &reqwest::blocking::Client,
+    app: &AppHandle,
+    url: &str,
+    dest: &std::path::Path,
+) -> Result<(), String> {
+    let mut resp = client
+        .get(url)
+        .send()
+        .map_err(|e| format!("download failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("download failed: {e}"))?;
+
+    let total = resp.content_length().unwrap_or(0);
+    let mut file = std::fs::File::create(dest).map_err(|e| e.to_string())?;
+    let mut buf = [0u8; 1 << 16];
+    let mut done: u64 = 0;
+    loop {
+        let n = resp.read(&mut buf).map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        file.write_all(&buf[..n]).map_err(|e| e.to_string())?;
+        done += n as u64;
+        let frac = if total > 0 {
+            (done as f64 / total as f64).min(0.98)
+        } else {
+            0.0
+        };
+        let _ = app.emit(
+            "ollama-install:progress",
+            json!({ "progress": frac, "step": "downloading" }),
+        );
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn run_installer(installer: &std::path::Path) -> Result<(), String> {
+    // OllamaSetup.exe is an Inno Setup installer (per-user, no admin) that also
+    // starts the daemon once installed.
+    let status = Command::new(installer)
+        .args(["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
+        .status()
+        .map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(format!("installer exited with {status}"));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn run_installer(installer: &std::path::Path) -> Result<(), String> {
+    // The download is a zip of Ollama.app; extract into ~/Applications
+    // (user-writable, no admin) and launch it so its daemon starts.
+    let home = std::env::var("HOME").map_err(|_| "no HOME".to_string())?;
+    let apps = PathBuf::from(&home).join("Applications");
+    std::fs::create_dir_all(&apps).map_err(|e| e.to_string())?;
+    let status = Command::new("ditto")
+        .args([
+            "-x",
+            "-k",
+            installer.to_string_lossy().as_ref(),
+            apps.to_string_lossy().as_ref(),
+        ])
+        .status()
+        .map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(format!("extract failed with {status}"));
+    }
+    Command::new("open")
+        .arg(apps.join("Ollama.app"))
+        .status()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn run_installer(installer: &std::path::Path) -> Result<(), String> {
+    // Linux isn't a shipping target; run the official script best-effort.
+    let status = Command::new("sh")
+        .arg(installer)
+        .status()
+        .map_err(|e| e.to_string())?;
+    if !status.success() {
+        return Err(format!("install script exited with {status}"));
+    }
+    Ok(())
 }
