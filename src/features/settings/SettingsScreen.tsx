@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
-import { Checkbox, Input, RadioGroup } from "../../components";
+import { Checkbox, DatePicker, Input, RadioGroup, TimePicker } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useSettings, type FontScale, type Theme } from "../../app/settings";
 import { useAsync } from "../../lib/useAsync";
@@ -139,31 +139,28 @@ export function SettingsScreen() {
               />
             </div>
             <div className={styles.profileGrid}>
-              <Input
+              <DatePicker
                 label="Term starts"
-                type="date"
                 value={fields.term_start ?? ""}
-                onChange={(e) => setField("term_start", e.target.value, true)}
+                onChange={(v) => setField("term_start", v, true)}
               />
-              <Input
+              <DatePicker
                 label="Term ends"
-                type="date"
                 value={fields.term_end ?? ""}
-                onChange={(e) => setField("term_end", e.target.value, true)}
+                onChange={(v) => setField("term_end", v, true)}
+                min={fields.term_start || undefined}
               />
             </div>
             <div className={styles.profileGrid}>
-              <Input
+              <TimePicker
                 label="I usually wake up around"
-                type="time"
                 value={fields.wake_time ?? ""}
-                onChange={(e) => setField("wake_time", e.target.value, true)}
+                onChange={(v) => setField("wake_time", v, true)}
               />
-              <Input
+              <TimePicker
                 label="I usually sleep around"
-                type="time"
                 value={fields.sleep_time ?? ""}
-                onChange={(e) => setField("sleep_time", e.target.value, true)}
+                onChange={(v) => setField("sleep_time", v, true)}
               />
             </div>
 

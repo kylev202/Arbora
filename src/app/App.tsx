@@ -1,25 +1,41 @@
 import { useState } from "react";
 import { AppRoutes } from "./router";
 import { OnboardingModal } from "../features/onboarding/OnboardingModal";
+import { TutorialModal } from "../features/onboarding/TutorialModal";
 import { Pet } from "../features/pet/Pet";
 import { SourceViewerProvider } from "../features/drive/SourceViewerProvider";
 
 const ONBOARDED_KEY = "arbora.onboarded";
+const TUTORIAL_KEY = "arbora.tutorialDone";
 
-/** Root component: routes + first-run onboarding overlay + the pet companion. */
+/** Root component: routes + first-run onboarding & tutorial overlays + the pet
+ * companion. New users see onboarding, then a short how-to walkthrough; either
+ * can be skipped, and both are recorded so they only appear once. */
 function App() {
   const [onboarding, setOnboarding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== "1");
+  // Show the tutorial to anyone already onboarded who hasn't seen it yet; new
+  // users get it queued the moment onboarding finishes.
+  const [tutorial, setTutorial] = useState(
+    () => localStorage.getItem(ONBOARDED_KEY) === "1" && localStorage.getItem(TUTORIAL_KEY) !== "1",
+  );
 
   function finishOnboarding() {
     localStorage.setItem(ONBOARDED_KEY, "1");
     setOnboarding(false);
+    if (localStorage.getItem(TUTORIAL_KEY) !== "1") setTutorial(true);
+  }
+
+  function finishTutorial() {
+    localStorage.setItem(TUTORIAL_KEY, "1");
+    setTutorial(false);
   }
 
   return (
     <SourceViewerProvider>
       <AppRoutes />
-      {!onboarding && <Pet />}
+      {!onboarding && !tutorial && <Pet />}
       <OnboardingModal open={onboarding} onFinish={finishOnboarding} />
+      <TutorialModal open={!onboarding && tutorial} onFinish={finishTutorial} />
     </SourceViewerProvider>
   );
 }

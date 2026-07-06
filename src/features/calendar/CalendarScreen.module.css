@@ -191,6 +191,64 @@
   font-weight: var(--weight-semibold);
 }
 
+/* All-day strip: full-day events (due-date todos, exam days) sit above the
+   hour grid instead of floating in it. Columns mirror the day headers. */
+.allDayRow {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  min-height: 32px;
+}
+
+.allDayGutter {
+  width: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.allDayCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border-left: 1px solid var(--color-border);
+}
+
+.allDayEvent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-2);
+  border: 1px solid;
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: clamp(0.7rem, 0.58rem + 0.35vw, 0.85rem);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+.allDayEvent:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.allDayEvent svg {
+  flex-shrink: 0;
+}
+
 .weekScroll {
   display: flex;
   overflow-y: auto;
@@ -415,21 +473,6 @@
 
 .moreCount {
   color: var(--color-text-muted);
-}
-
-/* ── Slot hover ghost ──────────────────────────────────────────────────── */
-
-.slotGhost {
-  position: absolute;
-  left: 0;
-  right: 4px;
-  height: 48px;
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  border: 1px dashed var(--color-primary);
-  border-radius: var(--radius-sm);
-  pointer-events: none;
-  opacity: 0.7;
-  z-index: 1;
 }
 
 /* Live block while dragging out a new event's time range. */

@@ -64,6 +64,7 @@ export function EventModal({
   const [date, setDate] = useState("");
   const [start, setStart] = useState("18:00");
   const [end, setEnd] = useState("19:00");
+  const [allDay, setAllDay] = useState(false);
   const [done, setDone] = useState(false);
   const [repeat, setRepeat] = useState(false);
   const [repeatFreq, setRepeatFreq] = useState<RepeatFreq>("weekly");
@@ -83,6 +84,7 @@ export function EventModal({
       setDate(event.start_at.split("T")[0]);
       setStart(event.start_at.split("T")[1]);
       setEnd(event.end_at.split("T")[1]);
+      setAllDay(event.all_day);
       setDone(event.status === "done");
     } else if (draft) {
       setTitle("");
@@ -93,12 +95,17 @@ export function EventModal({
       setDate(draft.date);
       setStart(draft.start);
       setEnd(draft.end);
+      setAllDay(false);
       setDone(false);
       setRepeat(false);
       setRepeatFreq("weekly");
       setRepeatUntil("");
     }
   }, [open, event, draft]);
+
+  // An all-day event carries nominal whole-day bounds; a timed one uses the pickers.
+  const startFor = (d: string) => (allDay ? `${d}T00:00` : `${d}T${start}`);
+  const endFor = (d: string) => (allDay ? `${d}T23:59` : `${d}T${end}`);
 
   async function save() {
     try {
@@ -115,11 +122,12 @@ export function EventModal({
           const saved = await api.upsertEvent({
             subject_id: subjectId || null,
             title,
-            start_at: `${d}T${start}`,
-            end_at: `${d}T${end}`,
+            start_at: startFor(d),
+            end_at: endFor(d),
             kind,
             kind_label: kindLabelValue,
             color,
+            all_day: allDay,
             recurrence_group_id: groupId,
           });
           onSaved(saved);
@@ -130,11 +138,12 @@ export function EventModal({
           id: event?.id,
           subject_id: subjectId || null,
           title,
-          start_at: `${date}T${start}`,
-          end_at: `${date}T${end}`,
+          start_at: startFor(date),
+          end_at: endFor(date),
           kind,
           kind_label: kindLabelValue,
           color,
+          all_day: allDay,
           status: event ? (done ? "done" : "planned") : undefined,
         });
         onSaved(saved);
@@ -258,10 +267,13 @@ export function EventModal({
           </div>
         </fieldset>
         <DatePicker label="Date" value={date} onChange={setDate} />
-        <div className={styles.pair}>
-          <TimePicker label="From" value={start} onChange={setStart} />
-          <TimePicker label="Until" value={end} onChange={setEnd} />
-        </div>
+        <Checkbox label="All day" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+        {!allDay && (
+          <div className={styles.pair}>
+            <TimePicker label="From" value={start} onChange={setStart} />
+            <TimePicker label="Until" value={end} onChange={setEnd} />
+          </div>
+        )}
         {!event && (
           <>
             <Checkbox

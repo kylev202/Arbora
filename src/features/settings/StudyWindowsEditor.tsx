@@ -1,5 +1,5 @@
 import { Plus, X } from "@phosphor-icons/react";
-import { Button, IconButton } from "../../components";
+import { Button, IconButton, TimePicker } from "../../components";
 import type { StudyWindowInput } from "../../lib/types";
 import styles from "./StudyWindowsEditor.module.css";
 
@@ -43,21 +43,23 @@ export function StudyWindowsEditor({
                 </option>
               ))}
             </select>
-            <input
-              className={styles.control}
-              type="time"
-              aria-label="From"
-              value={w.start_time}
-              onChange={(e) => patch(i, { start_time: e.target.value })}
-            />
+            <div className={styles.time}>
+              <TimePicker
+                id={`window-${i}-from`}
+                aria-label="From"
+                value={w.start_time}
+                onChange={(v) => patch(i, { start_time: v })}
+              />
+            </div>
             <span aria-hidden="true">to</span>
-            <input
-              className={styles.control}
-              type="time"
-              aria-label="Until"
-              value={w.end_time}
-              onChange={(e) => patch(i, { end_time: e.target.value })}
-            />
+            <div className={styles.time}>
+              <TimePicker
+                id={`window-${i}-until`}
+                aria-label="Until"
+                value={w.end_time}
+                onChange={(v) => patch(i, { end_time: v })}
+              />
+            </div>
             <IconButton
               label="Remove this window"
               icon={<X />}

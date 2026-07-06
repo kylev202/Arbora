@@ -68,7 +68,6 @@ export function CalendarScreen() {
     preview: { start_at: string; end_at: string } | null;
   } | null>(null);
   const [, forceRender] = useState(0);
-  const [hoverSlot, setHoverSlot] = useState<{ dayIndex: number; top: number } | null>(null);
   const [selection, setSelection] = useState<{ dayIndex: number; startMin: number; endMin: number } | null>(null);
   const selectRef = useRef<{
     dayIndex: number;
@@ -247,7 +246,6 @@ export function CalendarScreen() {
       moved: false,
     };
     setSelection({ dayIndex: slot.dayIndex, startMin: slot.min, endMin: slot.min });
-    setHoverSlot(null);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
@@ -261,9 +259,6 @@ export function CalendarScreen() {
       setSelection({ dayIndex: sel.dayIndex, startMin: sel.startMin, endMin: slot.min });
       return;
     }
-    if (dragRef.current) return; // an event is being dragged
-    const slot = gridSlot(e.clientX, e.clientY);
-    if (slot) setHoverSlot({ dayIndex: slot.dayIndex, top: slot.min * PX_PER_MIN });
   }
 
   function onGridPointerUp() {
@@ -378,6 +373,30 @@ export function CalendarScreen() {
                 </div>
               ))}
             </div>
+            <div className={styles.allDayRow}>
+              <div className={styles.allDayGutter} aria-hidden="true">
+                All day
+              </div>
+              {days.map((d) => (
+                <div key={d.getTime()} className={styles.allDayCol}>
+                  {events
+                    .filter((ev) => ev.all_day && sameDay(parseNaive(ev.start_at), d))
+                    .map((ev) => (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        className={`${styles.allDayEvent} ${styles[ev.kind]} ${ev.status === "done" ? styles.done : ""}`}
+                        style={eventColorStyle(ev.color)}
+                        title={ev.title}
+                        onClick={() => setModal({ event: ev, draft: null })}
+                      >
+                        {ev.status === "done" && <Check weight="bold" aria-label="Done" />}
+                        <span className={styles.eventTitleText}>{ev.title}</span>
+                      </button>
+                    ))}
+                </div>
+              ))}
+            </div>
             <div className={styles.weekScroll} ref={scrollRef}>
               <div className={styles.gutter}>
                 {hours.map((h) => (
@@ -392,9 +411,6 @@ export function CalendarScreen() {
                 onPointerDown={onGridPointerDown}
                 onPointerMove={onGridPointerMove}
                 onPointerUp={onGridPointerUp}
-                onPointerLeave={() => {
-                  if (!selectRef.current) setHoverSlot(null);
-                }}
               >
                 {days.map((d, di) => (
                   <div key={d.getTime()} className={styles.dayCol}>
@@ -405,9 +421,6 @@ export function CalendarScreen() {
                       <div className={styles.nowLine} style={{ top: nowOffset }} aria-hidden="true">
                         <div className={styles.nowDot} />
                       </div>
-                    )}
-                    {hoverSlot?.dayIndex === di && !dragRef.current && !selection && (
-                      <div className={styles.slotGhost} style={{ top: hoverSlot.top }} aria-hidden="true" />
                     )}
                     {selection?.dayIndex === di && (
                       <div
@@ -422,6 +435,7 @@ export function CalendarScreen() {
                     )}
                     {events
                       .filter((ev) => {
+                        if (ev.all_day) return false; // all-day events live in the strip above
                         const shown = dragRef.current?.event.id === ev.id && dragRef.current.preview
                           ? dragRef.current.preview.start_at
                           : ev.start_at;

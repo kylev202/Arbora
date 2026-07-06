@@ -46,11 +46,34 @@ async fn list(pool: &SqlitePool) -> Result<Vec<Todo>, String> {
     .map_err(|e| e.to_string())
 }
 
-/// A due date maps to a calm morning marker on the calendar (naive local ISO,
-/// matching `calendar_events`). Date-only input is the common case (DatePicker).
-fn deadline_window(due: &str) -> (String, String) {
-    let date = &due[..due.len().min(10)];
-    (format!("{date}T09:00"), format!("{date}T09:30"))
+/// Add 30 minutes to an "HH:MM", clamped to end-of-day so a late deadline never
+/// spills past midnight.
+fn plus_30(hm: &str) -> String {
+    let (h, m) = hm.split_once(':').unwrap_or((hm, "00"));
+    let mins =
+        (h.parse::<i32>().unwrap_or(0) * 60 + m.parse::<i32>().unwrap_or(0) + 30).min(23 * 60 + 59);
+    format!("{:02}:{:02}", mins / 60, mins % 60)
+}
+
+/// Turn a todo's due value into its mirror event window on the calendar (naive
+/// local ISO, matching `calendar_events`). A date-only due ("2026-07-12") is the
+/// common case → an all-day marker. A due carrying a time ("2026-07-12T14:30")
+/// → a 30-minute deadline block at that time. Returns (start, end, all_day).
+fn deadline_window(due: &str) -> (String, String, bool) {
+    match due.split_once('T') {
+        Some((date, time)) if !time.trim().is_empty() => {
+            let hm = &time[..time.len().min(5)];
+            (
+                format!("{date}T{hm}"),
+                format!("{date}T{}", plus_30(hm)),
+                false,
+            )
+        }
+        _ => {
+            let date = &due[..due.len().min(10)];
+            (format!("{date}T00:00"), format!("{date}T23:59"), true)
+        }
+    }
 }
 
 /// Keep a `deadline` calendar event in lock-step with a todo's due date. We
@@ -73,12 +96,12 @@ async fn sync_due_event(
     }
     match due {
         Some(due) if !due.trim().is_empty() => {
-            let (start_at, end_at) = deadline_window(due.trim());
+            let (start_at, end_at, all_day) = deadline_window(due.trim());
             let eid = Uuid::new_v4().to_string();
             sqlx::query(
                 "INSERT INTO calendar_events
-                   (id, subject_id, title, start_at, end_at, kind, status, origin, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 'deadline', 'planned', 'user',
+                   (id, subject_id, title, start_at, end_at, kind, all_day, status, origin, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 'deadline', ?6, 'planned', 'user',
                          strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
             )
             .bind(&eid)
@@ -86,6 +109,7 @@ async fn sync_due_event(
             .bind(title)
             .bind(&start_at)
             .bind(&end_at)
+            .bind(all_day)
             .execute(pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -111,13 +135,20 @@ async fn advance_due(
         "monthly" => "+1 month",
         _ => return Ok(None),
     };
-    let date = &due.trim()[..due.trim().len().min(10)];
+    let trimmed = due.trim();
+    let date = &trimmed[..trimmed.len().min(10)];
     let (next,): (String,) = sqlx::query_as("SELECT date(?1, ?2)")
         .bind(date)
         .bind(modifier)
         .fetch_one(pool)
         .await
         .map_err(|e| e.to_string())?;
+    // Preserve a wall-clock time on the due date (e.g. "…T14:30") so a timed
+    // repeat keeps its slot; a date-only due stays date-only (all-day).
+    let next = match trimmed.split_once('T') {
+        Some((_, time)) if !time.trim().is_empty() => format!("{next}T{time}"),
+        _ => next,
+    };
     Ok(Some(next))
 }
 
@@ -412,6 +443,57 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(n, 0, "deleting the todo removes its event");
+    }
+
+    #[tokio::test]
+    async fn due_window_is_all_day_by_date_and_timed_with_a_time() {
+        let pool = mem_pool().await;
+
+        // Date-only due → an all-day mirror event spanning the whole day.
+        let allday = insert(
+            &pool,
+            None,
+            "Report",
+            Some("2026-07-12".into()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        let (start, end, all_day): (String, String, bool) =
+            sqlx::query_as("SELECT start_at, end_at, all_day FROM calendar_events WHERE id = ?1")
+                .bind(allday.linked_event_id.unwrap())
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            (start.as_str(), end.as_str(), all_day),
+            ("2026-07-12T00:00", "2026-07-12T23:59", true)
+        );
+
+        // Due carrying a time → a 30-minute timed block at that time.
+        let timed = insert(
+            &pool,
+            None,
+            "Call",
+            Some("2026-07-12T14:30".into()),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        let (start, end, all_day): (String, String, bool) =
+            sqlx::query_as("SELECT start_at, end_at, all_day FROM calendar_events WHERE id = ?1")
+                .bind(timed.linked_event_id.unwrap())
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            (start.as_str(), end.as_str(), all_day),
+            ("2026-07-12T14:30", "2026-07-12T15:00", false)
+        );
     }
 
     #[tokio::test]

@@ -1,0 +1,77 @@
+.slide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  animation: slide-in var(--motion-base) var(--ease-out);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  font-size: 2rem;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: var(--radius-full);
+}
+
+.slideTitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.slideBody {
+  max-width: 42ch;
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+/* Progress = leaves growing, one per slide — matches onboarding (§5.1). */
+.stepMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stepLeaves {
+  display: inline-flex;
+  gap: 2px;
+}
+.stepLeaf {
+  color: var(--color-border-strong);
+  opacity: 0.5;
+}
+.stepLeafGrown {
+  color: var(--color-accent);
+  transition: color var(--motion-grow) var(--ease-growth);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.footerRight {
+  display: flex;
+  gap: var(--space-3);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    animation: none;
+  }
+}

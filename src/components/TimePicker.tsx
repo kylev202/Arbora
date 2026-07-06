@@ -3,6 +3,8 @@ import { Select, type SelectOption } from "./Select";
 
 export type TimePickerProps = {
   label?: string;
+  /** Accessible name when no visible `label` is wanted (keeps the control named). */
+  "aria-label"?: string;
   /** 24-hour "HH:MM". */
   value: string;
   onChange: (value: string) => void;
@@ -33,7 +35,7 @@ function grid(step: number): SelectOption<string>[] {
  * the same styling, keyboard nav, and type-ahead ("18" jumps to 18:00). An off-grid
  * current value (e.g. an event saved at 18:07) is inserted so it still shows correctly.
  */
-export function TimePicker({ label, value, onChange, step = 15, id }: TimePickerProps) {
+export function TimePicker({ label, "aria-label": ariaLabel, value, onChange, step = 15, id }: TimePickerProps) {
   const options = useMemo(() => {
     const base = grid(step);
     if (value && !base.some((o) => o.value === value)) {
@@ -45,6 +47,7 @@ export function TimePicker({ label, value, onChange, step = 15, id }: TimePicker
   return (
     <Select
       label={label}
+      aria-label={ariaLabel}
       value={value}
       onChange={onChange}
       options={options}

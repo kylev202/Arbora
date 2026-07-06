@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../components";
+import { Button, DatePicker, TimePicker } from "../../components";
 import styles from "./ScheduleProposalCard.module.css";
 
 export type ProposalView = {
@@ -51,28 +51,11 @@ export function ScheduleProposalCard({
       </div>
       {editing ? (
         <div className={styles.editRow}>
-          <input
-            className={styles.input}
-            type="date"
-            aria-label="Date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          <input
-            className={styles.input}
-            type="time"
-            aria-label="From"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-          />
-          <span aria-hidden="true">to</span>
-          <input
-            className={styles.input}
-            type="time"
-            aria-label="Until"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-          />
+          <DatePicker label="Date" value={date} onChange={setDate} />
+          <div className={styles.editTimes}>
+            <TimePicker label="From" value={start} onChange={setStart} />
+            <TimePicker label="Until" value={end} onChange={setEnd} />
+          </div>
         </div>
       ) : (
         <p className={styles.when}>

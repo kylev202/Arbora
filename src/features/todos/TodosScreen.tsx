@@ -9,7 +9,7 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { Button, DatePicker, EmptyState, IconButton, Input, Select, Textarea } from "../../components";
+import { Button, Checkbox, DatePicker, EmptyState, IconButton, Input, Select, Textarea, TimePicker } from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
@@ -136,6 +136,24 @@ export function TodosScreen() {
     merge(updated);
   }
 
+  // A due date is stored as "YYYY-MM-DD" (all-day) or "YYYY-MM-DDTHH:MM" (timed);
+  // either way the core mirrors it onto the calendar. These keep the date, the
+  // all-day toggle, and the time in sync on the single `due` string.
+  const dueDate = selected?.due?.slice(0, 10) ?? "";
+  const dueTime = selected && selected.due && selected.due.length > 10 ? selected.due.slice(11, 16) : "";
+
+  function setDueDate(date: string) {
+    void patch({ due: date ? (dueTime ? `${date}T${dueTime}` : date) : null });
+  }
+  function setDueAllDay(allDay: boolean) {
+    if (!dueDate) return;
+    void patch({ due: allDay ? dueDate : `${dueDate}T09:00` });
+  }
+  function setDueTime(time: string) {
+    if (!dueDate) return;
+    void patch({ due: `${dueDate}T${time}` });
+  }
+
   return (
     <div className={styles.screen}>
       <TopBar />
@@ -256,13 +274,17 @@ export function TodosScreen() {
                   onChange={(e) => merge({ ...selected, notes: e.target.value })}
                   onBlur={(e) => void patch({ notes: e.target.value || null })}
                 />
-                <DatePicker
-                  label="Due date"
-                  value={selected.due?.slice(0, 10) ?? ""}
-                  onChange={(v) => void patch({ due: v || null })}
-                />
-                {selected.due && (
-                  <p className={styles.hint}>Added to your calendar as a deadline.</p>
+                <DatePicker label="Due date" value={dueDate} onChange={setDueDate} />
+                {dueDate && (
+                  <>
+                    <Checkbox
+                      label="All day"
+                      checked={!dueTime}
+                      onChange={(e) => setDueAllDay(e.target.checked)}
+                    />
+                    {dueTime && <TimePicker label="Due time" value={dueTime} onChange={setDueTime} />}
+                    <p className={styles.hint}>Added to your calendar as a deadline.</p>
+                  </>
                 )}
                 <Select
                   label="Repeat"

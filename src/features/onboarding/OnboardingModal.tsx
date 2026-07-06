@@ -3,6 +3,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import { Plus, Tree, X } from "@phosphor-icons/react";
 import {
   Button,
+  DatePicker,
   Disclaimer,
   IconButton,
   Input,
@@ -10,6 +11,7 @@ import {
   Modal,
   ProgressBar,
   RadioGroup,
+  TimePicker,
 } from "../../components";
 import { onModelDone, onModelError, onModelProgress } from "../../lib/ipc";
 import { api } from "../../lib/api";
@@ -313,17 +315,12 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
             </ul>
           )}
           <div className={styles.pair}>
-            <Input
-              label="Term starts"
-              type="date"
-              value={termStart}
-              onChange={(e) => setTermStart(e.target.value)}
-            />
-            <Input
+            <DatePicker label="Term starts" value={termStart} onChange={setTermStart} />
+            <DatePicker
               label="Term ends"
-              type="date"
               value={termEnd}
-              onChange={(e) => setTermEnd(e.target.value)}
+              onChange={setTermEnd}
+              min={termStart || undefined}
             />
           </div>
         </div>
@@ -335,17 +332,15 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
             Your usual rhythm, so suggested study sessions land at humane hours.
           </p>
           <div className={styles.pair}>
-            <Input
+            <TimePicker
               label="I usually wake up around"
-              type="time"
               value={wakeTime}
-              onChange={(e) => setWakeTime(e.target.value)}
+              onChange={setWakeTime}
             />
-            <Input
+            <TimePicker
               label="I usually sleep around"
-              type="time"
               value={sleepTime}
-              onChange={(e) => setSleepTime(e.target.value)}
+              onChange={setSleepTime}
             />
           </div>
         </div>

@@ -330,6 +330,7 @@ export type CalendarEvent = {
   kind: EventKind;
   kind_label: string | null;
   color: string | null; // hex accent override; null = colour by kind
+  all_day: boolean; // true = shown in the all-day strip, not the hour grid
   status: EventStatus;
   origin: "user" | "ai";
   recurrence_group_id: string | null;

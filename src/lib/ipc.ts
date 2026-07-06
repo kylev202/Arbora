@@ -760,6 +760,7 @@ export function upsertEvent(event: {
   kind: EventKind;
   kind_label?: string | null;
   color?: string | null;
+  all_day?: boolean;
   recurrence_group_id?: string | null;
   status?: EventStatus;
 }): Promise<CalendarEvent> {
@@ -772,6 +773,7 @@ export function upsertEvent(event: {
     kind: event.kind,
     kindLabel: event.kind_label,
     color: event.color,
+    allDay: event.all_day ?? false,
     recurrenceGroupId: event.recurrence_group_id,
     status: event.status,
   });

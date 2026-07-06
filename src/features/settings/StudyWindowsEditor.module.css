@@ -11,8 +11,16 @@
   gap: var(--space-2);
 }
 
-/* Native select/time controls, matching the Input look (Field.module.css). */
+/* Glass TimePicker wrappers share the remaining row width evenly. */
+.time {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Native weekday select, matching the Input look (Field.module.css). */
 .control {
+  flex: 1.4;
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   min-height: 40px;
   font-family: inherit;

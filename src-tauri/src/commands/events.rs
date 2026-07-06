@@ -17,13 +17,14 @@ pub struct CalendarEvent {
     pub kind: String,
     pub kind_label: Option<String>,
     pub color: Option<String>,
+    pub all_day: bool,
     pub status: String,
     pub origin: String,
     pub recurrence_group_id: Option<String>,
 }
 
 const COLS: &str =
-    "SELECT id, subject_id, title, start_at, end_at, kind, kind_label, color, status, origin, recurrence_group_id FROM calendar_events";
+    "SELECT id, subject_id, title, start_at, end_at, kind, kind_label, color, all_day, status, origin, recurrence_group_id FROM calendar_events";
 
 async fn fetch(pool: &SqlitePool, id: &str) -> Result<CalendarEvent, String> {
     sqlx::query_as::<_, CalendarEvent>(&format!("{COLS} WHERE id = ?1"))
@@ -68,6 +69,7 @@ async fn upsert(
     kind: String,
     kind_label: Option<String>,
     color: Option<String>,
+    all_day: bool,
     recurrence_group_id: Option<String>,
     status: Option<String>,
 ) -> Result<CalendarEvent, String> {
@@ -75,7 +77,11 @@ async fn upsert(
     if title.is_empty() {
         return Err("title cannot be empty".to_string());
     }
-    validate_times(&start_at, &end_at)?;
+    // All-day events carry nominal T00:00/T23:59 bounds, so ordering ("ends
+    // after it starts") is irrelevant — only timed events are validated.
+    if !all_day {
+        validate_times(&start_at, &end_at)?;
+    }
 
     // kind_label is only meaningful for the "custom" kind.
     let kind_label = if kind == "custom" { kind_label } else { None };
@@ -85,7 +91,7 @@ async fn upsert(
             sqlx::query(
                 "UPDATE calendar_events
                  SET subject_id = ?2, title = ?3, start_at = ?4, end_at = ?5, kind = ?6,
-                     kind_label = ?7, color = ?8, status = COALESCE(?9, status)
+                     kind_label = ?7, color = ?8, all_day = ?9, status = COALESCE(?10, status)
                  WHERE id = ?1",
             )
             .bind(&id)
@@ -96,6 +102,7 @@ async fn upsert(
             .bind(&kind)
             .bind(&kind_label)
             .bind(&color)
+            .bind(all_day)
             .bind(status)
             .execute(pool)
             .await
@@ -107,8 +114,8 @@ async fn upsert(
             sqlx::query(
                 "INSERT INTO calendar_events
                    (id, subject_id, title, start_at, end_at, kind, kind_label, color,
-                    recurrence_group_id, status, origin, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(?10,'planned'), 'user',
+                    all_day, recurrence_group_id, status, origin, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, COALESCE(?11,'planned'), 'user',
                          strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
             )
             .bind(&id)
@@ -119,6 +126,7 @@ async fn upsert(
             .bind(&kind)
             .bind(&kind_label)
             .bind(&color)
+            .bind(all_day)
             .bind(&recurrence_group_id)
             .bind(status)
             .execute(pool)
@@ -181,6 +189,7 @@ pub async fn upsert_event(
     kind: String,
     kind_label: Option<String>,
     color: Option<String>,
+    all_day: bool,
     recurrence_group_id: Option<String>,
     status: Option<String>,
 ) -> Result<CalendarEvent, String> {
@@ -194,6 +203,7 @@ pub async fn upsert_event(
         kind,
         kind_label,
         color,
+        all_day,
         recurrence_group_id,
         status,
     )
@@ -277,6 +287,7 @@ mod tests {
             "lecture".into(),
             None,
             None,
+            false,
             None,
             None,
         )
@@ -295,6 +306,7 @@ mod tests {
             "custom".into(),
             Some("Doctor appointment".into()),
             None,
+            false,
             None,
             None,
         )
@@ -348,6 +360,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn all_day_event_skips_time_ordering_check() {
+        let pool = mem_pool().await;
+        // Nominal T00:00/T23:59 bounds; all_day=true means the "ends after it
+        // starts" rule is not applied and the flag round-trips.
+        let ev = upsert(
+            &pool,
+            None,
+            None,
+            "Exam day".into(),
+            "2026-07-15T00:00".into(),
+            "2026-07-15T23:59".into(),
+            "deadline".into(),
+            None,
+            None,
+            true,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        assert!(ev.all_day);
+    }
+
+    #[tokio::test]
     async fn subject_cascade_deletes_events() {
         let pool = mem_pool().await;
         upsert(
@@ -360,6 +396,7 @@ mod tests {
             "study".into(),
             None,
             None,
+            false,
             None,
             None,
         )
