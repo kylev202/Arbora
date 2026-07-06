@@ -1,0 +1,81 @@
+name: Release
+
+# Build shippable installers for Windows + macOS and attach them to a GitHub
+# Release. Triggered by pushing a version tag (e.g. `v0.1.0`) that matches the
+# version in tauri.conf.json. The release is created as a DRAFT so you can add
+# notes and review the assets before publishing.
+#
+# Unsigned first (see the release body): Windows shows a SmartScreen prompt;
+# macOS is ad-hoc signed, so users right-click → Open on first launch. Code
+# signing / notarization is a later step once certificates are in place.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release and upload assets
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest # → NSIS + MSI (x64)
+          - os: macos-latest # → .app + .dmg (Apple Silicon)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Frontend toolchain (tauri build runs `npm run build` for us).
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # Python to freeze the sidecar. Pinned to 3.12 for reproducible builds
+      # (matches CI); the frozen bundle carries its own interpreter.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Freeze the Python AI sidecar into src-tauri/binaries/ so the bundle
+      # overlay can ship it. Must run before `tauri build`.
+      - name: Build frozen sidecar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r sidecar/requirements.lock
+          pip install pyinstaller==6.16.0
+          python scripts/build_sidecar.py
+
+      - name: Build + release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Arbora ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
+          releaseBody: |
+            Local-first study assistant — turn your own documents and lectures
+            into grounded, cited notes, flashcards, and quizzes.
+
+            **Install**
+            - **Windows**: download the `-setup.exe`, run it. Windows SmartScreen
+              may warn ("unknown publisher") — click *More info → Run anyway*
+              (unsigned for now).
+            - **macOS**: download the `.dmg`, drag Arbora to Applications, then
+              **right-click the app → Open** the first time (unsigned for now).
+
+            On first launch Arbora sets up its local AI engine (Ollama) and
+            downloads the model for your machine. Everything runs on your device.
+          # Apply the release overlay so the frozen sidecar is bundled as a resource.
+          args: --config src-tauri/tauri.bundle.conf.json
