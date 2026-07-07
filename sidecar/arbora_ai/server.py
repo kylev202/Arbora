@@ -61,9 +61,16 @@ def _data_dir() -> str:
 
 
 def require_token(x_arbora_token: str | None = Header(default=None)) -> None:
-    """Reject requests without the per-launch token (when one is configured)."""
+    """Reject requests unless they carry the per-launch token.
+
+    Fails closed: no configured token means every guarded request is refused —
+    a missing ARBORA_SIDECAR_TOKEN is a deployment bug, not an open door.
+    (Running the server by hand for debugging requires exporting the var.)
+    """
     token = os.environ.get("ARBORA_SIDECAR_TOKEN")
-    if token and x_arbora_token != token:
+    if not token:
+        raise HTTPException(status_code=503, detail="sidecar token not configured")
+    if x_arbora_token != token:
         raise HTTPException(status_code=401, detail="invalid sidecar token")
 
 

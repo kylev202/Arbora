@@ -45,6 +45,33 @@ jobs:
       - run: ruff check .
       - run: pytest -q
 
+  audit:
+    name: Dependency audit (npm + pip + cargo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # npm: audits straight from package-lock.json, no install needed.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm audit --audit-level=high
+
+      # pip: the lock file is fully pinned, so audit exactly those pins.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pipx run pip-audit --no-deps -r sidecar/requirements.lock
+
+      # cargo: rust-cache keeps ~/.cargo/bin, so the install is a one-time cost.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo install cargo-audit --locked
+      - name: cargo audit
+        working-directory: src-tauri
+        run: cargo audit
+
   rust:
     name: Rust core (fmt + clippy + build)
     strategy:

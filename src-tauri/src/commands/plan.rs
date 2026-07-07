@@ -129,8 +129,9 @@ async fn create_grade_db(
     fetch_grade(pool, &id).await
 }
 
-async fn delete_row(pool: &SqlitePool, table: &str, id: &str) -> Result<(), String> {
-    // `table` is a fixed literal from the command, never user input.
+async fn delete_row(pool: &SqlitePool, table: &'static str, id: &str) -> Result<(), String> {
+    // `table` is a fixed literal — `&'static str` makes passing runtime
+    // (user-derived) strings a compile error, so it can never be injected.
     sqlx::query(&format!("DELETE FROM {table} WHERE id = ?1"))
         .bind(id)
         .execute(pool)

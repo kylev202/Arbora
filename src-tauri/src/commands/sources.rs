@@ -4,12 +4,12 @@
 //! completion, persists the returned chunk metadata. The sidecar owns the FAISS
 //! index; Rust owns every row.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 
 use super::JobHandle;
@@ -57,6 +57,40 @@ fn detect_type(file_path: &str) -> Result<&'static str, String> {
     }
 }
 
+// ── Source library (copy-on-import) ────────────────────────────────────────
+
+/// Where imported files live: a private library under the app data dir. Storing
+/// only copies from here lets the webview's asset scope stay pinned to
+/// `$APPDATA/sources/**` (see tauri.conf.json) instead of the whole filesystem.
+fn library_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("sources")
+}
+
+/// Copy a picked file into the library under a fresh name (uuid + original
+/// extension, lowercased). The copy — not the original — is what gets stored,
+/// served to the viewer, and ingested, so the library stays self-contained even
+/// if the user later moves or deletes the original.
+fn copy_into_library(data_dir: &Path, original: &Path) -> Result<PathBuf, String> {
+    let dir = library_dir(data_dir);
+    std::fs::create_dir_all(&dir).map_err(|e| format!("creating source library: {e}"))?;
+    let mut name = Uuid::new_v4().to_string();
+    if let Some(ext) = original.extension().and_then(|e| e.to_str()) {
+        name = format!("{name}.{}", ext.to_lowercase());
+    }
+    let dest = dir.join(name);
+    std::fs::copy(original, &dest).map_err(|e| format!("copying into source library: {e}"))?;
+    Ok(dest)
+}
+
+/// Display title for an imported file: the original file's stem.
+fn display_title(path: &str) -> String {
+    Path::new(path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(str::to_string)
+        .unwrap_or_else(|| path.to_string())
+}
+
 // ── DB layer (plain pool → unit-testable) ──────────────────────────────────
 
 async fn fetch_source(pool: &SqlitePool, id: &str) -> Result<Source, String> {
@@ -80,14 +114,10 @@ async fn insert(
     pool: &SqlitePool,
     subject_id: &str,
     file_path: &str,
+    title: &str,
     folder_id: Option<&str>,
 ) -> Result<Source, String> {
     let kind = detect_type(file_path)?;
-    let title = Path::new(file_path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .map(str::to_string)
-        .unwrap_or_else(|| file_path.to_string());
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         "INSERT INTO sources (id, subject_id, type, file_path, title, folder_id, ingest_state, created_at)
@@ -97,7 +127,7 @@ async fn insert(
     .bind(subject_id)
     .bind(kind)
     .bind(file_path)
-    .bind(&title)
+    .bind(title)
     .bind(folder_id)
     .execute(pool)
     .await
@@ -220,12 +250,30 @@ pub async fn list_sources(
 
 #[tauri::command]
 pub async fn add_source(
+    app: AppHandle,
     pool: State<'_, SqlitePool>,
     subject_id: String,
     file_path: String,
     folder_id: Option<String>,
 ) -> Result<Source, String> {
-    insert(pool.inner(), &subject_id, &file_path, folder_id.as_deref()).await
+    detect_type(&file_path)?; // reject unsupported types before copying anything
+    let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let title = display_title(&file_path);
+    // The copy can be gigabytes (lecture video) — keep it off the async runtime.
+    let original = PathBuf::from(&file_path);
+    let stored =
+        tauri::async_runtime::spawn_blocking(move || copy_into_library(&data_dir, &original))
+            .await
+            .map_err(|e| e.to_string())??;
+    let stored = stored.to_string_lossy().into_owned();
+    insert(
+        pool.inner(),
+        &subject_id,
+        &stored,
+        &title,
+        folder_id.as_deref(),
+    )
+    .await
 }
 
 /// One source row by id — used by the reader to resolve the original file path
@@ -249,12 +297,25 @@ pub async fn rename_source(
 /// subject's FAISS index but are unreachable (no chunk row maps to them), so they
 /// can never be cited — acceptable for the MVP; index compaction is a later concern.
 #[tauri::command]
-pub async fn delete_source(pool: State<'_, SqlitePool>, id: String) -> Result<(), String> {
+pub async fn delete_source(
+    app: AppHandle,
+    pool: State<'_, SqlitePool>,
+    id: String,
+) -> Result<(), String> {
+    let src = fetch_source(pool.inner(), &id).await.ok(); // keep delete idempotent
     sqlx::query("DELETE FROM sources WHERE id = ?1")
         .bind(&id)
         .execute(pool.inner())
         .await
         .map_err(|e| e.to_string())?;
+    // Remove the library copy, best-effort. Only ever a file inside the library —
+    // rows from before copy-on-import still point at the user's original file.
+    if let (Some(src), Ok(data_dir)) = (src, app.path().app_data_dir()) {
+        let path = PathBuf::from(&src.file_path);
+        if path.starts_with(library_dir(&data_dir)) {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
     Ok(())
 }
 
@@ -663,6 +724,40 @@ mod tests {
     }
 
     #[test]
+    fn display_title_is_the_original_stem() {
+        assert_eq!(display_title("/docs/Genetics.pdf"), "Genetics");
+        assert_eq!(
+            display_title(r"C:\Users\k\Week 1 – Cells.pptx"),
+            "Week 1 – Cells"
+        );
+    }
+
+    #[test]
+    fn copy_into_library_copies_under_data_dir() {
+        let data_dir = std::env::temp_dir().join(format!("arbora-test-{}", Uuid::new_v4()));
+        let original = data_dir.join("My Lecture.PDF");
+        std::fs::create_dir_all(&data_dir).unwrap();
+        std::fs::write(&original, b"pdf bytes").unwrap();
+
+        let stored = copy_into_library(&data_dir, &original).unwrap();
+        assert!(
+            stored.starts_with(library_dir(&data_dir)),
+            "lands in the library"
+        );
+        assert_eq!(
+            stored.extension().and_then(|e| e.to_str()),
+            Some("pdf"),
+            "extension kept (lowercased) so type detection still works"
+        );
+        assert_eq!(std::fs::read(&stored).unwrap(), b"pdf bytes");
+
+        // A missing original is a clean error, not a panic.
+        assert!(copy_into_library(&data_dir, Path::new("/nope/gone.pdf")).is_err());
+
+        std::fs::remove_dir_all(&data_dir).unwrap();
+    }
+
+    #[test]
     fn detect_type_maps_extensions() {
         assert_eq!(detect_type("a/b.pdf").unwrap(), "pdf");
         assert_eq!(detect_type("DECK.PPTX").unwrap(), "slide");
@@ -679,7 +774,7 @@ mod tests {
     async fn source_lifecycle() {
         let pool = mem_pool().await;
 
-        let src = insert(&pool, "subj1", "/docs/Genetics.pdf", None)
+        let src = insert(&pool, "subj1", "/docs/Genetics.pdf", "Genetics", None)
             .await
             .unwrap();
         assert_eq!(src.kind, "pdf");
@@ -759,7 +854,7 @@ mod tests {
     #[tokio::test]
     async fn viewer_chunks_and_annotations() {
         let pool = mem_pool().await;
-        let src = insert(&pool, "subj1", "/docs/Notes.pdf", None)
+        let src = insert(&pool, "subj1", "/docs/Notes.pdf", "Notes", None)
             .await
             .unwrap();
         insert_chunks(
@@ -844,7 +939,7 @@ mod tests {
         .unwrap();
 
         // A file assigned to the subfolder keeps its subject.
-        let src = insert(&pool, "subj1", "/docs/Paper.pdf", Some("f2"))
+        let src = insert(&pool, "subj1", "/docs/Paper.pdf", "Paper", Some("f2"))
             .await
             .unwrap();
         assert_eq!(src.folder_id.as_deref(), Some("f2"));
