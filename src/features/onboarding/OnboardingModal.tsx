@@ -29,6 +29,10 @@ import styles from "./OnboardingModal.module.css";
 
 const TOTAL_STEPS = 7;
 
+// Step 2 (identity/field of study) is the first screen with real questions.
+// It must be answered before the user can move on, skip, or close onboarding.
+const REQUIRED_STEP = 2;
+
 // Mirrors HomeScreen's palette so onboarding-created subjects match.
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
 
@@ -44,9 +48,10 @@ type DownloadPhase =
 
 /**
  * S-10 — first-run onboarding, expanded into a 7-step interview (redesign
- * slice A). Every step can be skipped and every answer edited later in
- * Settings; the whole flow stays calm and non-coercive. Answers persist to the
- * local `user_profile` / `study_windows` tables only (law #3).
+ * slice A). Every step but the identity step (name + field of study) can be
+ * skipped, and every answer can be edited later in Settings; the whole flow
+ * stays calm and non-coercive otherwise. Answers persist to the local
+ * `user_profile` / `study_windows` tables only (law #3).
  */
 export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: () => void }) {
   const [step, setStep] = useState(1);
@@ -55,6 +60,9 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
   const [name, setName] = useState("");
   const [year, setYear] = useState("");
   const [major, setMajor] = useState("");
+  // Name + field of study anchor every later recommendation, so this is the
+  // one screen we don't let people skip past blank.
+  const canLeaveRequiredStep = name.trim() !== "" && major.trim() !== "";
 
   // Step 3 — subjects this term + term dates
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -219,17 +227,21 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
   }
 
   function next() {
+    if (step === REQUIRED_STEP && !canLeaveRequiredStep) return;
     persistStep(step);
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   }
 
   function skipStep() {
+    if (step === REQUIRED_STEP) return; // this step must be answered, not skipped
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   }
 
   /** Finish (last step or closing early). Creates the listed subjects once and
-   * records the chosen preset; safe to call with everything skipped. */
+   * records the chosen preset; safe to call with everything skipped. Blocked
+   * while the required first question is still unanswered. */
   function finish() {
+    if (step === REQUIRED_STEP && !canLeaveRequiredStep) return;
     for (const [i, subjectName] of subjects.entries()) {
       void api.createSubject(subjectName, SUBJECT_COLORS[i % SUBJECT_COLORS.length]);
     }
@@ -251,6 +263,7 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
       open={open}
       onClose={finish}
       title="Welcome to Arbora"
+      hideClose={step === REQUIRED_STEP}
       meta={
         <span className={styles.stepMeta}>
           <span className={styles.stepLeaves} aria-hidden="true">
@@ -267,7 +280,7 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
       }
       footer={
         <div className={styles.footer}>
-          {step > 1 && !isLast ? (
+          {step > 1 && step !== REQUIRED_STEP && !isLast ? (
             <Button variant="ghost" onClick={skipStep}>
               Skip this step
             </Button>
@@ -285,7 +298,11 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
                 Get started
               </Button>
             ) : (
-              <Button variant="primary" onClick={next}>
+              <Button
+                variant="primary"
+                onClick={next}
+                disabled={step === REQUIRED_STEP && !canLeaveRequiredStep}
+              >
                 {step === 1 ? "Begin" : "Next"}
               </Button>
             )}
@@ -301,8 +318,9 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
             flashcards, and quizzes, then review them with calm spaced repetition.
           </p>
           <p className={styles.lead}>
-            A few quick questions help Arbora plan around your week. Every step is optional, and
-            you can change any answer later in Settings.
+            A few quick questions help Arbora plan around your week. Just your name and field of
+            study are required — everything after that is optional, and you can change any answer
+            later in Settings.
           </p>
           <Disclaimer>Everything stays on your device. Nothing is sent anywhere.</Disclaimer>
         </div>
@@ -311,7 +329,14 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
       {step === 2 && (
         <div className={styles.step}>
           <p className={styles.lead}>A little about you, so Arbora can greet you properly.</p>
-          <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <Input
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            required
+            hint="Required"
+          />
           <div className={styles.pair}>
             <Input
               label="Year of study"
@@ -324,6 +349,8 @@ export function OnboardingModal({ open, onFinish }: { open: boolean; onFinish: (
               placeholder="e.g. Computer Science"
               value={major}
               onChange={(e) => setMajor(e.target.value)}
+              required
+              hint="Required"
             />
           </div>
         </div>

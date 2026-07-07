@@ -1,15 +1,35 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "@phosphor-icons/react";
-import { Checkbox, DatePicker, Input, RadioGroup, TimePicker } from "../../components";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import { ArrowLeft, CheckCircle, CircleNotch } from "@phosphor-icons/react";
+import {
+  Button,
+  Checkbox,
+  DatePicker,
+  Input,
+  ProgressBar,
+  RadioGroup,
+  TimePicker,
+} from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useSettings, type FontScale, type Theme } from "../../app/settings";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
+import { onModelDone, onModelError, onModelProgress } from "../../lib/ipc";
 import type { AIPreset, StudyGoal, StudyWindowInput, UserProfile } from "../../lib/types";
 import { GOAL_OPTIONS, PRESET_OPTIONS, recommendedPreset } from "./presets";
 import { StudyWindowsEditor, validWindows } from "./StudyWindowsEditor";
 import { useNavigate } from "react-router-dom";
 import styles from "./SettingsScreen.module.css";
+
+/** Per-preset download state, keyed by AIPreset, for the "Manage AI model" section. */
+type ModelState =
+  | { phase: "checking" }
+  | { phase: "ready" }
+  | { phase: "not-downloaded" }
+  | { phase: "downloading"; jobId: string; progress: number; step: string }
+  | { phase: "error"; message: string };
+
+const ALL_PRESETS: AIPreset[] = ["low", "medium", "high"];
 
 const FONT_SIZES: FontScale[] = [14, 16, 18, 20];
 
@@ -40,6 +60,14 @@ export function SettingsScreen() {
   const [fields, setFields] = useState<ProfileFields>(EMPTY_FIELDS);
   const [goal, setGoal] = useState<StudyGoal | null>(null);
   const [windows, setWindows] = useState<StudyWindowInput[]>([]);
+
+  // Manage AI model — one download/readiness state per preset, so the user can
+  // fetch a model other than the one currently in use.
+  const [models, setModels] = useState<Record<AIPreset, ModelState>>({
+    low: { phase: "checking" },
+    medium: { phase: "checking" },
+    high: { phase: "checking" },
+  });
 
   const ramGb = sysInfo.status === "loaded" ? sysInfo.data.total_ram_gb : null;
   const recommended = ramGb === null ? null : recommendedPreset(ramGb);
@@ -80,6 +108,73 @@ export function SettingsScreen() {
   function changePreset(value: AIPreset) {
     setPreset(value);
     void api.updateSettings({ ai_preset: value });
+  }
+
+  // Check readiness for every preset once, so the section can offer download
+  // for models beyond the one currently selected.
+  useEffect(() => {
+    let cancelled = false;
+    for (const p of ALL_PRESETS) {
+      void api.modelReady(p).then(
+        (r) => {
+          if (cancelled) return;
+          setModels((prev) => ({ ...prev, [p]: { phase: r.ready ? "ready" : "not-downloaded" } }));
+        },
+        () => {
+          if (cancelled) return;
+          setModels((prev) => ({ ...prev, [p]: { phase: "not-downloaded" } }));
+        },
+      );
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Download progress arrives as model:* events; route each by job id to the
+  // preset that started it.
+  useEffect(() => {
+    const unsubs: UnlistenFn[] = [];
+    onModelProgress((e) =>
+      setModels((prev) => {
+        const p = e.preset as AIPreset;
+        const cur = prev[p];
+        return cur.phase === "downloading" && cur.jobId === e.job_id
+          ? { ...prev, [p]: { ...cur, progress: e.progress, step: e.step } }
+          : prev;
+      }),
+    ).then((u) => unsubs.push(u));
+    onModelDone((e) =>
+      setModels((prev) => {
+        const p = e.preset as AIPreset;
+        const cur = prev[p];
+        return cur.phase === "downloading" && cur.jobId === e.job_id
+          ? { ...prev, [p]: { phase: "ready" } }
+          : prev;
+      }),
+    ).then((u) => unsubs.push(u));
+    onModelError((e) =>
+      setModels((prev) => {
+        const p = e.preset as AIPreset;
+        const cur = prev[p];
+        return cur.phase === "downloading" && cur.jobId === e.job_id
+          ? { ...prev, [p]: { phase: "error", message: e.error } }
+          : prev;
+      }),
+    ).then((u) => unsubs.push(u));
+    return () => unsubs.forEach((u) => u());
+  }, []);
+
+  async function downloadPreset(p: AIPreset) {
+    try {
+      const { job_id } = await api.downloadModel(p);
+      setModels((prev) => ({
+        ...prev,
+        [p]: { phase: "downloading", jobId: job_id, progress: 0, step: "starting" },
+      }));
+    } catch (e) {
+      setModels((prev) => ({ ...prev, [p]: { phase: "error", message: String(e) } }));
+    }
   }
 
   /** Track a field locally; text fields save on blur, pickers save on change. */
@@ -198,6 +293,61 @@ export function SettingsScreen() {
                 {PRESET_OPTIONS.find((o) => o.value === recommended)?.label} suits it best.
               </p>
             )}
+          </section>
+
+          {/* ── Manage AI model ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Manage AI model</h2>
+            <p className={styles.hint}>
+              Download any preset's model ahead of time, or check what's already on this machine.
+              Everything downloads and runs locally — nothing is sent anywhere.
+            </p>
+            <div className={styles.modelList}>
+              {PRESET_OPTIONS.map((o) => {
+                const state = models[o.value];
+                return (
+                  <div key={o.value} className={styles.modelRow}>
+                    <div className={styles.modelInfo}>
+                      <span className={styles.rowLabel}>
+                        {o.icon} {o.label}
+                      </span>
+                      <span className={styles.hint}>{o.description}</span>
+                      {state.phase === "downloading" && (
+                        <ProgressBar
+                          value={state.progress}
+                          label={state.step || "Downloading model…"}
+                        />
+                      )}
+                      {state.phase === "error" && (
+                        <p className={styles.dlError} role="alert">
+                          Download failed: {state.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className={styles.modelAction}>
+                      {state.phase === "checking" && (
+                        <CircleNotch className={styles.spin} aria-label="Checking…" />
+                      )}
+                      {state.phase === "ready" && (
+                        <span className={styles.ready}>
+                          <CheckCircle weight="fill" aria-hidden="true" /> Downloaded
+                        </span>
+                      )}
+                      {(state.phase === "not-downloaded" || state.phase === "error") && (
+                        <Button variant="secondary" size="sm" onClick={() => downloadPreset(o.value)}>
+                          Download
+                        </Button>
+                      )}
+                      {state.phase === "downloading" && (
+                        <Button variant="ghost" size="sm" disabled>
+                          Downloading…
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </section>
 
           {/* ── Display & accessibility ── */}
