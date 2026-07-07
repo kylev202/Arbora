@@ -11,6 +11,24 @@ trusting. Keep it short and current — if it drifts from reality, fix it.
 > Its calm, accessibility-first design (see [ADR-0010](./docs/adr/0010-broaden-audience-comprehensive-study-platform.md))
 > benefits every student, not just one audience.
 
+## Start every session by reading the vault
+
+Before reading source or re-deriving context, read
+[`resources/vault/00 Bắt đầu ở đây.md`](./resources/vault/00%20Bắt%20đầu%20ở%20đây.md) — an
+Obsidian vault (Vietnamese, gitignored, local-only) that maps the current codebase: architecture,
+the full Tauri command surface, DB schema, sidecar endpoints, and phase-by-phase history, kept
+current across sessions. It exists so you don't have to re-read the whole codebase or replay old
+session transcripts to know what's already built. From that index, follow only the specific linked
+notes the current task needs — don't load the whole vault into context every time.
+
+**Durable project memory now lives there, not in Claude Code's default memory folder.** When you
+finish a meaningful chunk of work (a phase, a slice, an architecture decision, a gotcha worth
+remembering), update the relevant vault note yourself — usually `Progress Log.md` plus whichever
+domain note changed (`Tauri Commands.md`, `Sidecar Architecture.md`, `Database Schema.md`,
+`IPC Contract.md`) — in Vietnamese prose with code identifiers left in English, matching the
+existing house style. The default memory folder is fine for short-lived, single-session notes, but
+don't let it re-accumulate as the long-term record — that's the vault's job now.
+
 ## The three immutable laws (never violate)
 
 These are enforced in code and recorded in [ADR-0002](./docs/adr/0002-immutable-ai-laws.md).
@@ -88,10 +106,16 @@ ask. Pick one skill per axis; don't double up.
   Use the FSRS library; never hand-roll a scheduler.
 - `a11y-adhd` — any Arbora UI: high contrast, TTS, adjustable text, reduced motion,
   focus mode, calm non-punishing gamification (the tree never dies).
-- `impeccable` / `minimalist-ui` — UI design, critique, polish; warm editorial,
-  monochrome, no gradients/heavy shadows.
+- `impeccable` / `minimalist-ui` — UI design, critique, polish. **Note:** the house style moved
+  to glassmorphism ("Aurora Canopy") on 2026-07-03, so `minimalist-ui`'s "no gradients/heavy
+  shadows" rule is no longer current — check `resources/vault/Design System.md` and the vault's
+  UI-v3 note before assuming it still applies.
 - `cross-platform-packaging` — `.github/workflows/`, `scripts/`, Tauri bundling,
   model downloads, signing, releases (Phase 5).
+
+**Skill picks above were made 2026-06-22 and haven't been revisited since.** Before any UI/UX
+work, glance at `~/.claude/skills/` for newer or better-fitting skills (the global library grows
+over time) — don't assume this table is exhaustive or current.
 
 ## Working agreement
 

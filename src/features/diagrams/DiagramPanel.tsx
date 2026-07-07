@@ -101,6 +101,7 @@ export function DiagramPanel({
             <MermaidDiagram
               code={state.result.mermaid_code}
               className={styles.diagram}
+              label={state.result.title}
             />
             {state.result.citations.length > 0 && (
               <div className={styles.citations}>

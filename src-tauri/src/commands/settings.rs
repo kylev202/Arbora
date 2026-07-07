@@ -3,6 +3,10 @@
 //! Display/accessibility prefs (theme, contrast, font size) are pure UI state and
 //! stay in the browser's localStorage, not the DB. BYO-key fields are deliberately
 //! NOT exposed: that path is isolated behind its own opt-in (law #3).
+//!
+//! NOTE: the BYO-key online path is NOT implemented yet — despite the migration
+//! comment, no keychain storage exists. When it lands, the key goes in the OS
+//! keychain (e.g. the `keyring` crate), never this table or localStorage.
 
 use serde::Serialize;
 use sqlx::SqlitePool;
