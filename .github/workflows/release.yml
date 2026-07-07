@@ -37,7 +37,7 @@ jobs:
 
       # Python to freeze the sidecar. Pinned to 3.12 for reproducible builds
       # (matches CI); the frozen bundle carries its own interpreter.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
