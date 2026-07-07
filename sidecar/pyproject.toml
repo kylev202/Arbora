@@ -28,7 +28,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
-    "ruff==0.15.19",
+    "ruff==0.15.20",
 ]
 # Freezing the sidecar into a shippable binary (scripts/build_sidecar.py).
 build = [
