@@ -45,8 +45,9 @@ from .planner import (
     WindowIn,
     plan_week,
 )
-from .outline import extract_outline, syllabus_to_text
-from .schemas.output import OutlineExtraction, SourceRef
+from .assignment import extract_rubric, extract_spec
+from .outline import extract_outline, extract_unit_info, syllabus_to_text
+from .schemas.output import OutlineParseResult, RubricExtraction, SourceRef, SpecExtraction
 from .srs import compute_next
 
 # Marker line Rust scans stdout for to learn the chosen port.
@@ -142,6 +143,7 @@ class AssignmentBriefRequest(BaseModel):
     deadline_id: str
     assignment_title: str
     chunks: list[GenChunk]
+    rubric: str = ""  # compact rubric digest; steers the prompt, never cited
     llm_config: dict = {}
     preset: str = "medium"
     job_id: str | None = None
@@ -222,6 +224,14 @@ class ParseOutlineRequest(BaseModel):
     file_path: str
     llm_config: dict = {}
     preset: str = "medium"  # resolves the local model when llm_config has none
+
+
+class ParseAssignmentRequest(BaseModel):
+    subject_id: str
+    file_path: str
+    assignment_title: str = ""  # steers the spec extraction; unused for rubrics
+    llm_config: dict = {}
+    preset: str = "medium"
 
 
 class ScheduleRequest(BaseModel):
@@ -410,7 +420,11 @@ def create_app() -> FastAPI:
         registry.submit(
             job,
             lambda j: run_assignment_brief(
-                j, chunks=chunks, assignment_title=req.assignment_title, llm_config=cfg
+                j,
+                chunks=chunks,
+                assignment_title=req.assignment_title,
+                llm_config=cfg,
+                rubric=req.rubric,
             ),
         )
         return {"job_id": job.id}
@@ -559,12 +573,13 @@ def create_app() -> FastAPI:
 
     # ── Syllabus outline extraction ────────────────────────────────────────
 
-    @app.post("/parse-outline", response_model=OutlineExtraction, dependencies=guarded)
-    def parse_outline(req: ParseOutlineRequest) -> OutlineExtraction:
-        # Synchronous (one LLM call, unlike the per-chunk /generate job). Returns
-        # the structured-but-uncommitted result; the core writes nothing until
-        # the user confirms it (review-before-trust). The user's own file never
-        # leaves the device on the default local provider.
+    @app.post("/parse-outline", response_model=OutlineParseResult, dependencies=guarded)
+    def parse_outline(req: ParseOutlineRequest) -> OutlineParseResult:
+        # Synchronous (two LLM calls — schedule, then unit info — unlike the
+        # per-chunk /generate job). Returns the structured-but-uncommitted
+        # result; the core writes nothing until the user confirms it
+        # (review-before-trust). The user's own file never leaves the device
+        # on the default local provider.
         cfg = dict(req.llm_config)
         cfg.setdefault("provider", "ollama")
         if cfg["provider"] == "ollama":
@@ -574,7 +589,48 @@ def create_app() -> FastAPI:
         except (ValueError, OSError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         try:
-            return extract_outline(get_provider(cfg), text)
+            provider = get_provider(cfg)
+            outline = extract_outline(provider, text)
+            # Degrades to empty on retry exhaustion — never fails the parse.
+            unit_info = extract_unit_info(provider, text)
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except LLMSchemaError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return OutlineParseResult(
+            weeks=outline.weeks, deadlines=outline.deadlines, unit_info=unit_info
+        )
+
+    # ── Assignment spec + rubric extraction ────────────────────────────────
+    # Same contract as /parse-outline: synchronous, on-device, returns the
+    # structured-but-uncommitted result for the user to review (ADR-0006).
+
+    def _read_and_configure(req: ParseAssignmentRequest) -> tuple[str, dict]:
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        try:
+            text = syllabus_to_text(req.file_path)  # generic doc→text reader
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return text, cfg
+
+    @app.post("/parse-assignment-spec", response_model=SpecExtraction, dependencies=guarded)
+    def parse_assignment_spec(req: ParseAssignmentRequest) -> SpecExtraction:
+        text, cfg = _read_and_configure(req)
+        try:
+            return extract_spec(get_provider(cfg), text, req.assignment_title)
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        except LLMSchemaError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/parse-rubric", response_model=RubricExtraction, dependencies=guarded)
+    def parse_rubric(req: ParseAssignmentRequest) -> RubricExtraction:
+        text, cfg = _read_and_configure(req)
+        try:
+            return extract_rubric(get_provider(cfg), text)
         except LLMUnavailableError as exc:
             raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
         except LLMSchemaError as exc:

@@ -39,7 +39,7 @@ const COLS: &str = "SELECT id, subject_id, type AS kind, title, file_path, inges
     page_count, chunk_count, ingest_error AS error, week_id, folder_id, created_at AS added_at FROM sources";
 
 /// Map a file extension to a source type, mirroring the sidecar's `detect_type`.
-fn detect_type(file_path: &str) -> Result<&'static str, String> {
+pub(crate) fn detect_type(file_path: &str) -> Result<&'static str, String> {
     let ext = Path::new(file_path)
         .extension()
         .and_then(|e| e.to_str())
@@ -70,7 +70,7 @@ fn library_dir(data_dir: &Path) -> PathBuf {
 /// extension, lowercased). The copy — not the original — is what gets stored,
 /// served to the viewer, and ingested, so the library stays self-contained even
 /// if the user later moves or deletes the original.
-fn copy_into_library(data_dir: &Path, original: &Path) -> Result<PathBuf, String> {
+pub(crate) fn copy_into_library(data_dir: &Path, original: &Path) -> Result<PathBuf, String> {
     let dir = library_dir(data_dir);
     std::fs::create_dir_all(&dir).map_err(|e| format!("creating source library: {e}"))?;
     let mut name = Uuid::new_v4().to_string();
@@ -83,7 +83,7 @@ fn copy_into_library(data_dir: &Path, original: &Path) -> Result<PathBuf, String
 }
 
 /// Display title for an imported file: the original file's stem.
-fn display_title(path: &str) -> String {
+pub(crate) fn display_title(path: &str) -> String {
     Path::new(path)
         .file_stem()
         .and_then(|s| s.to_str())
@@ -93,7 +93,7 @@ fn display_title(path: &str) -> String {
 
 // ── DB layer (plain pool → unit-testable) ──────────────────────────────────
 
-async fn fetch_source(pool: &SqlitePool, id: &str) -> Result<Source, String> {
+pub(crate) async fn fetch_source(pool: &SqlitePool, id: &str) -> Result<Source, String> {
     sqlx::query_as::<_, Source>(&format!("{COLS} WHERE id = ?1"))
         .bind(id)
         .fetch_optional(pool)
@@ -110,7 +110,7 @@ async fn list(pool: &SqlitePool, subject_id: &str) -> Result<Vec<Source>, String
         .map_err(|e| e.to_string())
 }
 
-async fn insert(
+pub(crate) async fn insert(
     pool: &SqlitePool,
     subject_id: &str,
     file_path: &str,
@@ -768,6 +768,21 @@ mod tests {
         assert_eq!(detect_type("notes.txt").unwrap(), "text");
         assert_eq!(detect_type("README.md").unwrap(), "text");
         assert!(detect_type("archive.zip").is_err());
+    }
+
+    // Regression for migration 0017: the 0001 CHECK only allowed pdf|slide|audio,
+    // so the 'doc'/'text' kinds detect_type emits failed at insert.
+    #[tokio::test]
+    async fn doc_and_text_sources_insert() {
+        let pool = mem_pool().await;
+        let doc = insert(&pool, "subj1", "/docs/Spec.docx", "Spec", None)
+            .await
+            .unwrap();
+        assert_eq!(doc.kind, "doc");
+        let txt = insert(&pool, "subj1", "/docs/notes.md", "Notes", None)
+            .await
+            .unwrap();
+        assert_eq!(txt.kind, "text");
     }
 
     #[tokio::test]

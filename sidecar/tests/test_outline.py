@@ -7,21 +7,42 @@ from __future__ import annotations
 
 import pytest
 
-from arbora_ai.llm.provider import LLMProvider, LLMSchemaError
-from arbora_ai.outline.extract import extract_outline, syllabus_to_text
-from arbora_ai.schemas.output import OutlineExtraction
+from arbora_ai.llm.provider import LLMProvider, LLMSchemaError, LLMUnavailableError
+from arbora_ai.outline.extract import extract_outline, extract_unit_info, syllabus_to_text
+from arbora_ai.schemas.output import OutlineExtraction, UnitInfoExtraction
 
 SYLLABUS = (
     "BIOL101 Cell Biology\n"
+    "Coordinator: Dr Ada Chen (ada.chen@uni.edu)\n"
+    "Lectures are online; tutorial attendance is a hurdle requirement.\n"
     "Week 1: Introduction to cells\n"
     "Week 2: The cell membrane\n"
-    "Assignment 1 due 2026-03-15\n"
-    "Final exam 2026-06-20\n"
+    "Assignment 1 due 2026-03-15 (30%)\n"
+    "Final exam 2026-06-20 (50%)\n"
 )
+
+UNIT_INFO_PAYLOAD = {
+    "unit_code": "BIOL101",
+    "coordinator_name": "Dr Ada Chen",
+    "coordinator_contact": "ada.chen@uni.edu",
+    "delivery_summary": "Online lectures with on-campus tutorials.",
+    "classes": [
+        {
+            "label": "Tutorial",
+            "schedule": "Wed 10:00-11:00",
+            "mode": "on-campus",
+            "attendance": "attendance is a hurdle requirement",
+        }
+    ],
+    "assessments": [
+        {"name": "Assignment 1", "weight_percent": 30, "due_text": "2026-03-15"},
+        {"name": "Final exam", "weight_percent": 50, "due_text": "2026-06-20"},
+    ],
+}
 
 
 class FakeProvider(LLMProvider):
-    """Returns a schema-valid outline, branching on the requested schema."""
+    """Returns a schema-valid payload, branching on the requested schema."""
 
     def __init__(self, payload: dict | None = None):
         self._payload = payload
@@ -32,6 +53,8 @@ class FakeProvider(LLMProvider):
     def generate(self, prompt, schema=None, temperature=0.1):
         if self._payload is not None:
             return self._payload
+        if schema and "unit_code" in schema.get("properties", {}):
+            return UNIT_INFO_PAYLOAD
         return {
             "weeks": [
                 {"week_number": 1, "title": "Introduction to cells", "summary": ""},
@@ -65,6 +88,36 @@ def test_extract_outline_accepts_empty_arrays():
     result = extract_outline(empty, SYLLABUS)
     assert result.weeks == []
     assert result.deadlines == []
+
+
+def test_extract_unit_info_parses_all_sections():
+    info = extract_unit_info(FakeProvider(), SYLLABUS)
+    assert info.unit_code == "BIOL101"
+    assert info.coordinator_contact == "ada.chen@uni.edu"
+    assert info.classes[0].attendance == "attendance is a hurdle requirement"
+    assert info.assessments[0].weight_percent == 30
+    assert info.assessments[1].due_text == "2026-06-20"
+
+
+def test_extract_unit_info_degrades_to_empty_on_junk():
+    # Never schema-valid (weight 200 > 100) → empty result, no raise.
+    bad = FakeProvider(
+        {"assessments": [{"name": "A1", "weight_percent": 200}], "classes": []}
+    )
+    info = extract_unit_info(bad, SYLLABUS)
+    assert info == UnitInfoExtraction()
+
+
+def test_extract_unit_info_degrades_to_empty_when_provider_dies():
+    class DeadProvider(LLMProvider):
+        def health(self) -> bool:
+            return False
+
+        def generate(self, prompt, schema=None, temperature=0.1):
+            raise LLMUnavailableError("gone")
+
+    info = extract_unit_info(DeadProvider(), SYLLABUS)
+    assert info == UnitInfoExtraction()
 
 
 def test_syllabus_to_text_reads_text_file(tmp_path):

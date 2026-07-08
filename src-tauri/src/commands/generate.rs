@@ -399,7 +399,11 @@ async fn fetch_assignment_title(
         .ok_or_else(|| "DEADLINE_NOT_FOUND".to_string())
 }
 
-/// Chunks of the processed sources assigned to the weeks this assignment covers.
+/// Chunks for the brief: the assignment's own uploaded spec/rubric sources
+/// (`deadline_sources`) first — the most on-point material when present — then
+/// the processed sources assigned to the weeks the assignment covers. EXISTS
+/// (not JOIN) so a source matching both arms, or linked as both spec and
+/// rubric, never duplicates its chunks.
 async fn fetch_brief_chunks(
     pool: &SqlitePool,
     deadline_id: &str,
@@ -408,9 +412,15 @@ async fn fetch_brief_chunks(
         "SELECT c.source_id, c.text, c.page, c.timestamp_ms, c.chunk_index
          FROM chunks c
          JOIN sources s ON s.id = c.source_id
-         JOIN assignment_coverage ac ON ac.week_id = s.week_id
-         WHERE ac.deadline_id = ?1 AND s.ingest_state = 'processed'
-         ORDER BY s.id, c.chunk_index
+         WHERE s.ingest_state = 'processed' AND (
+            EXISTS (SELECT 1 FROM deadline_sources ds
+                    WHERE ds.source_id = s.id AND ds.deadline_id = ?1)
+            OR EXISTS (SELECT 1 FROM assignment_coverage ac
+                       WHERE ac.deadline_id = ?1 AND ac.week_id = s.week_id)
+         )
+         ORDER BY NOT EXISTS (SELECT 1 FROM deadline_sources ds
+                              WHERE ds.source_id = s.id AND ds.deadline_id = ?1),
+                  s.id, c.chunk_index
          LIMIT ?2",
     )
     .bind(deadline_id)
@@ -418,6 +428,46 @@ async fn fetch_brief_chunks(
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())
+}
+
+/// Cap the rubric context passed to the sidecar — it steers the prompt, it is
+/// not source material, so it must never crowd out the chunks.
+const MAX_RUBRIC_CONTEXT_CHARS: usize = 1500;
+
+/// A compact plain-text digest of the assignment's rubric ("- name (weight):
+/// top-level descriptor"), or "" when no rubric was imported. Passed to the
+/// sidecar as prompt context only; citations still come from chunks (law #1).
+async fn fetch_rubric_context(pool: &SqlitePool, deadline_id: &str) -> Result<String, String> {
+    let rows: Vec<(String, String, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT rc.name, rc.weight_text, rl.label, rl.descriptor
+         FROM rubric_criteria rc
+         LEFT JOIN rubric_levels rl ON rl.criterion_id = rc.id AND rl.position = 0
+         WHERE rc.deadline_id = ?1
+         ORDER BY rc.position",
+    )
+    .bind(deadline_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let mut out = String::new();
+    for (name, weight, label, descriptor) in rows {
+        let mut line = format!("- {name}");
+        if !weight.is_empty() {
+            line.push_str(&format!(" ({weight})"));
+        }
+        match (label.as_deref(), descriptor.as_deref()) {
+            (Some(l), Some(d)) if !d.is_empty() => line.push_str(&format!(": {l} — {d}")),
+            (Some(l), _) if !l.is_empty() => line.push_str(&format!(": {l}")),
+            _ => {}
+        }
+        if out.len() + line.len() + 1 > MAX_RUBRIC_CONTEXT_CHARS {
+            break;
+        }
+        out.push_str(&line);
+        out.push('\n');
+    }
+    Ok(out.trim_end().to_string())
 }
 
 /// Persist the brief and its citations, staged for the review gate. Returns the
@@ -476,8 +526,12 @@ pub async fn generate_assignment_brief(
     let title = fetch_assignment_title(pool.inner(), &deadline_id, &subject_id).await?;
     let chunks = fetch_brief_chunks(pool.inner(), &deadline_id).await?;
     if chunks.is_empty() {
-        return Err("no processed material in the weeks this assignment covers".to_string());
+        return Err(
+            "no processed material — upload the assignment's spec or assign material to the weeks it covers"
+                .to_string(),
+        );
     }
+    let rubric = fetch_rubric_context(pool.inner(), &deadline_id).await?;
     let base = sidecar
         .base_url()
         .filter(|_| sidecar.is_ready())
@@ -501,7 +555,7 @@ pub async fn generate_assignment_brief(
         .header("X-Arbora-Token", &token)
         .json(&json!({
             "job_id": job_id, "subject_id": subject_id, "deadline_id": deadline_id,
-            "assignment_title": title, "chunks": chunk_json,
+            "assignment_title": title, "chunks": chunk_json, "rubric": rubric,
             "llm_config": { "provider": "ollama" }, "preset": preset,
         }))
         .send()
@@ -803,5 +857,89 @@ mod tests {
         let chunks = fetch_brief_chunks(&pool, "d").await.unwrap();
         assert_eq!(chunks.len(), 1, "only the covered week's chunk");
         assert_eq!(chunks[0].text, "covered text");
+    }
+
+    #[tokio::test]
+    async fn brief_chunks_put_linked_spec_first_without_duplicates() {
+        let pool = seeded_pool().await;
+        sqlx::query(
+            "INSERT INTO weeks (id,subject_id,week_number,created_at) VALUES ('w1','subj1',1,'t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("UPDATE sources SET week_id='w1' WHERE id='src1'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO deadlines (id,subject_id,title,due_at,type,created_at) VALUES ('d','subj1','Essay','2026-03-20T09:00:00Z','assignment','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO assignment_coverage (deadline_id,week_id) VALUES ('d','w1')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO chunks (id,source_id,subject_id,text,page,faiss_id,chunk_index) VALUES ('ch','src1','subj1','week material',1,0,0)")
+            .execute(&pool).await.unwrap();
+        // The uploaded spec: linked to the deadline AND (worst case) also
+        // assigned to the covered week + linked twice (spec and rubric roles).
+        sqlx::query("INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,week_id,created_at) VALUES ('spec','subj1','pdf','/s.pdf','Spec','processed','w1','t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO chunks (id,source_id,subject_id,text,page,faiss_id,chunk_index) VALUES ('chs','spec','subj1','spec text',1,1,0)")
+            .execute(&pool).await.unwrap();
+        for role in ["spec", "rubric"] {
+            sqlx::query("INSERT INTO deadline_sources (deadline_id,role,source_id,created_at) VALUES ('d',?1,'spec','t')")
+                .bind(role)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+
+        let chunks = fetch_brief_chunks(&pool, "d").await.unwrap();
+        assert_eq!(
+            chunks.len(),
+            2,
+            "no duplicate rows for the doubly-linked spec"
+        );
+        assert_eq!(chunks[0].text, "spec text", "linked source ranks first");
+        assert_eq!(chunks[1].text, "week material");
+    }
+
+    #[tokio::test]
+    async fn rubric_context_formats_and_stays_bounded() {
+        let pool = seeded_pool().await;
+        sqlx::query("INSERT INTO deadlines (id,subject_id,title,due_at,type,created_at) VALUES ('d','subj1','Essay','2026-03-20T09:00:00Z','assignment','t')")
+            .execute(&pool).await.unwrap();
+
+        assert_eq!(
+            fetch_rubric_context(&pool, "d").await.unwrap(),
+            "",
+            "no rubric → empty context"
+        );
+
+        sqlx::query("INSERT INTO rubric_criteria (id,deadline_id,name,weight_text,position,created_at) VALUES ('c1','d','Accuracy','40%',0,'t')")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO rubric_levels (id,criterion_id,label,descriptor,position) VALUES ('l1','c1','HD','All mechanisms correct.',0)")
+            .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO rubric_criteria (id,deadline_id,name,weight_text,position,created_at) VALUES ('c2','d','Referencing','',1,'t')")
+            .execute(&pool).await.unwrap();
+
+        let ctx = fetch_rubric_context(&pool, "d").await.unwrap();
+        assert_eq!(
+            ctx,
+            "- Accuracy (40%): HD — All mechanisms correct.\n- Referencing"
+        );
+
+        // A pathological rubric never exceeds the prompt budget.
+        for i in 0..100 {
+            sqlx::query("INSERT INTO rubric_criteria (id,deadline_id,name,weight_text,position,created_at) VALUES (?1,'d',?2,'',?3,'t')")
+                .bind(format!("cx{i}"))
+                .bind("X".repeat(190))
+                .bind(10 + i)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+        let ctx = fetch_rubric_context(&pool, "d").await.unwrap();
+        assert!(ctx.len() <= MAX_RUBRIC_CONTEXT_CHARS);
     }
 }

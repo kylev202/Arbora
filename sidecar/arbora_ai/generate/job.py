@@ -66,6 +66,7 @@ def run_assignment_brief(
     chunks: list[dict[str, Any]],
     assignment_title: str,
     llm_config: dict[str, Any],
+    rubric: str = "",
 ) -> None:
     """Generate a grounded study brief from the covered weeks' chunks and store
     {content, source_refs} in `job.result`. Same job/progress shape as
@@ -85,7 +86,7 @@ def run_assignment_brief(
         job.meta["items_generated"] = accepted
 
     content, refs, _stats = generate_brief(
-        provider, rebuilt, assignment_title, progress_cb=on_progress
+        provider, rebuilt, assignment_title, progress_cb=on_progress, rubric=rubric
     )
 
     job.result = {"content": content, "source_refs": [r.model_dump() for r in refs]}

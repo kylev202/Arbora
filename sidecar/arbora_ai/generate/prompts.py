@@ -125,9 +125,19 @@ def walkthrough_lesson_prompt(chunks: list[Chunk], lesson_number: int, lesson_to
     )
 
 
-def brief_point_prompt(chunk: Chunk, assignment_title: str) -> str:
+def brief_point_prompt(chunk: Chunk, assignment_title: str, rubric: str = "") -> str:
+    # The rubric only *steers* which points are worth making — the point must
+    # still be drawn from (and its excerpt verbatim in) the passage, so the
+    # grounding contract (law #1) is unchanged.
+    rubric_block = (
+        f"The marking rubric rewards:\n{rubric}\n"
+        "Prefer points that help the student meet these criteria.\n\n"
+        if rubric
+        else ""
+    )
     return (
         f"You are helping a student prepare for an assignment: {assignment_title}. {_RULES}\n\n"
+        f"{rubric_block}"
         f"{_ctx(chunk)}\n\n"
         "Write ONE concrete thing the student should focus on for this assignment, "
         "drawn only from the passage:\n"

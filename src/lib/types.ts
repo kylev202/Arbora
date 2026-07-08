@@ -243,9 +243,50 @@ export type ParsedDeadline = {
   type: DeadlineType;
 };
 
+export type ParsedClass = {
+  label: string;
+  schedule: string;
+  mode: string;
+  attendance: string;
+};
+
+export type ParsedAssessment = {
+  name: string;
+  /** 0 = the syllabus didn't state a weighting. */
+  weight_percent: number;
+  due_text: string;
+};
+
+export type ParsedUnitInfo = {
+  unit_code: string;
+  coordinator_name: string;
+  coordinator_contact: string;
+  delivery_summary: string;
+  classes: ParsedClass[];
+  assessments: ParsedAssessment[];
+};
+
 export type ParsedOutline = {
   weeks: ParsedWeek[];
   deadlines: ParsedDeadline[];
+  unit_info: ParsedUnitInfo;
+};
+
+/** Stored unit info, as `get_unit_info` returns it (null = never imported). */
+export type UnitClass = {
+  id: string;
+  label: string;
+  schedule: string;
+  mode: string;
+  attendance: string;
+};
+
+export type UnitInfo = {
+  unit_code: string;
+  coordinator_name: string;
+  coordinator_contact: string;
+  delivery_summary: string;
+  classes: UnitClass[];
 };
 
 // ── Planning ─────────────────────────────────────────────────────────────
@@ -256,6 +297,52 @@ export type Deadline = {
   title: string;
   due_at: string;
   type: DeadlineType;
+};
+
+/** An assignment spec parsed by the AI sidecar but **not yet committed** —
+ * reviewed/edited in a modal, then `commitAssignmentSpec` persists it. */
+export type ParsedSpec = {
+  overview: string;
+  /** ISO date (YYYY-MM-DD) or "" — only applied when the user opts in. */
+  due_date: string;
+  requirements: string[];
+  process_steps: string[];
+  plan_steps: string[];
+};
+
+export type ParsedRubricLevel = { label: string; descriptor: string };
+export type ParsedRubricCriterion = {
+  name: string;
+  weight_text: string;
+  levels: ParsedRubricLevel[];
+};
+export type ParsedRubric = { criteria: ParsedRubricCriterion[] };
+
+/** Stored assignment detail, as `getAssignmentDetail` returns it. */
+export type AssignmentItemKind = "requirement" | "process" | "plan";
+export type AssignmentItem = {
+  id: string;
+  kind: AssignmentItemKind;
+  text: string;
+  done: boolean;
+  /** Set once the step was added to Todos (idempotent). */
+  todo_id: string | null;
+};
+
+export type RubricLevel = { label: string; descriptor: string };
+export type RubricCriterion = {
+  id: string;
+  name: string;
+  weight_text: string;
+  levels: RubricLevel[];
+};
+
+export type AssignmentDetail = {
+  overview: string;
+  items: AssignmentItem[];
+  criteria: RubricCriterion[];
+  spec_source_id: string | null;
+  rubric_source_id: string | null;
 };
 
 export type Grade = {

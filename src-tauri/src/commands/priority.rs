@@ -255,11 +255,13 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        // Set AFTER migrate to match db.rs, where table-rebuild migrations
+        // (0017) run with foreign keys off.
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&pool)
             .await
             .unwrap();
-        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
         sqlx::query("INSERT INTO subjects (id,name,color,created_at,updated_at) VALUES ('s','S','#000','t','t')")
             .execute(&pool).await.unwrap();
         // Two weeks.

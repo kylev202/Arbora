@@ -60,10 +60,83 @@ pub struct ParsedDeadline {
     kind: String,
 }
 
+/// Unit info parsed from the syllabus alongside the schedule. Every field is
+/// optional/defaulted — the sidecar degrades this to empty rather than failing
+/// the parse, and the user reviews/edits it all before commit.
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ParsedClass {
+    #[serde(default)]
+    label: String,
+    #[serde(default)]
+    schedule: String,
+    #[serde(default)]
+    mode: String,
+    #[serde(default)]
+    attendance: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParsedAssessment {
+    name: String,
+    #[serde(default)]
+    weight_percent: f64,
+    #[serde(default)]
+    due_text: String,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ParsedUnitInfo {
+    #[serde(default)]
+    unit_code: String,
+    #[serde(default)]
+    coordinator_name: String,
+    #[serde(default)]
+    coordinator_contact: String,
+    #[serde(default)]
+    delivery_summary: String,
+    #[serde(default)]
+    classes: Vec<ParsedClass>,
+    #[serde(default)]
+    assessments: Vec<ParsedAssessment>,
+}
+
+impl ParsedUnitInfo {
+    /// True when the parse (or the user) filled nothing in — commit then leaves
+    /// any previously saved unit info untouched instead of blanking it.
+    fn is_empty(&self) -> bool {
+        self.unit_code.trim().is_empty()
+            && self.coordinator_name.trim().is_empty()
+            && self.coordinator_contact.trim().is_empty()
+            && self.delivery_summary.trim().is_empty()
+            && self.classes.is_empty()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParsedOutline {
     weeks: Vec<ParsedWeek>,
     deadlines: Vec<ParsedDeadline>,
+    #[serde(default)]
+    unit_info: ParsedUnitInfo,
+}
+
+/// Stored unit info, as the UI reads it back (`get_unit_info`).
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct UnitClass {
+    id: String,
+    label: String,
+    schedule: String,
+    mode: String,
+    attendance: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UnitInfoView {
+    unit_code: String,
+    coordinator_name: String,
+    coordinator_contact: String,
+    delivery_summary: String,
+    classes: Vec<UnitClass>,
 }
 
 const WEEK_COLS: &str = "SELECT id, subject_id, week_number, title, summary, start_date FROM weeks";
@@ -168,14 +241,16 @@ async fn set_outline_db(
 
 /// Persist a user-confirmed parsed outline in **one transaction**: set the
 /// subject's term start + week count, upsert the reviewed weeks (filling
-/// topic/summary), reconcile the count, recompute dates, and add the reviewed
-/// deadlines. Either the whole outline lands or none of it does.
+/// topic/summary), reconcile the count, recompute dates, add the reviewed
+/// deadlines, save the reviewed unit info + classes, and pre-fill the grade
+/// book from the assessment overview. Either it all lands or none of it does.
 async fn commit_parsed_outline_db(
     pool: &SqlitePool,
     subject_id: &str,
     term_start: Option<&str>,
     weeks: &[ParsedWeek],
     deadlines: &[ParsedDeadline],
+    unit_info: Option<&ParsedUnitInfo>,
 ) -> Result<Outline, String> {
     let week_count = weeks.len() as i64;
     if !(0..=MAX_WEEKS).contains(&week_count) {
@@ -261,8 +336,137 @@ async fn commit_parsed_outline_db(
         .map_err(|e| e.to_string())?;
     }
 
+    if let Some(info) = unit_info {
+        // Only write when something was extracted/entered, so re-importing a
+        // syllabus the model couldn't read doesn't blank saved unit info.
+        if !info.is_empty() {
+            sqlx::query(
+                "INSERT INTO unit_info (subject_id, unit_code, coordinator_name,
+                    coordinator_contact, delivery_summary, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+                 ON CONFLICT(subject_id) DO UPDATE SET
+                    unit_code = excluded.unit_code,
+                    coordinator_name = excluded.coordinator_name,
+                    coordinator_contact = excluded.coordinator_contact,
+                    delivery_summary = excluded.delivery_summary,
+                    updated_at = excluded.updated_at",
+            )
+            .bind(subject_id)
+            .bind(info.unit_code.trim())
+            .bind(info.coordinator_name.trim())
+            .bind(info.coordinator_contact.trim())
+            .bind(info.delivery_summary.trim())
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            // Classes are display-only and nothing references them — replace.
+            sqlx::query("DELETE FROM unit_classes WHERE subject_id = ?1")
+                .bind(subject_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            for (i, c) in info.classes.iter().enumerate() {
+                sqlx::query(
+                    "INSERT INTO unit_classes (id, subject_id, label, schedule, mode,
+                        attendance, position, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+                )
+                .bind(Uuid::new_v4().to_string())
+                .bind(subject_id)
+                .bind(c.label.trim())
+                .bind(c.schedule.trim())
+                .bind(c.mode.trim())
+                .bind(c.attendance.trim())
+                .bind(i as i64)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+
+        // Pre-fill the grade book from the assessment overview so the what-if
+        // calculator works right away. Idempotent by (case-insensitive) name:
+        // a fresh name inserts score=NULL; an ungraded row gets its weight
+        // refreshed; a graded row is never touched.
+        for a in &info.assessments {
+            let name = a.name.trim();
+            if name.is_empty() {
+                continue;
+            }
+            let weight = a.weight_percent.clamp(0.0, 100.0) / 100.0;
+            let existing: Option<(String, Option<f64>)> = sqlx::query_as(
+                "SELECT id, score FROM grades
+                 WHERE subject_id = ?1 AND lower(trim(name)) = lower(trim(?2)) LIMIT 1",
+            )
+            .bind(subject_id)
+            .bind(name)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+            match existing {
+                None => {
+                    sqlx::query(
+                        "INSERT INTO grades (id, subject_id, name, category, score,
+                            max_score, weight, created_at)
+                         VALUES (?1, ?2, ?3, 'Assessment', NULL, 100, ?4,
+                            strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+                    )
+                    .bind(Uuid::new_v4().to_string())
+                    .bind(subject_id)
+                    .bind(name)
+                    .bind(weight)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+                Some((id, None)) => {
+                    sqlx::query("UPDATE grades SET weight = ?2 WHERE id = ?1")
+                        .bind(&id)
+                        .bind(weight)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                Some((_, Some(_))) => {}
+            }
+        }
+    }
+
     tx.commit().await.map_err(|e| e.to_string())?;
     get_outline_db(pool, subject_id).await
+}
+
+async fn get_unit_info_db(
+    pool: &SqlitePool,
+    subject_id: &str,
+) -> Result<Option<UnitInfoView>, String> {
+    let row: Option<(String, String, String, String)> = sqlx::query_as(
+        "SELECT unit_code, coordinator_name, coordinator_contact, delivery_summary
+         FROM unit_info WHERE subject_id = ?1",
+    )
+    .bind(subject_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    let Some((unit_code, coordinator_name, coordinator_contact, delivery_summary)) = row else {
+        return Ok(None);
+    };
+    let classes = sqlx::query_as::<_, UnitClass>(
+        "SELECT id, label, schedule, mode, attendance FROM unit_classes
+         WHERE subject_id = ?1 ORDER BY position",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(Some(UnitInfoView {
+        unit_code,
+        coordinator_name,
+        coordinator_contact,
+        delivery_summary,
+        classes,
+    }))
 }
 
 async fn update_week_db(
@@ -409,7 +613,7 @@ pub async fn get_assignment_coverage(
 // the user's own syllabus; this command just relays it back uncommitted. Nothing
 // is written until `commit_parsed_outline` (review-before-trust, ADR-0006).
 
-async fn fetch_preset(pool: &SqlitePool) -> String {
+pub(crate) async fn fetch_preset(pool: &SqlitePool) -> String {
     sqlx::query_as::<_, (String,)>("SELECT ai_preset FROM settings WHERE id = 1")
         .fetch_one(pool)
         .await
@@ -462,6 +666,7 @@ pub async fn commit_parsed_outline(
     term_start: Option<String>,
     weeks: Vec<ParsedWeek>,
     deadlines: Vec<ParsedDeadline>,
+    unit_info: Option<ParsedUnitInfo>,
 ) -> Result<Outline, String> {
     commit_parsed_outline_db(
         pool.inner(),
@@ -469,8 +674,17 @@ pub async fn commit_parsed_outline(
         term_start.as_deref(),
         &weeks,
         &deadlines,
+        unit_info.as_ref(),
     )
     .await
+}
+
+#[tauri::command]
+pub async fn get_unit_info(
+    pool: State<'_, SqlitePool>,
+    subject_id: String,
+) -> Result<Option<UnitInfoView>, String> {
+    get_unit_info_db(pool.inner(), &subject_id).await
 }
 
 #[cfg(test)]
@@ -484,13 +698,14 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
         // Foreign keys aren't on by default for :memory: pools; the SET NULL /
-        // CASCADE behaviour we rely on needs them.
+        // CASCADE behaviour we rely on needs them. Set AFTER migrate to match
+        // db.rs, where table-rebuild migrations (0017) run with FKs off.
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&pool)
             .await
             .unwrap();
-        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
         sqlx::query("INSERT INTO subjects (id,name,color,created_at,updated_at) VALUES ('s','S','#000','t','t')")
             .execute(&pool).await.unwrap();
         pool
@@ -652,9 +867,10 @@ mod tests {
             pdeadline("No date yet", "", "assignment"), // skipped — user left it blank
         ];
 
-        let outline = commit_parsed_outline_db(&pool, "s", Some("2026-02-23"), &weeks, &deadlines)
-            .await
-            .unwrap();
+        let outline =
+            commit_parsed_outline_db(&pool, "s", Some("2026-02-23"), &weeks, &deadlines, None)
+                .await
+                .unwrap();
         assert_eq!(outline.week_count, Some(3));
         assert_eq!(outline.weeks[1].title, "Membranes");
         assert_eq!(outline.weeks[0].start_date.as_deref(), Some("2026-02-23"));
@@ -683,7 +899,7 @@ mod tests {
             .bind(&week2).execute(&pool).await.unwrap();
 
         // Committing a parsed 2-week outline upserts weeks 1-2 and prunes week 3.
-        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A"), pweek(2, "B")], &[])
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A"), pweek(2, "B")], &[], None)
             .await
             .unwrap();
 
@@ -703,8 +919,143 @@ mod tests {
     async fn commit_rejects_too_many_weeks() {
         let pool = mem_pool().await;
         let weeks: Vec<ParsedWeek> = (1..=MAX_WEEKS + 1).map(|n| pweek(n, "x")).collect();
-        assert!(commit_parsed_outline_db(&pool, "s", None, &weeks, &[])
+        assert!(
+            commit_parsed_outline_db(&pool, "s", None, &weeks, &[], None)
+                .await
+                .is_err()
+        );
+    }
+
+    // ── Unit info + grades pre-fill ─────────────────────────────────────────
+
+    fn punit(code: &str, assessments: Vec<ParsedAssessment>) -> ParsedUnitInfo {
+        ParsedUnitInfo {
+            unit_code: code.into(),
+            coordinator_name: "Dr Ada Chen".into(),
+            coordinator_contact: "ada@uni.edu".into(),
+            delivery_summary: "Online lectures, on-campus tutorials.".into(),
+            classes: vec![ParsedClass {
+                label: "Tutorial".into(),
+                schedule: "Wed 10:00-11:00".into(),
+                mode: "on-campus".into(),
+                attendance: "hurdle requirement".into(),
+            }],
+            assessments,
+        }
+    }
+
+    fn passess(name: &str, weight: f64) -> ParsedAssessment {
+        ParsedAssessment {
+            name: name.into(),
+            weight_percent: weight,
+            due_text: String::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn commit_writes_unit_info_and_prefills_grades() {
+        let pool = mem_pool().await;
+        let info = punit(
+            "BIOL101",
+            vec![passess("Assignment 1", 30.0), passess("Final exam", 50.0)],
+        );
+
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A")], &[], Some(&info))
             .await
-            .is_err());
+            .unwrap();
+
+        let stored = get_unit_info_db(&pool, "s").await.unwrap().unwrap();
+        assert_eq!(stored.unit_code, "BIOL101");
+        assert_eq!(stored.classes.len(), 1);
+        assert_eq!(stored.classes[0].attendance, "hurdle requirement");
+
+        // Assessments landed in the grade book, score empty, weight %→fraction.
+        let grades: Vec<(String, Option<f64>, f64)> = sqlx::query_as(
+            "SELECT name, score, weight FROM grades WHERE subject_id='s' ORDER BY name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(grades.len(), 2);
+        assert_eq!(grades[0], ("Assignment 1".into(), None, 0.3));
+        assert_eq!(grades[1], ("Final exam".into(), None, 0.5));
+    }
+
+    #[tokio::test]
+    async fn reimport_updates_ungraded_weight_and_never_touches_graded_rows() {
+        let pool = mem_pool().await;
+        let first = punit("BIOL101", vec![passess("Assignment 1", 30.0)]);
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A")], &[], Some(&first))
+            .await
+            .unwrap();
+
+        // The user grades Assignment 1, then re-imports a corrected syllabus
+        // where its weight changed and a new assessment appears.
+        sqlx::query("UPDATE grades SET score = 82 WHERE subject_id='s'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let second = punit(
+            "BIOL101",
+            vec![passess("assignment 1", 40.0), passess("Quiz", 10.0)],
+        );
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A")], &[], Some(&second))
+            .await
+            .unwrap();
+
+        let grades: Vec<(String, Option<f64>, f64)> = sqlx::query_as(
+            "SELECT name, score, weight FROM grades WHERE subject_id='s' ORDER BY name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        // Case-insensitive match → no duplicate; graded row keeps its weight.
+        assert_eq!(grades.len(), 2);
+        assert_eq!(grades[0], ("Assignment 1".into(), Some(82.0), 0.3));
+        assert_eq!(grades[1], ("Quiz".into(), None, 0.1));
+
+        // Ungraded rows DO get their weight refreshed on a later re-import.
+        let third = punit("BIOL101", vec![passess("Quiz", 15.0)]);
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A")], &[], Some(&third))
+            .await
+            .unwrap();
+        let (quiz_weight,): (f64,) =
+            sqlx::query_as("SELECT weight FROM grades WHERE subject_id='s' AND name='Quiz'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(quiz_weight, 0.15);
+    }
+
+    #[tokio::test]
+    async fn empty_unit_info_does_not_blank_saved_data() {
+        let pool = mem_pool().await;
+        let info = punit("BIOL101", vec![]);
+        commit_parsed_outline_db(&pool, "s", None, &[pweek(1, "A")], &[], Some(&info))
+            .await
+            .unwrap();
+
+        // A re-import whose unit-info extraction degraded to empty leaves the
+        // saved info (and classes) alone.
+        commit_parsed_outline_db(
+            &pool,
+            "s",
+            None,
+            &[pweek(1, "A")],
+            &[],
+            Some(&ParsedUnitInfo::default()),
+        )
+        .await
+        .unwrap();
+
+        let stored = get_unit_info_db(&pool, "s").await.unwrap().unwrap();
+        assert_eq!(stored.unit_code, "BIOL101");
+        assert_eq!(stored.classes.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn unit_info_absent_returns_none() {
+        let pool = mem_pool().await;
+        assert!(get_unit_info_db(&pool, "s").await.unwrap().is_none());
     }
 }

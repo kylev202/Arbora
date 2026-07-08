@@ -18,6 +18,8 @@ class FakeProvider:
         return True
 
     def generate(self, prompt, schema=None, temperature=0.1):
+        if schema and "unit_code" in schema.get("properties", {}):
+            return {"unit_code": "BIOL101", "classes": [], "assessments": []}
         return {
             "weeks": [
                 {"week_number": 1, "title": "Cells", "summary": ""},
@@ -47,6 +49,8 @@ def test_parse_outline_flow(monkeypatch, tmp_path):
     data = res.json()
     assert [w["week_number"] for w in data["weeks"]] == [1, 2]
     assert data["deadlines"][0]["type"] == "exam"
+    assert data["unit_info"]["unit_code"] == "BIOL101"
+    assert data["unit_info"]["coordinator_name"] == ""  # defaulted, never invented
 
 
 def test_parse_outline_rejects_unsupported_file(monkeypatch, tmp_path):

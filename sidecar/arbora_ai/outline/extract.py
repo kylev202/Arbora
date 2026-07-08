@@ -14,14 +14,18 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from ..ingest.parse import parse_docx, parse_pdf, parse_pptx
-from ..llm.provider import LLMProvider, LLMSchemaError
-from ..schemas.output import OutlineExtraction
+from ..llm.provider import LLMProvider, LLMSchemaError, LLMUnavailableError
+from ..schemas.output import OutlineExtraction, UnitInfoExtraction
 
 MAX_STRUCTURE_RETRIES = 3
 
 # Small local models have a small context window; a long syllabus would overflow
 # it. Syllabi put the schedule up front, so the head is what matters.
 MAX_SYLLABUS_CHARS = 12000
+
+# Unit info (code, coordinator, classes, assessment table) sits even closer to
+# the top of a syllabus, so the second extraction call reads a shorter head.
+MAX_UNIT_INFO_CHARS = 8000
 
 _PDF = {".pdf"}
 _SLIDE = {".pptx", ".ppt"}
@@ -93,3 +97,47 @@ def extract_outline(provider: LLMProvider, text: str) -> OutlineExtraction:
             last_err = exc
             continue
     raise LLMSchemaError(f"could not extract a structured outline after retries: {last_err}")
+
+
+def unit_info_prompt(text: str) -> str:
+    """Instruction for the unit-info extraction (call 2 of /parse-outline)."""
+    return (
+        "You are extracting key unit information from a university unit syllabus.\n"
+        "Use ONLY information stated in the syllabus below. Do NOT invent "
+        "anything — leave a field as an empty string (or an array empty) if the "
+        "syllabus doesn't state it.\n\n"
+        "Return JSON with:\n"
+        "- unit_code: the unit/course code (e.g. 'COMP1010').\n"
+        "- coordinator_name: the unit coordinator or lecturer in charge.\n"
+        "- coordinator_contact: their email or other contact given.\n"
+        "- delivery_summary: 1-3 sentences on how the unit runs (delivery mode, "
+        "weekly structure, expectations).\n"
+        "- classes: each {label (e.g. 'Lecture', 'Tutorial', 'Lab'), schedule "
+        "(day and time as written, e.g. 'Wed 10:00-11:00', else empty), mode "
+        "(e.g. 'on-campus', 'online', else empty), attendance (what attendance "
+        "is expected or required, e.g. 'attendance is a hurdle requirement', "
+        "else empty)}.\n"
+        "- assessments: each {name (e.g. 'Assignment 1'), weight_percent "
+        "(number 0-100, 0 if no weighting is stated), due_text (the due date/"
+        "week exactly as written, else empty)}.\n\n"
+        "--- SYLLABUS ---\n"
+        f"{text}\n"
+        "--- END SYLLABUS ---"
+    )
+
+
+def extract_unit_info(provider: LLMProvider, text: str) -> UnitInfoExtraction:
+    """Constrained-generate the unit info. Unlike the outline, any failure
+    degrades to an empty UnitInfoExtraction instead of raising: the schedule is
+    the point of the parse, unit info is a bonus the user can type in. That
+    includes the provider dying mid-request — the caller already has the
+    outline by then, and a 503 would throw it away."""
+    schema = UnitInfoExtraction.model_json_schema()
+    prompt = unit_info_prompt(text[:MAX_UNIT_INFO_CHARS])
+    for attempt in range(MAX_STRUCTURE_RETRIES):
+        try:
+            raw = provider.generate(prompt, schema=schema, temperature=0.1 + attempt * 0.05)
+            return UnitInfoExtraction.model_validate(raw)
+        except (LLMSchemaError, ValidationError, LLMUnavailableError):
+            continue
+    return UnitInfoExtraction()

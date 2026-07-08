@@ -81,6 +81,16 @@ export const api = {
   getPriorityQueue: ipc.getPriorityQueue,
   parseOutlineFile: ipc.parseOutlineFile,
   commitParsedOutline: ipc.commitParsedOutline,
+  getUnitInfo: ipc.getUnitInfo,
+
+  // ── Assignment spec + rubric ──
+  parseAssignmentSpec: ipc.parseAssignmentSpec,
+  parseRubric: ipc.parseRubric,
+  commitAssignmentSpec: ipc.commitAssignmentSpec,
+  commitRubric: ipc.commitRubric,
+  getAssignmentDetail: ipc.getAssignmentDetail,
+  setAssignmentItemDone: ipc.setAssignmentItemDone,
+  addAssignmentStepTodo: ipc.addAssignmentStepTodo,
 
   // ── Slice 4c — Settings (live) ──
   getSettings: ipc.getSettings,

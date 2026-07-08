@@ -5,6 +5,7 @@
 //! `src/lib/ipc.ts` — keep the two in sync.
 
 pub mod assess;
+pub mod assignment;
 pub mod chat;
 pub mod content;
 pub mod dashboard;

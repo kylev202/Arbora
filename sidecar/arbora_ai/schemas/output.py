@@ -269,3 +269,69 @@ class DeadlineExtraction(BaseModel):
 class OutlineExtraction(BaseModel):
     weeks: list[WeekExtraction] = Field(default_factory=list)
     deadlines: list[DeadlineExtraction] = Field(default_factory=list)
+
+
+# ── Unit info extraction (second call within /parse-outline) ────────────────
+# Same posture as the outline: extract only what the syllabus states, every
+# field reviewed/editable before commit, constraints loose for a small model.
+# All fields default so the whole thing can degrade to empty when the model
+# can't fill it — unit info is a bonus on top of the schedule, never a blocker.
+
+
+class ClassExtraction(BaseModel):
+    label: str = Field(default="", max_length=80)  # Lecture / Tutorial / Lab …
+    schedule: str = Field(default="", max_length=200)  # "Wed 10:00–11:00"
+    mode: str = Field(default="", max_length=40)  # on-campus / online / hybrid…
+    attendance: str = Field(default="", max_length=300)  # e.g. "hurdle requirement"
+
+
+class AssessmentExtraction(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    weight_percent: float = Field(default=0, ge=0, le=100)  # 0 = not stated
+    due_text: str = Field(default="", max_length=120)  # verbatim, review-only
+
+
+class UnitInfoExtraction(BaseModel):
+    unit_code: str = Field(default="", max_length=40)
+    coordinator_name: str = Field(default="", max_length=120)
+    coordinator_contact: str = Field(default="", max_length=200)
+    delivery_summary: str = Field(default="", max_length=600)
+    classes: list[ClassExtraction] = Field(default_factory=list)
+    assessments: list[AssessmentExtraction] = Field(default_factory=list)
+
+
+class OutlineParseResult(OutlineExtraction):
+    """Full /parse-outline response: schedule + unit info (two LLM calls)."""
+
+    unit_info: UnitInfoExtraction = Field(default_factory=UnitInfoExtraction)
+
+
+# ── Assignment spec + rubric extraction ──────────────────────────────────────
+# Same review-before-commit posture as the outline (ADR-0006): extracted from
+# the user's own uploaded file, every row editable, nothing written until the
+# user accepts. Loose constraints for small-model reliability.
+
+SpecItem = Annotated[str, Field(min_length=1, max_length=400)]
+
+
+class SpecExtraction(BaseModel):
+    overview: str = Field(default="", max_length=1500)
+    due_date: str = Field(default="", max_length=40)  # plain string, like DeadlineExtraction
+    requirements: list[SpecItem] = Field(default_factory=list)
+    process_steps: list[SpecItem] = Field(default_factory=list)  # how submission/marking runs
+    plan_steps: list[SpecItem] = Field(default_factory=list)  # steps to finish the work
+
+
+class RubricLevelExtraction(BaseModel):
+    label: str = Field(default="", max_length=60)  # e.g. HD / Credit / Pass
+    descriptor: str = Field(default="", max_length=600)
+
+
+class RubricCriterionExtraction(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    weight_text: str = Field(default="", max_length=40)  # loose: "30%", "3 marks", ""
+    levels: list[RubricLevelExtraction] = Field(default_factory=list)
+
+
+class RubricExtraction(BaseModel):
+    criteria: list[RubricCriterionExtraction] = Field(default_factory=list)

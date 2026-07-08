@@ -61,6 +61,38 @@ def test_generate_brief_respects_max_points():
     assert len(refs) == 1  # same point text deduped
 
 
+def test_brief_prompt_includes_rubric_only_when_given():
+    from arbora_ai.generate.prompts import brief_point_prompt
+
+    chunk = _chunk(CHUNK_A, 0)
+    plain = brief_point_prompt(chunk, "Bio essay")
+    assert "marking rubric" not in plain
+
+    steered = brief_point_prompt(chunk, "Bio essay", rubric="- Accuracy (40%)")
+    assert "The marking rubric rewards:" in steered
+    assert "- Accuracy (40%)" in steered
+    # The grounding instructions are unchanged — rubric steers, never sources.
+    assert "drawn only from the passage" in steered
+
+
+def test_generate_brief_grounding_still_applies_with_rubric():
+    # An ungrounded excerpt is dropped even when a rubric steers the prompt.
+    class Ungrounded(LLMProvider):
+        def health(self):
+            return True
+
+        def generate(self, prompt, schema=None, temperature=0.1):
+            assert "The marking rubric rewards:" in prompt  # rubric reached the prompt
+            return {"point": "A point with no real support.", "excerpt": "not present anywhere"}
+
+    content, refs, stats = generate_brief(
+        Ungrounded(), [_chunk(CHUNK_A, 0)], "Essay", rubric="- Accuracy"
+    )
+    assert content == ""
+    assert refs == []
+    assert stats.grounding_drops == 1
+
+
 def test_generate_brief_empty_when_nothing_grounds():
     # excerpt never in chunk → no points kept, brief is empty (never invented)
     class Ungrounded(LLMProvider):

@@ -24,6 +24,76 @@
   color: var(--color-text-muted);
 }
 
+/* ── Unit info card (from syllabus import, display only) ── */
+.unitCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.unitHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.unitCode {
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+.unitDelivery {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.unitClasses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unitClass {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.unitClassLabel {
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+.unitClassMode {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--text-xs);
+}
+
+.unitClassAttendance {
+  font-style: italic;
+}
+
 .weeks {
   display: flex;
   flex-direction: column;

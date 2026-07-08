@@ -51,10 +51,17 @@
   gap: var(--space-4);
 }
 
+.dueRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .sectionHead {
@@ -71,94 +78,44 @@
   letter-spacing: 0.04em;
 }
 
-.weekRow {
+.itemRow {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.weekNum {
-  flex: none;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-top: var(--space-1);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
+  gap: var(--space-2);
 }
 
-.weekFields {
+.itemRow > :first-child {
   flex: 1;
   min-width: 0;
+}
+
+.weight {
+  flex: 0 0 84px !important;
+}
+
+.criterion {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-/* ── Unit info / classes / assessments (review) ── */
-.infoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-2);
-}
-
-.classRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.classFields {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-.assessRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.assessRow > :nth-child(1),
-.assessRow > :nth-child(3) {
-  flex: 1;
-  min-width: 0;
-}
-
-.assessRow > :nth-child(2) {
-  flex: 0 0 84px;
-}
-
-.deadlineRow {
+.levelRow {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding-left: var(--space-4);
 }
 
-.deadlineRow > :first-child {
+.levelRow > :nth-child(2) {
   flex: 1;
   min-width: 0;
 }
 
-.typeSelect {
-  font: inherit;
-  color: var(--color-text);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
-  flex: none;
+.levelLabel {
+  flex: 0 0 96px !important;
 }
 
 .errorText {

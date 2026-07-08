@@ -14,6 +14,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   Annotation,
   AssignmentBrief,
+  AssignmentDetail,
   CalendarEvent,
   Card,
   ChatMessageResponse,
@@ -32,6 +33,9 @@ import type {
   Outline,
   ParsedDeadline,
   ParsedOutline,
+  ParsedRubric,
+  ParsedSpec,
+  ParsedUnitInfo,
   ParsedWeek,
   PetReply,
   PriorityItem,
@@ -56,6 +60,7 @@ import type {
   TestKind,
   Todo,
   TodoRepeat,
+  UnitInfo,
   UserNote,
   UserProfile,
   Week,
@@ -519,14 +524,95 @@ export function parseOutlineFile(subjectId: string, filePath: string): Promise<P
 }
 
 /** Persist a user-confirmed parsed outline in one transaction (weeks + dated
- * deadlines). Returns the resulting outline. */
+ * deadlines + unit info/classes + grade-book pre-fill from the assessment
+ * overview). Returns the resulting outline. */
 export function commitParsedOutline(
   subjectId: string,
   termStart: string | null,
   weeks: ParsedWeek[],
   deadlines: ParsedDeadline[],
+  unitInfo: ParsedUnitInfo | null,
 ): Promise<Outline> {
-  return invoke<Outline>("commit_parsed_outline", { subjectId, termStart, weeks, deadlines });
+  return invoke<Outline>("commit_parsed_outline", {
+    subjectId,
+    termStart,
+    weeks,
+    deadlines,
+    unitInfo,
+  });
+}
+
+/** Stored unit info for a subject, or null when none was ever imported. */
+export function getUnitInfo(subjectId: string): Promise<UnitInfo | null> {
+  return invoke<UnitInfo | null>("get_unit_info", { subjectId });
+}
+
+// ── Assignment spec + rubric ────────────────────────────────────────────────
+
+/** AI-parse an assignment spec file into editable requirements/steps. Writes
+ * nothing — the result is staged for review; `commitAssignmentSpec` persists. */
+export function parseAssignmentSpec(
+  subjectId: string,
+  deadlineId: string,
+  filePath: string,
+): Promise<ParsedSpec> {
+  return invoke<ParsedSpec>("parse_assignment_spec", { subjectId, deadlineId, filePath });
+}
+
+/** AI-parse a rubric file into editable criteria × levels. Writes nothing. */
+export function parseRubric(
+  subjectId: string,
+  deadlineId: string,
+  filePath: string,
+): Promise<ParsedRubric> {
+  return invoke<ParsedRubric>("parse_rubric", { subjectId, deadlineId, filePath });
+}
+
+/** Persist a user-confirmed spec in one transaction (overview + items, with
+ * checklist state carried across re-uploads; optional due-date update) and add
+ * the file to the source library linked to the deadline. Returns the new
+ * source — call `ingestSource` on it so briefs can cite the spec. */
+export function commitAssignmentSpec(
+  subjectId: string,
+  deadlineId: string,
+  filePath: string,
+  spec: ParsedSpec,
+  updateDue: boolean,
+): Promise<Source> {
+  return invoke<Source>("commit_assignment_spec", {
+    subjectId,
+    deadlineId,
+    filePath,
+    spec,
+    updateDue,
+  });
+}
+
+/** Persist a user-confirmed rubric (wholesale replace) and add the file to the
+ * source library linked to the deadline. Returns the new source. */
+export function commitRubric(
+  subjectId: string,
+  deadlineId: string,
+  filePath: string,
+  rubric: ParsedRubric,
+): Promise<Source> {
+  return invoke<Source>("commit_rubric", { subjectId, deadlineId, filePath, rubric });
+}
+
+/** Stored assignment detail (overview, checklist items, rubric, file links). */
+export function getAssignmentDetail(deadlineId: string): Promise<AssignmentDetail> {
+  return invoke<AssignmentDetail>("get_assignment_detail", { deadlineId });
+}
+
+/** Toggle one checklist item. */
+export function setAssignmentItemDone(itemId: string, done: boolean): Promise<void> {
+  return invoke<void>("set_assignment_item_done", { itemId, done });
+}
+
+/** Turn one plan step into a todo (source 'ai', no due date). Idempotent:
+ * a step already linked to a live todo returns that todo. */
+export function addAssignmentStepTodo(itemId: string): Promise<Todo> {
+  return invoke<Todo>("add_assignment_step_todo", { itemId });
 }
 
 // ── Settings singleton (Slice 4) ───────────────────────────────────────────

@@ -57,6 +57,7 @@ def generate_brief(
     max_points: int = DEFAULT_MAX_POINTS,
     base_temp: float = 0.1,
     progress_cb: Callable[[int, int, int], None] | None = None,
+    rubric: str = "",
 ) -> tuple[str, list[SourceRef], BriefStats]:
     """Generate up to `max_points` grounded focus points and assemble them into a
     single brief. Returns (markdown_content, source_refs, stats)."""
@@ -69,7 +70,9 @@ def generate_brief(
     for done, chunk in enumerate(chunks, start=1):
         if len(refs) < max_points:
             stats.attempts += 1
-            gen = _generate_point(provider, brief_point_prompt(chunk, assignment_title), base_temp)
+            gen = _generate_point(
+                provider, brief_point_prompt(chunk, assignment_title, rubric), base_temp
+            )
             if gen is None:
                 stats.structure_fails += 1
             elif not grounding.excerpt_grounded(gen.excerpt, chunk.text):

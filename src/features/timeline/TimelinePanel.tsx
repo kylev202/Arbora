@@ -5,7 +5,7 @@ import { Button, EmptyState } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { formatDate } from "../../lib/date";
-import type { Deadline, PriorityItem, Source, Week } from "../../lib/types";
+import type { Deadline, PriorityItem, Source, UnitInfo, Week } from "../../lib/types";
 import { EditWeekModal, SetupOutlineModal } from "../outline/OutlineEditor";
 import { ImportSyllabusModal } from "../outline/ImportSyllabusModal";
 import { WeekCard } from "./WeekCard";
@@ -23,6 +23,7 @@ export function TimelinePanel({ subjectId }: { subjectId: string }) {
   const sources = useAsync(() => api.listSources(subjectId), [subjectId, reload]);
   const deadlines = useAsync(() => api.listDeadlines(subjectId), [subjectId, reload]);
   const priority = useAsync(() => api.getPriorityQueue(subjectId), [subjectId, reload]);
+  const unitInfo = useAsync(() => api.getUnitInfo(subjectId), [subjectId, reload]);
 
   const [editingSetup, setEditingSetup] = useState(false);
   const [editingWeek, setEditingWeek] = useState<Week | null>(null);
@@ -86,6 +87,7 @@ export function TimelinePanel({ subjectId }: { subjectId: string }) {
             {data?.term_start ? `Starts ${formatDate(data.term_start)}` : "No start date set"} ·{" "}
             {data?.week_count} weeks
           </p>
+          {unitInfo.data && <UnitInfoCard info={unitInfo.data} />}
           <ol className={styles.weeks}>
             {weeks.map((w) => (
               <WeekCard
@@ -137,6 +139,38 @@ export function TimelinePanel({ subjectId }: { subjectId: string }) {
         onCommitted={refresh}
       />
     </section>
+  );
+}
+
+/**
+ * Unit info imported from the syllabus (display only): code, coordinator, how
+ * the unit runs, and each class with its expected attendance. Edits happen by
+ * re-importing the syllabus — the review modal is the single write path.
+ */
+function UnitInfoCard({ info }: { info: UnitInfo }) {
+  const coordinator = [info.coordinator_name, info.coordinator_contact && `(${info.coordinator_contact})`]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <div className={styles.unitCard}>
+      <p className={styles.unitHead}>
+        {info.unit_code && <span className={styles.unitCode}>{info.unit_code}</span>}
+        {coordinator && <span>Coordinator: {coordinator}</span>}
+      </p>
+      {info.delivery_summary && <p className={styles.unitDelivery}>{info.delivery_summary}</p>}
+      {info.classes.length > 0 && (
+        <ul className={styles.unitClasses}>
+          {info.classes.map((c) => (
+            <li key={c.id} className={styles.unitClass}>
+              <span className={styles.unitClassLabel}>{c.label || "Class"}</span>
+              {c.schedule && <span>{c.schedule}</span>}
+              {c.mode && <span className={styles.unitClassMode}>{c.mode}</span>}
+              {c.attendance && <span className={styles.unitClassAttendance}>{c.attendance}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

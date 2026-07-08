@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { CalendarBlank, Exam, FileText, Plus, Sparkle, X } from "@phosphor-icons/react";
+import { CalendarBlank, Exam, FileText, ListChecks, Plus, Sparkle, X } from "@phosphor-icons/react";
 import { Button, EmptyState, IconButton, Input, Modal, RadioGroup, Tag } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { formatDate, relativeDays } from "../../lib/date";
 import type { Deadline, DeadlineType } from "../../lib/types";
 import { AssignmentBriefModal } from "./AssignmentBriefModal";
+import { AssignmentDetailModal } from "./AssignmentDetailModal";
 import { GradeTable } from "./GradeTable";
 import styles from "./PlanScreen.module.css";
 
@@ -32,6 +33,7 @@ export function DeadlinesPanel({ subjectId }: { subjectId: string }) {
   const [addingDeadline, setAddingDeadline] = useState(false);
   const [addingGrade, setAddingGrade] = useState(false);
   const [briefFor, setBriefFor] = useState<Deadline | null>(null);
+  const [detailFor, setDetailFor] = useState<Deadline | null>(null);
 
   const refresh = () => setReload((r) => r + 1);
 
@@ -81,6 +83,16 @@ export function DeadlinesPanel({ subjectId }: { subjectId: string }) {
                 <span className={styles.dlDate}>{formatDate(d.due_at)}</span>
                 <span className={styles.dlRel}>{relativeDays(d.due_at)}</span>
                 <div className={styles.dlActions}>
+                  {d.type === "assignment" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={<ListChecks weight="regular" />}
+                      onClick={() => setDetailFor(d)}
+                    >
+                      Details
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -134,6 +146,15 @@ export function DeadlinesPanel({ subjectId }: { subjectId: string }) {
         deadline={briefFor}
         weeks={weeks}
         brief={briefFor ? (briefByDeadline.get(briefFor.id) ?? null) : null}
+      />
+      <AssignmentDetailModal
+        open={!!detailFor}
+        onClose={() => {
+          setDetailFor(null);
+          refresh();
+        }}
+        subjectId={subjectId}
+        deadline={detailFor}
       />
     </>
   );
