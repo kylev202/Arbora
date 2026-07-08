@@ -55,6 +55,12 @@ jobs:
           pip install pyinstaller==6.16.0
           python scripts/build_sidecar.py
 
+      # Prove the frozen bundle actually starts and serves before we ship it —
+      # catches a missing hidden import / native lib here instead of on a user's
+      # machine (where the sidecar would just be "unavailable" with no recourse).
+      - name: Smoke-test frozen sidecar
+        run: python scripts/smoke_sidecar.py
+
       - name: Build + release
         uses: tauri-apps/tauri-action@v0
         env:

@@ -3,6 +3,7 @@ import { AppRoutes } from "./router";
 import { OnboardingModal } from "../features/onboarding/OnboardingModal";
 import { TutorialModal } from "../features/onboarding/TutorialModal";
 import { Pet } from "../features/pet/Pet";
+import { SidecarBanner } from "./shell/SidecarBanner";
 import { SourceViewerProvider } from "../features/drive/SourceViewerProvider";
 import { QuickNoteModal } from "../features/notes/QuickNoteModal";
 import { useGlobalShortcuts } from "../lib/useGlobalShortcuts";
@@ -43,6 +44,7 @@ function App() {
   return (
     <SourceViewerProvider>
       <AppRoutes />
+      <SidecarBanner />
       {!onboarding && !tutorial && <Pet />}
       <QuickNoteModal open={quickNote} onClose={() => setQuickNote(false)} />
       <OnboardingModal open={onboarding} onFinish={finishOnboarding} />

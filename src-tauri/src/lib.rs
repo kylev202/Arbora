@@ -36,6 +36,7 @@ pub fn run() {
             commands::greet,
             commands::db_health,
             commands::sidecar_status,
+            sidecar::restart_sidecar,
             commands::get_system_info,
             commands::subjects::list_subjects,
             commands::subjects::get_subject,

@@ -1,0 +1,91 @@
+/* Floating status strip, bottom-centre — clear of the top nav and the pet
+   (bottom-right). Glass, calm, above screens but under modals. */
+.banner {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 950;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(560px, calc(100vw - var(--space-8)));
+  padding: var(--space-3) var(--space-4);
+
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
+
+  animation: banner-rise var(--motion-slow) var(--ease-out) both;
+}
+
+/* Neutral, reassuring — the engine is just warming up. */
+.calm {
+  color: var(--color-text-muted);
+}
+
+/* Gold, never red: a calm warning, not an alarm (house style). */
+.warn {
+  border-color: color-mix(in srgb, var(--color-accent-warm) 40%, var(--glass-border));
+  background: color-mix(in srgb, var(--color-accent-warm) 12%, var(--glass-bg-strong));
+}
+
+.text {
+  min-width: 0;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.icon {
+  flex: none;
+  font-size: 1.15rem;
+  color: var(--color-warning);
+}
+
+.spin {
+  flex: none;
+  font-size: 1.1rem;
+  animation: banner-spin 1s linear infinite;
+}
+
+.banner :global(button) {
+  flex: none;
+  margin-left: auto;
+}
+
+@keyframes banner-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, var(--space-3));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes banner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect reduced-motion: no spin, no slide-in. */
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+  .spin {
+    animation: none;
+  }
+}

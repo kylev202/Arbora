@@ -2,8 +2,9 @@
 """Freeze the Python AI sidecar into a standalone bundle Tauri can ship.
 
 Runs PyInstaller against ``sidecar/arbora-sidecar.spec`` and writes the onedir
-bundle to ``src-tauri/binaries/arbora-sidecar/`` — the path ``tauri.conf.json``
-lists under ``bundle.resources`` and ``sidecar.rs`` resolves at runtime.
+bundle to ``src-tauri/binaries/arbora-sidecar/`` — the path the release overlay
+``src-tauri/tauri.bundle.conf.json`` lists under ``bundle.resources`` and
+``sidecar.rs`` resolves at runtime.
 
 Run with the sidecar's environment (its deps + pyinstaller must be importable):
 

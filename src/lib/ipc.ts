@@ -104,6 +104,12 @@ export function onSidecarStatus(
   return listen<SidecarEvent>("sidecar:status", (e) => handler(e.payload));
 }
 
+/** Re-run sidecar startup after a crash (the app-shell "Try again"). Returns
+ * once the restart is kicked off; progress arrives via `onSidecarStatus`. */
+export function restartSidecar(): Promise<void> {
+  return invoke("restart_sidecar");
+}
+
 // ── Subjects (Slice 0) ─────────────────────────────────────────────────────
 
 /** All subjects, oldest first. */
