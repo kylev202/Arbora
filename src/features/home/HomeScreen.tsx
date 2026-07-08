@@ -30,6 +30,8 @@ export function HomeScreen() {
   const [forest, setForest] = useState<ForestBranchData[] | null>(null);
   const [suggested, setSuggested] = useState<{ subject: Subject; due: number } | null>(null);
   const [creating, setCreating] = useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
 
   // Local mirror of the loaded list so a fresh create shows up immediately
   // without re-fetching.
@@ -151,7 +153,12 @@ export function HomeScreen() {
           {remote.status === "loaded" && subjects.length > 0 && (
             <div className={`${styles.grid} stagger`}>
               {subjects.map((s) => (
-                <SubjectCard key={s.id} subject={s} />
+                <SubjectCard
+                  key={s.id}
+                  subject={s}
+                  onEdit={() => setEditingSubject(s)}
+                  onDelete={() => setDeletingSubject(s)}
+                />
               ))}
             </div>
           )}
@@ -171,6 +178,47 @@ export function HomeScreen() {
       </main>
 
       <CreateSubjectModal open={creating} onClose={() => setCreating(false)} onCreate={handleCreate} />
+
+      <EditSubjectModal
+        subject={editingSubject}
+        onClose={() => setEditingSubject(null)}
+        onSaved={(updated) => {
+          setSubjects((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+          setEditingSubject(null);
+        }}
+      />
+
+      <Modal
+        open={deletingSubject !== null}
+        onClose={() => setDeletingSubject(null)}
+        title="Delete subject"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeletingSubject(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                if (!deletingSubject) return;
+                await api.deleteSubject(deletingSubject.id);
+                setSubjects((prev) => prev.filter((s) => s.id !== deletingSubject.id));
+                setDeletingSubject(null);
+              }}
+            >
+              Delete subject
+            </Button>
+          </>
+        }
+      >
+        {deletingSubject && (
+          <p>
+            This removes <strong>{deletingSubject.name}</strong> with all its sources, cards, and
+            schedule from this device. There is no undo.
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -223,6 +271,76 @@ function CreateSubjectModal({
           autoFocus
         />
       </form>
+    </Modal>
+  );
+}
+
+/** Rename/recolour a subject from its ⋮ menu, without leaving Home. */
+function EditSubjectModal({
+  subject,
+  onClose,
+  onSaved,
+}: {
+  subject: Subject | null;
+  onClose: () => void;
+  onSaved: (updated: Subject) => void;
+}) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("");
+
+  useEffect(() => {
+    if (subject) {
+      setName(subject.name);
+      setColor(subject.color);
+    }
+  }, [subject]);
+
+  const valid = name.trim().length > 0;
+
+  return (
+    <Modal
+      open={subject !== null}
+      onClose={onClose}
+      title="Edit subject"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            disabled={!valid}
+            onClick={async () => {
+              if (!subject) return;
+              const updated = await api.updateSubject(subject.id, { name: name.trim(), color });
+              onSaved(updated);
+            }}
+          >
+            Save changes
+          </Button>
+        </>
+      }
+    >
+      <div className={styles.editForm}>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <fieldset className={styles.colors}>
+          <legend className={styles.colorsLegend}>Accent colour</legend>
+          <div className={styles.colorRow}>
+            {SUBJECT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`${styles.colorSwatch} ${c === color ? styles.colorActive : ""}`}
+                style={{ backgroundColor: c }}
+                aria-label={`Colour ${c}`}
+                aria-pressed={c === color}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
+        </fieldset>
+      </div>
     </Modal>
   );
 }

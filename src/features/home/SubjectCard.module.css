@@ -1,7 +1,14 @@
+/* Wraps the card link + the ⋮ menu as siblings (never nest a button inside
+   the link) so the menu can overlay the top-right corner. */
+.cardWrap {
+  position: relative;
+}
+
 /* Subject identity = dot + FULL border tint (no stripe accents — §0 bans).
    A glass pane, faintly lit by the subject's own color from within. */
 .card {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -89,4 +96,53 @@
 .metaIcon {
   flex: none;
   font-size: 1rem;
+}
+
+/* ── ⋮ menu (sibling of the card link, portaled) ── */
+.menuTrigger {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 2;
+}
+
+.menu {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), var(--glass-highlight);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out);
+}
+.menuItem:hover {
+  background: var(--color-surface-alt);
+}
+.menuItem svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+.menuDanger {
+  color: var(--color-danger, #b5524a);
 }

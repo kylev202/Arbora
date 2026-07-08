@@ -88,6 +88,46 @@
   animation: pulse 1.4s ease-in-out infinite;
 }
 
+/* ── Edit-subject modal ── */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.colors {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.colorsLegend {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-bottom: var(--space-2);
+}
+
+.colorRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+}
+.colorSwatch:hover {
+  border-color: var(--color-border-strong);
+}
+.colorActive,
+.colorActive:hover {
+  border-color: var(--color-text);
+}
+
 @keyframes pulse {
   0%,
   100% {
