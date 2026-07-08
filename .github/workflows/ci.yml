@@ -36,7 +36,7 @@ jobs:
         working-directory: sidecar
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -58,7 +58,7 @@ jobs:
       - run: npm audit --audit-level=high
 
       # pip: the lock file is fully pinned, so audit exactly those pins.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pipx run pip-audit --no-deps -r sidecar/requirements.lock
