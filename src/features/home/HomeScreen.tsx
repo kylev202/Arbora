@@ -1,17 +1,32 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Plus, Tree as TreeIcon } from "@phosphor-icons/react";
-import { Button, EmptyState, ForestTree, Input, Modal, type ForestBranchData } from "../../components";
+import {
+  Button,
+  EmptyState,
+  ForestTree,
+  Input,
+  Modal,
+  RadioGroup,
+  type ForestBranchData,
+} from "../../components";
 import { TopBar } from "../../app/shell/TopBar";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { getAchievementTree } from "../../lib/achievementTree";
-import type { Subject } from "../../lib/types";
+import { DISCIPLINES, type Discipline, type Subject } from "../../lib/types";
 import { SubjectCard } from "./SubjectCard";
 import { TodoPanel } from "./TodoPanel";
 import styles from "./HomeScreen.module.css";
 
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
+
+/** Discipline picker options — mirrors `DISCIPLINES`, shaped for `RadioGroup`. */
+const DISCIPLINE_OPTIONS = DISCIPLINES.map((d) => ({
+  value: d.value,
+  label: d.label,
+  description: d.hint,
+}));
 
 /** Neutral time-of-day greeting — no streaks, no "you've been away" (§3.1). */
 function greetingFor(name: string | null): string {
@@ -75,9 +90,9 @@ export function HomeScreen() {
     };
   }, [subjects]);
 
-  async function handleCreate(name: string) {
+  async function handleCreate(name: string, discipline: Discipline) {
     const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
-    const created = await api.createSubject(name, color);
+    const created = await api.createSubject(name, color, discipline);
     setSubjects((prev) => [...prev, created]);
     setCreating(false);
     // Land on the timeline: import a syllabus or lay out the weeks (§4.1).
@@ -230,14 +245,16 @@ function CreateSubjectModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onCreate: (name: string, discipline: Discipline) => void;
 }) {
   const [name, setName] = useState("");
+  const [discipline, setDiscipline] = useState<Discipline>("general");
   const trimmed = name.trim();
 
   function submit() {
-    if (trimmed) onCreate(trimmed);
+    if (trimmed) onCreate(trimmed, discipline);
     setName("");
+    setDiscipline("general");
   }
 
   return (
@@ -258,6 +275,7 @@ function CreateSubjectModal({
       }
     >
       <form
+        className={styles.editForm}
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -269,6 +287,12 @@ function CreateSubjectModal({
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
+        />
+        <RadioGroup
+          legend="Subject type"
+          options={DISCIPLINE_OPTIONS}
+          value={discipline}
+          onChange={setDiscipline}
         />
       </form>
     </Modal>
@@ -287,11 +311,13 @@ function EditSubjectModal({
 }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("");
+  const [discipline, setDiscipline] = useState<Discipline>("general");
 
   useEffect(() => {
     if (subject) {
       setName(subject.name);
       setColor(subject.color);
+      setDiscipline(subject.discipline);
     }
   }, [subject]);
 
@@ -313,7 +339,11 @@ function EditSubjectModal({
             disabled={!valid}
             onClick={async () => {
               if (!subject) return;
-              const updated = await api.updateSubject(subject.id, { name: name.trim(), color });
+              const updated = await api.updateSubject(subject.id, {
+                name: name.trim(),
+                color,
+                discipline,
+              });
               onSaved(updated);
             }}
           >
@@ -324,6 +354,12 @@ function EditSubjectModal({
     >
       <div className={styles.editForm}>
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <RadioGroup
+          legend="Subject type"
+          options={DISCIPLINE_OPTIONS}
+          value={discipline}
+          onChange={setDiscipline}
+        />
         <fieldset className={styles.colors}>
           <legend className={styles.colorsLegend}>Accent colour</legend>
           <div className={styles.colorRow}>

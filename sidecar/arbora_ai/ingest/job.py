@@ -14,6 +14,7 @@ from ..jobs import Job
 from ..rag.embeddings import embed_texts
 from ..rag.faiss_index import SubjectIndex
 from .chunk import chunk_units
+from .figures import extract_pdf_figures
 from .parse import parse_source
 
 
@@ -56,6 +57,20 @@ def run_ingest(
     index = SubjectIndex.load(path) if path.exists() else SubjectIndex(dim=int(vectors.shape[1]))
     faiss_ids = index.add(vectors)
     index.save(path)
+
+    # A PDF's own figures become citable visual excerpts (ADR-0012); other source
+    # types have none. Best-effort — a PDF we can't open/extract still ingests fine.
+    if source_type == "pdf":
+        job.step = "figures"
+        job.progress = 0.85
+        figures_dir = Path(data_dir) / "sources" / "figures"
+        try:
+            job.meta["figures"] = [
+                {"page": f.page, "path": f.path, "width": f.width, "height": f.height}
+                for f in extract_pdf_figures(file_path, figures_dir, source_id)
+            ]
+        except Exception:
+            job.meta["figures"] = []
 
     job.result = [
         {

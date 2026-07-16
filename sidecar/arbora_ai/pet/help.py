@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from ..llm.provider import LLMProvider, LLMSchemaError
 from ..rag.embeddings import embed_texts
+from ..rag.retrieve import bm25_rank, fuse_ranks
 
 KB_PATH = Path(__file__).resolve().parent.parent / "help" / "app_help_kb.md"
 MAX_RETRIES = 2
@@ -74,13 +75,19 @@ class HelpIndex:
             self._matrix = vecs / np.maximum(norms, 1e-9)
 
     def search(self, question: str, k: int = DEFAULT_K) -> list[KBSection]:
+        """Hybrid: cosine (paraphrases) + BM25 (exact feature/button names, the
+        common case for app-help questions), fused by reciprocal rank — same
+        recipe as rag/retrieve.py, over the in-memory sections."""
         self._ensure()
         assert self._sections is not None and self._matrix is not None
         q = embed_texts([question]).astype("float32")[0]
         q = q / max(float(np.linalg.norm(q)), 1e-9)
         scores = self._matrix @ q
-        top = np.argsort(-scores)[: min(k, len(self._sections))]
-        return [self._sections[int(i)] for i in top]
+        k = min(k, len(self._sections))
+        vector_ranking = [int(i) for i in np.argsort(-scores)[: 2 * k]]
+        keyword_ranking = bm25_rank(question, [s.text for s in self._sections])[: 2 * k]
+        top = fuse_ranks([vector_ranking, keyword_ranking], k)
+        return [self._sections[i] for i in top]
 
 
 _INDEX: HelpIndex | None = None
@@ -99,8 +106,10 @@ def _prompt(question: str, sections: list[KBSection]) -> str:
         "You are the in-app guide for the Arbora study app. Answer the user's "
         "question about how to use Arbora, using ONLY the numbered guide "
         "passages below. Point to the exact buttons/screens the passages name. "
+        "When the passages describe a procedure, answer as short numbered steps "
+        "(1. 2. 3.); otherwise a few plain sentences. Keep it brief and friendly. "
         "If the passages don't cover it, say the guide doesn't cover that yet — "
-        "never invent features.\n\n"
+        "never invent features, settings, or shortcuts.\n\n"
         f"PASSAGES:\n{body}\n\n"
         f"QUESTION: {question}\n\n"
         "Return a JSON object with:\n"

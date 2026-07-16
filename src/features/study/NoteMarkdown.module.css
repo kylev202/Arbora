@@ -64,3 +64,70 @@
   border-radius: var(--radius-sm);
   background: var(--color-surface-alt);
 }
+
+/* Fenced code block — verbatim, scrolls horizontally rather than wrapping so
+   indentation stays intact. */
+.pre {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  overflow-x: auto;
+}
+.pre code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: var(--leading-normal);
+  white-space: pre;
+}
+
+/* Source figure (ADR-0012) — a picture cropped verbatim from the user's own
+   document, shown beside the prose it belongs to. */
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+.figcaption {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* A figure the model placed mid-prose (capable preset) — block it out on its
+   own line so it reads as a figure, not an inline glyph. */
+.inlineFigure {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-2) auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+/* Grounded Mermaid diagram — a review-gated visual aid (ADR-0011 posture),
+   centred and free to scroll if the graph is wider than the note. */
+.diagram {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: var(--space-2) 0;
+}
+
+/* Inline math sits on the text baseline; block math centres and can scroll if a
+   long equation overflows the note width. */
+.math {
+  font-size: 1em;
+}
+.mathBlock {
+  overflow-x: auto;
+  padding: var(--space-1) 0;
+}

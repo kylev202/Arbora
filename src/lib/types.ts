@@ -63,11 +63,27 @@ export type SourceRef = {
 };
 
 // ── Library ──────────────────────────────────────────────────────────────
+
+/** What kind of course a subject is — steers subject-aware generation (math
+ * emits LaTeX, cs emits fenced code, …). 'general' keeps the plain-text output. */
+export type Discipline = "general" | "math" | "cs" | "science" | "humanities";
+
+/** Picker options, in display order. `hint` explains what the discipline
+ * changes about generated material. */
+export const DISCIPLINES: { value: Discipline; label: string; hint: string }[] = [
+  { value: "general", label: "General", hint: "Plain prose notes — the default." },
+  { value: "math", label: "Math & quantitative", hint: "Equations as LaTeX, worked steps." },
+  { value: "cs", label: "CS & engineering", hint: "Fenced code blocks, algorithms." },
+  { value: "science", label: "Life & physical sciences", hint: "Formulas, tables, processes." },
+  { value: "humanities", label: "Humanities & social science", hint: "Essays, arguments, figures." },
+];
+
 export type Subject = {
   id: string;
   name: string;
   color: string; // hex — the subject's accent
   created_at: string;
+  discipline: Discipline;
 };
 
 export type SourceType = "pdf" | "slide" | "audio" | "doc" | "text";
@@ -396,9 +412,15 @@ export type SubjectDashboard = {
 };
 
 // ── RAG Q&A ──────────────────────────────────────────────────────────────
+/** One prior turn, sent with follow-up questions so the sidecar can resolve
+ * "it"/"that" against the conversation. Ephemeral — never persisted. */
+export type ChatHistoryTurn = { role: "user" | "assistant"; content: string };
+
 export type ChatMessageResponse = {
   answer: string;
   citations: SourceRef[];
+  /** Up to 3 follow-up questions answerable from the retrieved passages. */
+  suggested_questions: string[];
 };
 
 // ── Calendar + todos (redesign slice D) ───────────────────────────────────

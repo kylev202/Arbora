@@ -50,3 +50,36 @@ def test_pipeline_keeps_grounded_drops_ungrounded_and_malformed():
     # citation anchored to the real chunk it came from (page 1), not the model's 99
     assert kept.source_ref.source_id == "bio"
     assert kept.source_ref.location.page == 1
+
+
+class FakeQuizProvider(LLMProvider):
+    """Always returns the same quiz with the correct answer first (the position
+    bias small models exhibit)."""
+
+    def health(self) -> bool:
+        return True
+
+    def generate(self, prompt, schema=None, temperature=0.1):
+        return {
+            "question": "What vibrates to transmit sound?",
+            "options": ["the eardrum", "the cochlea", "the hammer", "the anvil"],
+            "answer_index": 0,
+            "explanation": "",
+            "excerpt": "the eardrum vibrates",
+        }
+
+
+def test_quiz_options_shuffled_answer_remapped_and_duplicates_dropped():
+    chunks = [
+        _chunk("the eardrum vibrates to transmit sound waves", 0),
+        _chunk("again the eardrum vibrates to transmit sound", 1),  # same question → dedupe
+    ]
+    result, stats = generate_from_chunks(FakeQuizProvider(), chunks, types=["quiz"])
+    s = stats["quiz"]
+
+    assert s.accepted == 1
+    assert s.dedupe_drops == 1
+    item = result.quiz_items[0]
+    # all four options survive the shuffle and answer_index still names the correct one
+    assert set(item.options) == {"the eardrum", "the cochlea", "the hammer", "the anvil"}
+    assert item.options[item.answer_index] == "the eardrum"

@@ -107,10 +107,18 @@ class ChunkOut(BaseModel):
     chunk_index: int
 
 
+class FigureOut(BaseModel):
+    page: int
+    path: str
+    width: int
+    height: int
+
+
 class IngestResult(BaseModel):
     chunks: list[ChunkOut]
     chunk_count: int
     page_count: int | None = None
+    figures: list[FigureOut] = []
 
 
 class GenChunk(BaseModel):
@@ -128,6 +136,7 @@ class GenerateRequest(BaseModel):
     llm_config: dict = {}
     preset: str = "medium"  # resolves the local model when llm_config has none
     job_id: str | None = None
+    discipline: str = "general"  # steers subject-aware formatting (math → LaTeX, cs → code)
 
 
 class GenerateStatus(BaseModel):
@@ -157,6 +166,8 @@ class WalkthroughRequest(BaseModel):
     llm_config: dict = {}
     preset: str = "medium"
     job_id: str | None = None
+    discipline: str = "general"  # steers subject-aware formatting (math → LaTeX, cs → code)
+    figures: list[dict] = []  # source figures available to lessons (ADR-0012)
 
 
 class ModelReadyResponse(BaseModel):
@@ -182,9 +193,17 @@ class ModelWarmupRequest(BaseModel):
     preset: str = "medium"
 
 
+class ChatTurn(BaseModel):
+    """One prior conversation turn (chat panel or pet) — ephemeral, never stored."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class PetRouteRequest(BaseModel):
     question: str
     preset: str = "medium"
+    history: list[ChatTurn] = []
 
 
 class PetRouteResponse(BaseModel):
@@ -289,11 +308,13 @@ class ChatRequest(BaseModel):
     chunks: list[ChatChunk]
     preset: str = "medium"
     k: int = 6
+    history: list[ChatTurn] = []
 
 
 class ChatResponse(BaseModel):
     answer: str
     source_refs: list[SourceRef]
+    suggested_questions: list[str] = []
 
 
 class DiagramChunk(BaseModel):
@@ -370,6 +391,7 @@ def create_app() -> FastAPI:
             chunks=job.result,
             chunk_count=job.meta.get("chunk_count", len(job.result)),
             page_count=job.meta.get("page_count"),
+            figures=job.meta.get("figures", []),
         )
 
     @app.post("/generate", status_code=202, dependencies=guarded)
@@ -381,7 +403,10 @@ def create_app() -> FastAPI:
         chunks = [c.model_dump() for c in req.chunks]
         job = registry.create(req.job_id)
         registry.submit(
-            job, lambda j: run_generate(j, chunks=chunks, types=req.types, llm_config=cfg)
+            job,
+            lambda j: run_generate(
+                j, chunks=chunks, types=req.types, llm_config=cfg, discipline=req.discipline
+            ),
         )
         return {"job_id": job.id}
 
@@ -466,7 +491,13 @@ def create_app() -> FastAPI:
         registry.submit(
             job,
             lambda j: run_walkthrough(
-                j, chunks=chunks, week_title=req.week_title, llm_config=cfg
+                j,
+                chunks=chunks,
+                week_title=req.week_title,
+                llm_config=cfg,
+                discipline=req.discipline,
+                figures=req.figures,
+                preset=req.preset,
             ),
         )
         return {"job_id": job.id}
@@ -529,7 +560,11 @@ def create_app() -> FastAPI:
         # domains (law #1); everything else is refused by the UI.
         cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
         try:
-            domain = route_question(req.question, get_provider(cfg))
+            domain = route_question(
+                req.question,
+                get_provider(cfg),
+                history=[t.model_dump() for t in req.history],
+            )
         except LLMUnavailableError as exc:
             raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
         except ValueError as exc:
@@ -660,13 +695,14 @@ def create_app() -> FastAPI:
         cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
         chunks = [c.model_dump() for c in req.chunks]
         try:
-            answer, source_refs = answer_question(
+            answer, source_refs, suggested = answer_question(
                 question=req.question,
                 subject_id=req.subject_id,
                 chunks=chunks,
                 provider=get_provider(cfg),
                 data_dir=_data_dir(),
                 k=req.k,
+                history=[t.model_dump() for t in req.history],
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -674,7 +710,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
         except LLMSchemaError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return ChatResponse(answer=answer, source_refs=source_refs)
+        return ChatResponse(answer=answer, source_refs=source_refs, suggested_questions=suggested)
 
     # ── Mermaid diagrams ───────────────────────────────────────────────────
 

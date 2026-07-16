@@ -15,6 +15,7 @@ from ..jobs import Job
 from ..llm.provider import LLMUnavailableError, get_provider
 from . import generate_from_chunks
 from .brief import generate_brief
+from .figures import LessonFigure
 from .walkthrough import generate_walkthrough
 
 
@@ -37,9 +38,11 @@ def run_generate(
     chunks: list[dict[str, Any]],
     types: list[str],
     llm_config: dict[str, Any],
+    discipline: str = "general",
 ) -> None:
     """Build a provider from `llm_config`, generate from `chunks`, and store the
-    kept `GenerationResult` in `job.result`. Streams progress via `job`."""
+    kept `GenerationResult` in `job.result`. Streams progress via `job`.
+    `discipline` steers subject-aware formatting (see prompts.discipline_overlay)."""
     provider = get_provider(llm_config)
     if not provider.health():
         raise LLMUnavailableError("LLM_UNAVAILABLE: provider not reachable")
@@ -54,7 +57,9 @@ def run_generate(
         job.progress = 0.02 + 0.96 * (done / total) if total else 1.0
         job.meta["items_generated"] = accepted
 
-    result, _stats = generate_from_chunks(provider, rebuilt, types, progress_cb=on_progress)
+    result, _stats = generate_from_chunks(
+        provider, rebuilt, types, progress_cb=on_progress, discipline=discipline
+    )
 
     job.result = result.model_dump()
     job.meta["items_generated"] = len(result.cards) + len(result.quiz_items) + len(result.notes)
@@ -99,6 +104,9 @@ def run_walkthrough(
     chunks: list[dict[str, Any]],
     week_title: str,
     llm_config: dict[str, Any],
+    discipline: str = "general",
+    figures: list[dict[str, Any]] | None = None,
+    preset: str = "medium",
 ) -> None:
     """Generate the week walkthrough (overview + lesson notes) and store the
     WalkthroughResult in `job.result`. Same job/progress shape as `run_generate`;
@@ -117,8 +125,15 @@ def run_walkthrough(
         job.progress = 0.02 + 0.96 * (done / total) if total else 1.0
         job.meta["items_generated"] = accepted
 
+    lesson_figures = [LessonFigure(**f) for f in (figures or [])]
     result, _stats = generate_walkthrough(
-        provider, rebuilt, week_title=week_title, progress_cb=on_progress
+        provider,
+        rebuilt,
+        week_title=week_title,
+        progress_cb=on_progress,
+        discipline=discipline,
+        figures=lesson_figures,
+        preset=preset,
     )
 
     job.result = result.model_dump()

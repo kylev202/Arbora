@@ -53,6 +53,17 @@ async fn fetch_preset(pool: &SqlitePool) -> String {
         .unwrap_or_else(|_| "medium".to_string())
 }
 
+/// The subject's discipline steers subject-aware prompts in the sidecar.
+/// Falls back to 'general' (plain-text output) if the row is missing.
+pub(crate) async fn fetch_discipline(pool: &SqlitePool, subject_id: &str) -> String {
+    sqlx::query_as::<_, (String,)>("SELECT discipline FROM subjects WHERE id = ?1")
+        .bind(subject_id)
+        .fetch_one(pool)
+        .await
+        .map(|(d,)| d)
+        .unwrap_or_else(|_| "general".to_string())
+}
+
 // ── Sidecar /generate result shapes ────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -261,12 +272,14 @@ pub async fn generate_content(
         })
         .collect();
 
+    let discipline = fetch_discipline(pool.inner(), &subject_id).await;
     reqwest::Client::new()
         .post(format!("{base}/generate"))
         .header("X-Arbora-Token", &token)
         .json(&json!({
             "job_id": job_id, "subject_id": subject_id, "types": types,
             "chunks": chunk_json, "llm_config": { "provider": "ollama" }, "preset": preset,
+            "discipline": discipline,
         }))
         .send()
         .await

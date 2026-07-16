@@ -60,3 +60,41 @@ def test_check_quiz_distinct_options():
         source_ref=SourceRef(source_id="bio", location=PageLocation(page=5), excerpt="the eardrum vibrates"),
     )
     assert grounding.check_quiz(quiz, CHUNK) == "options not distinct"
+
+
+def test_check_card_drops_meta_reference():
+    card = _card("According to the passage, what vibrates?", "The eardrum", "the eardrum vibrates")
+    assert grounding.check_card(card, CHUNK) == "refers to the source material"
+
+
+def test_check_card_drops_unsupported_back():
+    # Excerpt is real, but the answer names something the passage never says —
+    # the model reached for its own knowledge (the failure mode law #1 targets).
+    card = _card("What transmits sound?", "The cochlear amplifier", "the eardrum vibrates")
+    assert grounding.check_card(card, CHUNK) == "answer not supported by the passage"
+
+
+def test_answer_supported_tolerates_inflection():
+    assert grounding.answer_supported("vibration of the eardrum", CHUNK.text)
+
+
+def test_check_quiz_drops_unsupported_correct_option():
+    quiz = QuizItemOut(
+        question="What vibrates?",
+        options=["cochlea", "hammer", "anvil", "stirrup"],
+        answer_index=0,
+        explanation="",
+        source_ref=SourceRef(source_id="bio", location=PageLocation(page=5), excerpt="the eardrum vibrates"),
+    )
+    assert grounding.check_quiz(quiz, CHUNK) == "correct option not supported by the passage"
+
+
+def test_check_quiz_passes_when_correct_option_grounded():
+    quiz = QuizItemOut(
+        question="What vibrates to transmit sound?",
+        options=["eardrum", "cochlea", "hammer", "anvil"],
+        answer_index=0,
+        explanation="",
+        source_ref=SourceRef(source_id="bio", location=PageLocation(page=5), excerpt="the eardrum vibrates"),
+    )
+    assert grounding.check_quiz(quiz, CHUNK) is None

@@ -29,19 +29,29 @@ class FakeChatProvider(LLMProvider):
         answer: str = "The answer is [1].",
         indices: list[int] | None = None,
         grounded: bool = True,
+        follow_ups: list[str] | None = None,
+        condensed: str | None = None,
     ):
         self._answer = answer
         self._indices = indices or [1]
         self._grounded = grounded
+        self._follow_ups = follow_ups or []
+        self._condensed = condensed
+        self.prompts: list[str] = []
 
     def health(self) -> bool:
         return True
 
     def generate(self, prompt: str, schema=None, temperature: float = 0.1) -> dict:
+        self.prompts.append(prompt)
+        # The condensation call constrains to the SearchQueryGen schema.
+        if schema and "search_query" in schema.get("properties", {}):
+            return {"search_query": self._condensed or "standalone question"}
         return {
             "answer": self._answer,
             "used_passage_indices": self._indices,
             "grounded": self._grounded,
+            "follow_up_questions": self._follow_ups,
         }
 
 
@@ -72,7 +82,7 @@ def test_answer_question_returns_answer_and_citation(tmp_path, monkeypatch):
     _build_index(tmp_path, "subj1", chunks)
     provider = FakeChatProvider(answer="ATP is made by mitochondria [1].", indices=[1])
 
-    answer, refs = answer_question(
+    answer, refs, _ = answer_question(
         question="What makes ATP?",
         subject_id="subj1",
         chunks=chunks,
@@ -100,7 +110,7 @@ def test_answer_question_timestamp_chunk(tmp_path, monkeypatch):
     _build_index(tmp_path, "subj1", chunks)
     provider = FakeChatProvider(indices=[1])
 
-    _, refs = answer_question("What?", "subj1", chunks, provider, str(tmp_path), k=1)
+    _, refs, _ = answer_question("What?", "subj1", chunks, provider, str(tmp_path), k=1)
 
     assert isinstance(refs[0].location, TimestampLocation)
     assert refs[0].location.timestamp_ms == 5000
@@ -118,7 +128,7 @@ def test_answer_question_invalid_indices_uses_fallback(tmp_path, monkeypatch):
     _build_index(tmp_path, "subj1", chunks)
     provider = FakeChatProvider(indices=[99, 100])  # all invalid
 
-    _, refs = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
+    _, refs, _ = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
 
     assert len(refs) == 1
     assert refs[0].source_id == "src1"
@@ -126,7 +136,8 @@ def test_answer_question_invalid_indices_uses_fallback(tmp_path, monkeypatch):
 
 def test_answer_question_ungrounded_returns_insufficient_message(tmp_path, monkeypatch):
     """When the passages don't cover the question, return the standard 'add more
-    sources' reply with no citation (never a fabricated answer or source)."""
+    sources' reply with no citation and no suggestions (never a fabricated
+    answer or source)."""
     monkeypatch.setattr("arbora_ai.chat.session.embed_texts", _fake_embed)
 
     from arbora_ai.chat.session import INSUFFICIENT_CONTEXT_MESSAGE, answer_question
@@ -135,12 +146,15 @@ def test_answer_question_ungrounded_returns_insufficient_message(tmp_path, monke
         {"faiss_id": 0, "source_id": "src1", "text": "Unrelated content.", "page": 1, "timestamp_ms": None},
     ]
     _build_index(tmp_path, "subj1", chunks)
-    provider = FakeChatProvider(answer="I don't have that.", indices=[], grounded=False)
+    provider = FakeChatProvider(
+        answer="I don't have that.", indices=[], grounded=False, follow_ups=["Stray suggestion?"]
+    )
 
-    answer, refs = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
+    answer, refs, suggestions = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
 
     assert answer == INSUFFICIENT_CONTEXT_MESSAGE
     assert refs == []
+    assert suggestions == []
 
 
 def test_answer_question_no_chunks_raises(tmp_path, monkeypatch):
@@ -176,7 +190,72 @@ def test_answer_question_deduplicates_source_refs(tmp_path, monkeypatch):
     _build_index(tmp_path, "subj1", chunks)
     provider = FakeChatProvider(indices=[1, 2])  # both passages cited
 
-    _, refs = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=2)
+    _, refs, _ = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=2)
 
     assert len(refs) == 1, "deduplication by source_id"
     assert refs[0].source_id == "src1"
+
+
+def test_answer_question_with_history_condenses_and_shows_conversation(tmp_path, monkeypatch):
+    """A follow-up question triggers one condensation call, and the answer
+    prompt carries the recent conversation for continuity."""
+    monkeypatch.setattr("arbora_ai.chat.session.embed_texts", _fake_embed)
+
+    from arbora_ai.chat.session import answer_question
+
+    chunks = [
+        {"faiss_id": 0, "source_id": "src1", "text": "Chloroplasts do photosynthesis.", "page": 1, "timestamp_ms": None},
+        {"faiss_id": 1, "source_id": "src1", "text": "Mitochondria produce ATP.", "page": 2, "timestamp_ms": None},
+    ]
+    _build_index(tmp_path, "subj1", chunks)
+    provider = FakeChatProvider(indices=[1], condensed="Why do chloroplasts do photosynthesis?")
+    history = [
+        {"role": "user", "content": "Tell me about chloroplasts."},
+        {"role": "assistant", "content": "Chloroplasts do photosynthesis [1]."},
+    ]
+
+    answer, refs, _ = answer_question(
+        "Why?", "subj1", chunks, provider, str(tmp_path), k=2, history=history
+    )
+
+    assert answer
+    assert len(refs) >= 1
+    assert len(provider.prompts) == 2, "one condensation call + one answer call"
+    assert "Tell me about chloroplasts." in provider.prompts[0]
+    assert "CONVERSATION SO FAR" in provider.prompts[1]
+    assert "STUDENT'S QUESTION: Why?" in provider.prompts[1]
+
+
+def test_answer_question_without_history_skips_condensation(tmp_path, monkeypatch):
+    monkeypatch.setattr("arbora_ai.chat.session.embed_texts", _fake_embed)
+
+    from arbora_ai.chat.session import answer_question
+
+    chunks = [
+        {"faiss_id": 0, "source_id": "src1", "text": "Only chunk here.", "page": 1, "timestamp_ms": None},
+    ]
+    _build_index(tmp_path, "subj1", chunks)
+    provider = FakeChatProvider(indices=[1])
+
+    answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
+
+    assert len(provider.prompts) == 1, "no condensation call without history"
+    assert "CONVERSATION SO FAR" not in provider.prompts[0]
+
+
+def test_answer_question_returns_trimmed_suggestions(tmp_path, monkeypatch):
+    monkeypatch.setattr("arbora_ai.chat.session.embed_texts", _fake_embed)
+
+    from arbora_ai.chat.session import answer_question
+
+    chunks = [
+        {"faiss_id": 0, "source_id": "src1", "text": "The eardrum vibrates.", "page": 1, "timestamp_ms": None},
+    ]
+    _build_index(tmp_path, "subj1", chunks)
+    provider = FakeChatProvider(
+        indices=[1], follow_ups=["  What is ATP?  ", "   ", "How does the eardrum move?"]
+    )
+
+    _, _, suggestions = answer_question("Q?", "subj1", chunks, provider, str(tmp_path), k=1)
+
+    assert suggestions == ["What is ATP?", "How does the eardrum move?"]

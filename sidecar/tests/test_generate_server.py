@@ -65,7 +65,10 @@ def test_run_generate_grounds_and_cites(monkeypatch):
     assert card["source_ref"]["source_id"] == "s1"
     assert card["source_ref"]["location"] == {"type": "page", "page": 1}
     assert EXCERPT in card["source_ref"]["excerpt"]
-    assert job.result["quiz_items"][0]["answer_index"] == 0
+    # options are shuffled (position-bias fix) — the index must still name the
+    # correct option, wherever it landed
+    quiz = job.result["quiz_items"][0]
+    assert quiz["options"][quiz["answer_index"]] == "Mitochondria"
     assert job.result["notes"][0]["format"] == "outline"
     assert job.meta["items_generated"] == 3
 

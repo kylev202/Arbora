@@ -9,11 +9,18 @@ apply (law #2 covers stored deck items; see /chat and /diagram precedent).
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 
 from pydantic import BaseModel, ValidationError
 
-from ..generate.grounding import excerpt_grounded, location_from_chunk, normalize
+from ..generate.grounding import (
+    answer_supported,
+    excerpt_grounded,
+    location_from_chunk,
+    normalize,
+    refers_to_source,
+)
 from ..ingest.chunk import Chunk
 from ..llm.provider import LLMProvider, LLMSchemaError
 from ..schemas.output import (
@@ -75,16 +82,25 @@ def _build_item(kind: str, chunk: Chunk, provider: LLMProvider):
             return None
         if len({normalize(o) for o in gen.options}) < 4:
             return None
+        correct = gen.options[gen.answer_index]
+        if refers_to_source(gen.question) or not answer_supported(correct, chunk.text):
+            return None
+        # Same position-bias fix as generate/pipeline.py: small models put the
+        # correct option first; a deterministic per-chunk shuffle removes the tell.
+        options = list(gen.options)
+        random.Random(chunk.index).shuffle(options)
         return MultipleChoiceOut(
             question=gen.question,
-            options=gen.options,
-            answer_index=gen.answer_index,
+            options=options,
+            answer_index=options.index(correct),
             explanation=gen.explanation,
             source_ref=_cite(chunk, gen.excerpt),
         )
     if kind == "short_answer":
         gen = _generate_valid(provider, prompts.short_answer_prompt(chunk), ShortAnswerGen)
         if gen is None or not excerpt_grounded(gen.excerpt, chunk.text):
+            return None
+        if refers_to_source(gen.question) or not answer_supported(gen.expected_answer, chunk.text):
             return None
         return ShortAnswerOut(
             question=gen.question,

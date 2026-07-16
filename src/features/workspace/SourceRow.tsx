@@ -14,7 +14,7 @@ import {
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
-import { Button, IconButton, ProgressBar, Tag } from "../../components";
+import { Button, IconButton, ProgressBar, Select, Tag } from "../../components";
 import type { Source, SourceType, Week } from "../../lib/types";
 import styles from "./SourceRow.module.css";
 
@@ -123,22 +123,23 @@ export function SourceRow({
         {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
 
         {weeks && weeks.length > 0 && onAssignWeek && (
-          <label className={styles.weekAssign}>
+          <div className={styles.weekAssign}>
             <span className={styles.weekAssignLabel}>Week</span>
-            <select
-              className={styles.weekSelect}
-              value={source.week_id ?? ""}
-              onChange={(e) => onAssignWeek(source, e.target.value || null)}
-            >
-              <option value="">Unassigned</option>
-              {weeks.map((w) => (
-                <option key={w.id} value={w.id}>
-                  Week {w.week_number}
-                  {w.title ? ` · ${w.title}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className={styles.weekSelect}>
+              <Select
+                aria-label="Assign to week"
+                value={source.week_id ?? ""}
+                onChange={(v) => onAssignWeek(source, v || null)}
+                options={[
+                  { value: "", label: "Unassigned" },
+                  ...weeks.map((w) => ({
+                    value: w.id,
+                    label: `Week ${w.week_number}${w.title ? ` · ${w.title}` : ""}`,
+                  })),
+                ]}
+              />
+            </div>
+          </div>
         )}
 
         {source.ingest_state === "processing" && (

@@ -26,6 +26,13 @@ from ..schemas.output import (
     WalkthroughOverviewGen,
     WalkthroughResult,
 )
+from .figures import (
+    LessonFigure,
+    append_figure,
+    figures_for_bucket,
+    figures_offer,
+    resolve_figure_refs,
+)
 from .grounding import excerpt_grounded, location_from_chunk
 from .prompts import walkthrough_lesson_prompt, walkthrough_overview_prompt
 
@@ -107,13 +114,22 @@ def generate_walkthrough(
     week_title: str = "",
     base_temp: float = 0.1,
     progress_cb: Callable[[int, int, int], None] | None = None,
+    discipline: str = "general",
+    figures: list[LessonFigure] | None = None,
+    preset: str = "medium",
 ) -> tuple[WalkthroughResult, WalkthroughStats]:
     """Generate the week's overview + one note per lesson bucket. Returns the
     result plus stats. Raises ValueError (NO_CHUNKS / NO_OVERVIEW / NO_LESSONS)
-    when nothing groundable can be built — never a partial invention."""
+    when nothing groundable can be built — never a partial invention.
+    `discipline` steers subject-aware formatting (math → LaTeX, cs → code);
+    see prompts.discipline_overlay. `figures` are the source's extracted images
+    (ADR-0012); a lesson may show the ones on its own pages, model-referenced on a
+    capable preset or deterministically appended on `low`."""
     if not chunks:
         raise ValueError("NO_CHUNKS: nothing to build a walkthrough from")
 
+    figures = figures or []
+    capable = preset != "low"  # medium/high can place figures inline; low cannot
     stats = WalkthroughStats()
     buckets = _buckets(chunks, lesson_count(len(chunks)))
     total = 1 + len(buckets)
@@ -128,7 +144,7 @@ def generate_walkthrough(
     overview_chunks = _spread(chunks, MAX_OVERVIEW_CHUNKS)
     overview = _generate_valid(
         provider,
-        walkthrough_overview_prompt(overview_chunks, week_title),
+        walkthrough_overview_prompt(overview_chunks, week_title, discipline),
         WalkthroughOverviewGen,
         base_temp,
     )
@@ -147,9 +163,11 @@ def generate_walkthrough(
     for i, bucket in enumerate(buckets, start=1):
         stats.attempts += 1
         prompt_chunks = _spread(bucket, MAX_LESSON_CHUNKS)
+        bucket_figures = figures_for_bucket(bucket, figures)
+        offer = figures_offer(bucket_figures) if capable else ""
         lesson = _generate_valid(
             provider,
-            walkthrough_lesson_prompt(prompt_chunks, i, len(buckets)),
+            walkthrough_lesson_prompt(prompt_chunks, i, len(buckets), discipline, offer),
             WalkthroughLessonGen,
             base_temp,
         )
@@ -160,10 +178,17 @@ def generate_walkthrough(
             if not refs:
                 stats.grounding_drops += 1
             else:
+                # Always resolve first: rewrite valid `figure:N` refs to real paths
+                # and strip any other image the model emitted (no arbitrary/invented
+                # figures reach the reader). On low the model wasn't offered figures,
+                # so we then append the largest one deterministically.
+                content = resolve_figure_refs(lesson.content, bucket_figures)
+                if not capable:
+                    content = append_figure(content, bucket_figures)
                 lessons.append(
                     WalkthroughLessonOut(
                         title=lesson.title,
-                        content=lesson.content,
+                        content=content,
                         source_refs=refs,
                         chunk_refs=[
                             ChunkKey(source_id=c.source_id, chunk_index=c.index) for c in bucket

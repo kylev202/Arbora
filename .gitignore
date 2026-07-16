@@ -51,6 +51,7 @@ Thumbs.db
 
 # ── Local agent tooling (not needed to build or run Arbora) ──
 .claude/
+/CLAUDE.md
 
 # ── Planning docs (kept local, not needed to build or run Arbora) ──
 /resources/

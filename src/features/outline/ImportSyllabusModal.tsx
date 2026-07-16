@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { FileArrowUp, FilePlus, Plus, Sparkle, Trash, WarningCircle } from "@phosphor-icons/react";
-import { Button, Disclaimer, IconButton, Input, Modal, Textarea } from "../../components";
+import { Button, Disclaimer, IconButton, Input, Modal, Select, Textarea } from "../../components";
 import { api } from "../../lib/api";
 import type {
   DeadlineType,
@@ -451,18 +451,17 @@ export function ImportSyllabusModal({
                   value={d.due_date.slice(0, 10)}
                   onChange={(e) => patchDeadline(i, { due_date: e.target.value })}
                 />
-                <select
-                  className={styles.typeSelect}
-                  aria-label={`Deadline ${i + 1} type`}
-                  value={d.type}
-                  onChange={(e) => patchDeadline(i, { type: e.target.value as DeadlineType })}
-                >
-                  {DEADLINE_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t[0].toUpperCase() + t.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                <div className={styles.typeSelect}>
+                  <Select
+                    aria-label={`Deadline ${i + 1} type`}
+                    value={d.type}
+                    onChange={(v) => patchDeadline(i, { type: v as DeadlineType })}
+                    options={DEADLINE_TYPES.map((t) => ({
+                      value: t,
+                      label: t[0].toUpperCase() + t.slice(1),
+                    }))}
+                  />
+                </div>
                 <IconButton
                   label={`Remove deadline ${i + 1}`}
                   icon={<Trash />}

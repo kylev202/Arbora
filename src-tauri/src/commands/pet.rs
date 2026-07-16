@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tauri::State;
 
-use super::chat::{self, ChatCitation};
+use super::chat::{self, ChatCitation, ChatHistoryTurn};
 use crate::sidecar::Sidecar;
 
 #[derive(Serialize)]
@@ -46,17 +46,21 @@ pub async fn pet_message(
     sidecar: State<'_, Sidecar>,
     question: String,
     subject_id: Option<String>,
+    history: Option<Vec<ChatHistoryTurn>>,
 ) -> Result<PetReply, String> {
+    let history = history.unwrap_or_default();
     let base = sidecar
         .base_url()
         .filter(|_| sidecar.is_ready())
         .ok_or("SIDECAR_UNAVAILABLE")?;
     let preset = chat::fetch_preset(pool.inner()).await;
 
+    // History goes to the router too: a bare follow-up ("why?") only
+    // classifies correctly when the router can see what it continues.
     let resp = reqwest::Client::new()
         .post(format!("{base}/pet/route"))
         .header("X-Arbora-Token", sidecar.token())
-        .json(&serde_json::json!({ "question": question, "preset": preset }))
+        .json(&serde_json::json!({ "question": question, "preset": preset, "history": history }))
         .send()
         .await
         .map_err(|e| format!("PET_FAILED: {e}"))?;
@@ -73,7 +77,7 @@ pub async fn pet_message(
     match route.domain.as_str() {
         "lesson" => match subject_id {
             None => Ok(PetReply::NeedsSubject),
-            Some(sid) => match chat::ask(pool.inner(), &sidecar, &sid, &question).await {
+            Some(sid) => match chat::ask(pool.inner(), &sidecar, &sid, &question, &history).await {
                 Ok(r) => Ok(PetReply::Answer {
                     answer: r.answer,
                     citations: r.citations,

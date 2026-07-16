@@ -51,16 +51,7 @@
 
 .subjectSelect {
   flex: 1;
-  padding: var(--space-1) var(--space-2);
-  min-height: 32px;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  min-width: 0;
 }
 
 .messages {

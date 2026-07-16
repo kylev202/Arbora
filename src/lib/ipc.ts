@@ -17,11 +17,13 @@ import type {
   AssignmentDetail,
   CalendarEvent,
   Card,
+  ChatHistoryTurn,
   ChatMessageResponse,
   ConceptEntry,
   Deadline,
   DiagramResponse,
   DeadlineType,
+  Discipline,
   DueCard,
   EventKind,
   EventStatus,
@@ -122,17 +124,27 @@ export function getSubject(id: string): Promise<Subject> {
   return invoke<Subject>("get_subject", { id });
 }
 
-/** Create a subject and return the persisted row. */
-export function createSubject(name: string, color: string): Promise<Subject> {
-  return invoke<Subject>("create_subject", { name, color });
+/** Create a subject and return the persisted row. Discipline defaults to
+ * `general` server-side when omitted. */
+export function createSubject(
+  name: string,
+  color: string,
+  discipline?: Discipline,
+): Promise<Subject> {
+  return invoke<Subject>("create_subject", { name, color, discipline });
 }
 
-/** Patch a subject's name and/or color; returns the updated row. */
+/** Patch a subject's name, color and/or discipline; returns the updated row. */
 export function updateSubject(
   id: string,
-  patch: { name?: string; color?: string },
+  patch: { name?: string; color?: string; discipline?: Discipline },
 ): Promise<Subject> {
-  return invoke<Subject>("update_subject", { id, name: patch.name, color: patch.color });
+  return invoke<Subject>("update_subject", {
+    id,
+    name: patch.name,
+    color: patch.color,
+    discipline: patch.discipline,
+  });
 }
 
 /** Delete a subject; sources/cards/grades cascade in SQLite. */
@@ -822,13 +834,15 @@ export function deleteWeekWalkthrough(walkthroughId: string): Promise<void> {
 }
 
 /** Ask a question grounded in the subject's indexed sources (RAG Q&A).
+ *  Pass recent turns as `history` so follow-ups resolve "it"/"that".
  *  Rejects with `NO_CHUNKS` when no sources have been ingested yet, or
  *  `SIDECAR_UNAVAILABLE` when Ollama is not reachable. */
 export function chatMessage(
   subjectId: string,
   question: string,
+  history: ChatHistoryTurn[] = [],
 ): Promise<ChatMessageResponse> {
-  return invoke<ChatMessageResponse>("chat_message", { subjectId, question });
+  return invoke<ChatMessageResponse>("chat_message", { subjectId, question, history });
 }
 
 export function getKnowledgeMap(subjectId: string): Promise<ConceptEntry[]> {
@@ -1006,10 +1020,15 @@ export function acceptSchedule(
 // ── Pet companion + Ollama lifecycle (redesign slice B) ────────────────────
 
 /** One pet message: routed to lessons (RAG, cited) or app help; out-of-scope
- * comes back as `refusal`. Rejects with `SIDECAR_UNAVAILABLE` or
+ * comes back as `refusal`. Recent turns in `history` let follow-ups route and
+ * answer correctly. Rejects with `SIDECAR_UNAVAILABLE` or
  * `OLLAMA_UNAVAILABLE` while the local AI is still starting. */
-export function petMessage(question: string, subjectId?: string | null): Promise<PetReply> {
-  return invoke<PetReply>("pet_message", { question, subjectId });
+export function petMessage(
+  question: string,
+  subjectId?: string | null,
+  history: ChatHistoryTurn[] = [],
+): Promise<PetReply> {
+  return invoke<PetReply>("pet_message", { question, subjectId, history });
 }
 
 /** Whether the local Ollama daemon is reachable right now. */

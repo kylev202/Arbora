@@ -19,11 +19,14 @@ pub struct Subject {
     pub name: String,
     pub color: String,
     pub created_at: String,
+    /// Steers subject-aware generation (math/STEM → LaTeX, cs → code, …).
+    /// One of the values in the TS `Discipline` union; 'general' by default.
+    pub discipline: String,
 }
 
 // ── DB layer (plain pool → unit-testable) ──────────────────────────────────
 
-const COLS: &str = "SELECT id, name, color, created_at FROM subjects";
+const COLS: &str = "SELECT id, name, color, created_at, discipline FROM subjects";
 
 /// Fetch one subject by id, or `SUBJECT_NOT_FOUND`.
 async fn fetch(pool: &SqlitePool, id: &str) -> Result<Subject, String> {
@@ -42,15 +45,21 @@ async fn list(pool: &SqlitePool) -> Result<Vec<Subject>, String> {
         .map_err(|e| e.to_string())
 }
 
-async fn create(pool: &SqlitePool, name: &str, color: &str) -> Result<Subject, String> {
+async fn create(
+    pool: &SqlitePool,
+    name: &str,
+    color: &str,
+    discipline: &str,
+) -> Result<Subject, String> {
     let id = Uuid::new_v4().to_string();
     sqlx::query(
-        "INSERT INTO subjects (id, name, color, created_at, updated_at)
-         VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+        "INSERT INTO subjects (id, name, color, discipline, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
     )
     .bind(&id)
     .bind(name)
     .bind(color)
+    .bind(discipline)
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -62,17 +71,20 @@ async fn update(
     id: &str,
     name: Option<String>,
     color: Option<String>,
+    discipline: Option<String>,
 ) -> Result<Subject, String> {
     sqlx::query(
         "UPDATE subjects
          SET name = COALESCE(?2, name),
              color = COALESCE(?3, color),
+             discipline = COALESCE(?4, discipline),
              updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')
          WHERE id = ?1",
     )
     .bind(id)
     .bind(name)
     .bind(color)
+    .bind(discipline)
     .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
@@ -105,8 +117,15 @@ pub async fn create_subject(
     pool: State<'_, SqlitePool>,
     name: String,
     color: String,
+    discipline: Option<String>,
 ) -> Result<Subject, String> {
-    create(pool.inner(), &name, &color).await
+    create(
+        pool.inner(),
+        &name,
+        &color,
+        discipline.as_deref().unwrap_or("general"),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -115,8 +134,9 @@ pub async fn update_subject(
     id: String,
     name: Option<String>,
     color: Option<String>,
+    discipline: Option<String>,
 ) -> Result<Subject, String> {
-    update(pool.inner(), &id, name, color).await
+    update(pool.inner(), &id, name, color, discipline).await
 }
 
 /// Delete a subject. Sources, chunks, cards, schedules, grades… cascade via the
@@ -148,20 +168,31 @@ mod tests {
     async fn crud_roundtrip() {
         let pool = mem_pool().await;
 
-        let made = create(&pool, "Biology 12", "#4A7C59").await.unwrap();
+        let made = create(&pool, "Biology 12", "#4A7C59", "science")
+            .await
+            .unwrap();
         assert_eq!(made.name, "Biology 12");
         assert_eq!(made.color, "#4A7C59");
+        assert_eq!(made.discipline, "science");
         assert!(!made.id.is_empty(), "id should be a generated uuid");
 
         assert_eq!(list(&pool).await.unwrap().len(), 1);
         assert_eq!(fetch(&pool, &made.id).await.unwrap().id, made.id);
 
-        // Patch name only → color is preserved by COALESCE.
-        let edited = update(&pool, &made.id, Some("Bio".into()), None)
+        // Patch name only → color and discipline are preserved by COALESCE.
+        let edited = update(&pool, &made.id, Some("Bio".into()), None, None)
             .await
             .unwrap();
         assert_eq!(edited.name, "Bio");
         assert_eq!(edited.color, "#4A7C59");
+        assert_eq!(edited.discipline, "science");
+
+        // Patch discipline only → name is preserved.
+        let redisc = update(&pool, &made.id, None, None, Some("math".into()))
+            .await
+            .unwrap();
+        assert_eq!(redisc.name, "Bio");
+        assert_eq!(redisc.discipline, "math");
 
         delete(&pool, &made.id).await.unwrap();
         assert!(list(&pool).await.unwrap().is_empty());

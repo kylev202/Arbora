@@ -152,3 +152,25 @@ def test_syllabus_to_text_reads_docx(tmp_path):
     text = syllabus_to_text(path)
     assert "Introduction to cells" in text
     assert "cell membrane" in text
+
+
+def test_syllabus_to_text_keeps_back_page_schedule(tmp_path):
+    """Regression: institutional unit guides bury the weekly-activities table
+    and assessment schedule on the LAST page, behind a title page + table of
+    contents. An over-budget syllabus must keep those, not the boilerplate head."""
+    toc = "\n\n".join(f"Section {i} .................... {i}" for i in range(400))  # padding
+    schedule = (
+        "Unit weekly activities\n"
+        "Week 1: What is deep learning?\n"
+        "Week 6: Computer vision\n"
+        "Assessment task 1 due 24 July 2026 (30%)\n"
+        "Final exam due 5 October 2026 (40%)\n"
+    )
+    path = tmp_path / "unit-guide.txt"
+    path.write_text(f"SIT319 Deep Learning\n\n{toc}\n\n{schedule}", encoding="utf-8")
+
+    text = syllabus_to_text(path)
+    assert len(text) <= 12000  # over-budget input was reduced
+    assert "Unit weekly activities" in text  # ...but the back-page schedule survived
+    assert "Assessment task 1 due 24 July 2026" in text
+    assert "Final exam due 5 October 2026" in text

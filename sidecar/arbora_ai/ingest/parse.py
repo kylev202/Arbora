@@ -40,27 +40,54 @@ def parse_pptx(path: str | Path) -> list[SourceUnit]:
     units: list[SourceUnit] = []
     prs = Presentation(str(path))
     for i, slide in enumerate(prs.slides):
-        parts = [
-            shape.text_frame.text.strip()
-            for shape in slide.shapes
-            if shape.has_text_frame and shape.text_frame.text.strip()
-        ]
+        parts: list[str] = []
+        for shape in slide.shapes:
+            if shape.has_text_frame and shape.text_frame.text.strip():
+                parts.append(shape.text_frame.text.strip())
+            elif shape.has_table:
+                # Schedule slides are often a bare table with no text frame —
+                # without this the whole slide would come back empty.
+                for row in shape.table.rows:
+                    line = " | ".join(cell.text.strip() for cell in row.cells)
+                    if line.strip(" |"):
+                        parts.append(line)
         text = "\n".join(parts).strip()
         if text:
             units.append(SourceUnit(text=text, location={"type": "page", "page": i + 1}))
     return units
 
 
+def _iter_docx_blocks(doc):
+    """Yield paragraph and table text in document order.
+
+    `doc.paragraphs` skips everything inside tables, so a syllabus that lays its
+    weekly schedule or assessment breakdown out in a table (most do) would lose
+    exactly that. Walk the body children instead: paragraphs verbatim, table
+    rows as pipe-joined cells so row/column structure survives as plain text."""
+    from docx.oxml.table import CT_Tbl
+    from docx.oxml.text.paragraph import CT_P
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    for child in doc.element.body.iterchildren():
+        if isinstance(child, CT_P):
+            yield Paragraph(child, doc).text
+        elif isinstance(child, CT_Tbl):
+            for row in Table(child, doc).rows:
+                yield " | ".join(cell.text.strip() for cell in row.cells)
+
+
 def parse_docx(path: str | Path) -> list[SourceUnit]:
-    """One unit per non-empty paragraph, numbered sequentially (cited as pages)."""
+    """One unit per non-empty paragraph or table row, numbered sequentially
+    (cited as pages). Table rows are included — see `_iter_docx_blocks`."""
     from docx import Document
 
     doc = Document(str(path))
     units: list[SourceUnit] = []
     page = 1
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if text:
+    for block in _iter_docx_blocks(doc):
+        text = block.strip()
+        if text.strip(" |"):
             units.append(SourceUnit(text=text, location={"type": "page", "page": page}))
             page += 1
     return units

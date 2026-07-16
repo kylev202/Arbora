@@ -212,6 +212,32 @@ async fn insert_chunks(
     Ok(())
 }
 
+/// Persist a PDF's extracted figures (ADR-0012). Each is a citable visual
+/// excerpt; the file already lives under the source library, servable to the
+/// webview via the pinned asset scope.
+async fn insert_figures(
+    pool: &SqlitePool,
+    source_id: &str,
+    figures: &[FigureRow],
+) -> Result<(), String> {
+    for f in figures {
+        sqlx::query(
+            "INSERT INTO source_figures (id, source_id, page, path, width, height, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(source_id)
+        .bind(f.page)
+        .bind(&f.path)
+        .bind(f.width)
+        .bind(f.height)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 // ── Sidecar response shapes ────────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -224,10 +250,20 @@ struct ChunkRow {
 }
 
 #[derive(Deserialize)]
+struct FigureRow {
+    page: i64,
+    path: String,
+    width: i64,
+    height: i64,
+}
+
+#[derive(Deserialize)]
 struct IngestResultResp {
     chunks: Vec<ChunkRow>,
     chunk_count: i64,
     page_count: Option<i64>,
+    #[serde(default)]
+    figures: Vec<FigureRow>,
 }
 
 #[derive(Deserialize)]
@@ -446,6 +482,9 @@ async fn finish(
     };
 
     if let Err(e) = insert_chunks(pool, source_id, subject_id, &res.chunks).await {
+        return fail(app, pool, source_id, job_id, &e).await;
+    }
+    if let Err(e) = insert_figures(pool, source_id, &res.figures).await {
         return fail(app, pool, source_id, job_id, &e).await;
     }
     if let Err(e) = mark_processed(pool, source_id, res.chunk_count, res.page_count).await {
@@ -855,6 +894,36 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(n, 0, "chunks cascade on source delete");
+    }
+
+    // ADR-0012: extracted figures persist and cascade with their source.
+    #[tokio::test]
+    async fn figures_persist_and_cascade() {
+        let pool = mem_pool().await;
+        let src = insert(&pool, "subj1", "/docs/Anatomy.pdf", "Anatomy", None)
+            .await
+            .unwrap();
+
+        let figures = vec![
+            FigureRow { page: 3, path: "/lib/figures/a/12.png".into(), width: 400, height: 300 },
+            FigureRow { page: 5, path: "/lib/figures/a/34.png".into(), width: 800, height: 600 },
+        ];
+        insert_figures(&pool, &src.id, &figures).await.unwrap();
+
+        let (n,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM source_figures WHERE source_id = ?1")
+                .bind(&src.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(n, 2);
+
+        delete_source_db(&pool, &src.id).await;
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM source_figures")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(n, 0, "figures cascade on source delete");
     }
 
     // Mirrors the delete_source command body (the command itself needs Tauri State).

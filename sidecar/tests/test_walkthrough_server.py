@@ -41,7 +41,7 @@ def test_walkthrough_requires_token(monkeypatch):
 def test_walkthrough_job_returns_overview_and_lessons(monkeypatch):
     monkeypatch.setenv("ARBORA_SIDECAR_TOKEN", "secret")
 
-    def fake_run(job, *, chunks, week_title, llm_config):
+    def fake_run(job, *, chunks, week_title, llm_config, discipline="general", **_):
         job.result = {
             "overview": "Sound is transmitted through the ear.",
             "overview_refs": [
@@ -88,7 +88,7 @@ def test_walkthrough_job_returns_overview_and_lessons(monkeypatch):
 def test_walkthrough_error_surfaces(monkeypatch):
     monkeypatch.setenv("ARBORA_SIDECAR_TOKEN", "secret")
 
-    def fake_run(job, *, chunks, week_title, llm_config):
+    def fake_run(job, *, chunks, week_title, llm_config, discipline="general", **_):
         raise ValueError("NO_OVERVIEW: overview could not be grounded in the material")
 
     monkeypatch.setattr("arbora_ai.server.run_walkthrough", fake_run)

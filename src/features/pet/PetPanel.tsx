@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { matchPath, useLocation } from "react-router-dom";
 import { ArrowRight, Minus } from "@phosphor-icons/react";
-import { CitationChip, Disclaimer, IconButton } from "../../components";
+import { CitationChip, Disclaimer, IconButton, Select } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
-import type { PetReply, SchedulePlan, SourceRef } from "../../lib/types";
+import type { ChatHistoryTurn, PetReply, SchedulePlan, SourceRef } from "../../lib/types";
 import { startOfWeek, toNaive } from "../calendar/dates";
 import { ScheduleProposalCard } from "../calendar/ScheduleProposalCard";
 import type { PetState } from "./Pet";
@@ -88,11 +88,21 @@ export function PetPanel({
     setBusy(true);
     onStateChange("thinking");
 
+    // Recent exchanges travel with the message so the router and the lesson
+    // answerer can resolve follow-ups ("why?"). Ephemeral — state only.
+    const history: ChatHistoryTurn[] = turns
+      .filter((t): t is Extract<Turn, { status: "done" }> => t.status === "done")
+      .slice(-3)
+      .flatMap((t) => [
+        { role: "user" as const, content: t.question },
+        { role: "assistant" as const, content: t.text },
+      ]);
+
     const idx = turns.length;
     setTurns((prev) => [...prev, { status: "loading", question: q }]);
 
     try {
-      const reply = await api.petMessage(q, subjectId);
+      const reply = await api.petMessage(q, subjectId, history);
       if (reply.kind === "schedule_request") {
         // The pet announces what it did BEFORE showing the confirm cards (§1.4);
         // nothing touches the calendar until the user accepts (law #2).
@@ -214,21 +224,20 @@ export function PetPanel({
       </header>
 
       {subjects.status === "loaded" && subjects.data.length > 0 && (
-        <label className={styles.subjectRow}>
+        <div className={styles.subjectRow}>
           <span className={styles.subjectLabel}>Subject</span>
-          <select
-            className={styles.subjectSelect}
-            value={subjectId ?? ""}
-            onChange={(e) => setChosenSubject(e.target.value || null)}
-          >
-            <option value="">None picked</option>
-            {subjects.data.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className={styles.subjectSelect}>
+            <Select
+              aria-label="Subject"
+              value={subjectId ?? ""}
+              onChange={(v) => setChosenSubject(v || null)}
+              options={[
+                { value: "", label: "None picked" },
+                ...subjects.data.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+          </div>
+        </div>
       )}
 
       <div className={styles.messages} aria-live="polite" aria-label="Pet conversation">

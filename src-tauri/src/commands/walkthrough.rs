@@ -16,6 +16,7 @@ use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use super::chat::fetch_preset;
+use super::generate::fetch_discipline;
 use super::JobHandle;
 use crate::sidecar::Sidecar;
 
@@ -40,6 +41,36 @@ async fn fetch_week_chunks(
          FROM chunks c JOIN sources s ON s.id = c.source_id
          WHERE c.subject_id = ?1 AND s.week_id = ?2 AND s.ingest_state = 'processed'
          ORDER BY s.id, c.chunk_index",
+    )
+    .bind(subject_id)
+    .bind(week_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// The week's extracted source figures (ADR-0012), sent to the sidecar so a
+/// lesson can show the pictures on its own pages. Field names mirror the
+/// sidecar's `LessonFigure`.
+#[derive(sqlx::FromRow, Serialize)]
+struct FigureForWalkthrough {
+    source_id: String,
+    page: i64,
+    path: String,
+    width: i64,
+    height: i64,
+}
+
+async fn fetch_week_figures(
+    pool: &SqlitePool,
+    subject_id: &str,
+    week_id: &str,
+) -> Result<Vec<FigureForWalkthrough>, String> {
+    sqlx::query_as::<_, FigureForWalkthrough>(
+        "SELECT f.source_id, f.page, f.path, f.width, f.height
+         FROM source_figures f JOIN sources s ON s.id = f.source_id
+         WHERE s.subject_id = ?1 AND s.week_id = ?2 AND s.ingest_state = 'processed'
+         ORDER BY f.source_id, f.page",
     )
     .bind(subject_id)
     .bind(week_id)
@@ -224,12 +255,14 @@ pub async fn generate_week_walkthrough(
     if chunks.is_empty() {
         return Err("NO_CHUNKS".to_string());
     }
+    let figures = fetch_week_figures(pool.inner(), &subject_id, &week_id).await?;
     let base = sidecar
         .base_url()
         .filter(|_| sidecar.is_ready())
         .ok_or("SIDECAR_UNAVAILABLE")?;
     let token = sidecar.token().to_string();
     let preset = fetch_preset(pool.inner()).await;
+    let discipline = fetch_discipline(pool.inner(), &subject_id).await;
     let job_id = Uuid::new_v4().to_string();
 
     let chunk_json: Vec<_> = chunks
@@ -249,6 +282,7 @@ pub async fn generate_week_walkthrough(
             "job_id": job_id, "subject_id": subject_id, "week_id": week_id,
             "week_title": week_title, "chunks": chunk_json,
             "llm_config": { "provider": "ollama" }, "preset": preset,
+            "discipline": discipline, "figures": figures,
         }))
         .send()
         .await

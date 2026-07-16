@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field, ValidationError
 from ..llm.provider import LLMProvider, LLMSchemaError
 from ..rag.embeddings import embed_texts
 from ..rag.faiss_index import SubjectIndex
+from ..rag.retrieve import hybrid_select
 from ..schemas.output import PageLocation, SourceRef, TimestampLocation
 
 MAX_RETRIES = 2
@@ -95,12 +96,17 @@ def generate_diagram(
     if not index_path.exists():
         raise ValueError("no indexed material to search")
 
-    by_faiss_id = {int(c["faiss_id"]): c for c in chunks}
+    position_of = {int(c["faiss_id"]): i for i, c in enumerate(chunks)}
     index = SubjectIndex.load(index_path)
 
     q_vec = embed_texts([topic])
-    _, raw_ids = index.search(q_vec, k=min(k, index.size))
-    top_chunks = [by_faiss_id[int(fid)] for fid in raw_ids[0] if int(fid) in by_faiss_id]
+    _, raw_ids = index.search(q_vec, k=min(2 * k, index.size))
+    vector_positions = [position_of[int(fid)] for fid in raw_ids[0] if int(fid) in position_of]
+    # Hybrid semantic + keyword ranking with same-source neighbours, so the
+    # diagram sees the chunks that literally name the topic, not just the
+    # embedding-nearest ones (same retrieval as chat — rag/retrieve.py).
+    top_positions = hybrid_select(topic, chunks, vector_positions, k=k, max_extra=2)
+    top_chunks = [chunks[pos] for pos in top_positions]
 
     if not top_chunks:
         raise ValueError("no matching chunks found")

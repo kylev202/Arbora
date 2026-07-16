@@ -56,6 +56,17 @@ pub(crate) async fn source_title(pool: &SqlitePool, source_id: &str) -> String {
         .unwrap_or_else(|| "Unknown source".to_string())
 }
 
+// ── Request shapes ─────────────────────────────────────────────────────────────
+
+/// One prior turn of the conversation, forwarded to the sidecar so follow-up
+/// questions ("why does *it* do that?") can be condensed into standalone
+/// search queries. Ephemeral — never persisted (law #2 posture unchanged).
+#[derive(Deserialize, Serialize)]
+pub struct ChatHistoryTurn {
+    pub role: String, // "user" | "assistant"
+    pub content: String,
+}
+
 // ── Sidecar response shapes ────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -78,6 +89,8 @@ struct ChatSidecarResponse {
     answer: String,
     #[serde(default)]
     source_refs: Vec<SidecarSourceRef>,
+    #[serde(default)]
+    suggested_questions: Vec<String>,
 }
 
 // ── UI output shapes ───────────────────────────────────────────────────────────
@@ -104,6 +117,7 @@ pub struct ChatCitation {
 pub struct ChatMessageResponse {
     pub answer: String,
     pub citations: Vec<ChatCitation>,
+    pub suggested_questions: Vec<String>,
 }
 
 // ── Command ────────────────────────────────────────────────────────────────────
@@ -114,8 +128,16 @@ pub async fn chat_message(
     sidecar: State<'_, Sidecar>,
     subject_id: String,
     question: String,
+    history: Option<Vec<ChatHistoryTurn>>,
 ) -> Result<ChatMessageResponse, String> {
-    ask(pool.inner(), &sidecar, &subject_id, &question).await
+    ask(
+        pool.inner(),
+        &sidecar,
+        &subject_id,
+        &question,
+        &history.unwrap_or_default(),
+    )
+    .await
 }
 
 /// Full RAG Q&A path (chunks → sidecar /chat → titled citations). Shared by the
@@ -125,6 +147,7 @@ pub(crate) async fn ask(
     sidecar: &Sidecar,
     subject_id: &str,
     question: &str,
+    history: &[ChatHistoryTurn],
 ) -> Result<ChatMessageResponse, String> {
     let chunks = fetch_subject_chunks(pool, subject_id).await?;
     if chunks.is_empty() {
@@ -158,6 +181,7 @@ pub(crate) async fn ask(
             "question": question,
             "chunks": chunk_json,
             "preset": preset,
+            "history": history,
         }))
         .send()
         .await
@@ -191,6 +215,7 @@ pub(crate) async fn ask(
     Ok(ChatMessageResponse {
         answer: sidecar_resp.answer,
         citations,
+        suggested_questions: sidecar_resp.suggested_questions,
     })
 }
 

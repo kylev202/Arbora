@@ -8,6 +8,10 @@ The pet serves exactly these intents:
     deadlines (routed to the rule-based week planner, proposals only).
 Everything else is ``out_of_scope`` and gets a gentle refusal in the UI —
 the pet never freewheels on general knowledge.
+
+Classification is conversation-aware: a bare follow-up ("why?", "and then?")
+carries no domain signal on its own, so the recent turns are shown to the
+router and short follow-ups inherit the domain they continue.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ from pydantic import BaseModel, ValidationError
 from ..llm.provider import LLMProvider, LLMSchemaError
 
 MAX_RETRIES = 2
+HISTORY_TURNS = 4  # most recent history entries shown to the router
+HISTORY_CHARS = 200  # per-entry cap — the router needs the gist, not the essay
 
 Domain = Literal["lesson", "app_help", "schedule", "out_of_scope"]
 
@@ -41,16 +47,42 @@ into exactly one domain:
 - "out_of_scope": anything else (weather, news, general chit-chat, coding help,
   personal advice, other apps).
 
-Message: {question}
+A short follow-up ("why?", "and then?", "what about the second one?") continues
+the conversation — give it the same domain as the message it follows.
+
+EXAMPLES:
+"What does the Krebs cycle produce?" -> {{"domain": "lesson"}}
+"How do I import my lecture slides?" -> {{"domain": "app_help"}}
+"Plan my study week around Friday's deadline" -> {{"domain": "schedule"}}
+"What's the weather tomorrow?" -> {{"domain": "out_of_scope"}}
+
+{history_block}Message: {question}
 
 Return a JSON object with one key "domain".
 """
 
 
-def route_question(question: str, provider: LLMProvider) -> Domain:
-    """Classify one message. Raises LLMUnavailableError when Ollama is down and
-    ValueError when the model can't produce a valid classification."""
-    prompt = _PROMPT.format(question=question.strip())
+def _history_block(history: list[dict]) -> str:
+    lines = []
+    for turn in history[-HISTORY_TURNS:]:
+        content = " ".join(str(turn.get("content", "")).split())
+        if len(content) > HISTORY_CHARS:
+            content = content[:HISTORY_CHARS] + "…"
+        speaker = "User" if turn.get("role") == "user" else "Assistant"
+        lines.append(f"{speaker}: {content}")
+    return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
+
+
+def route_question(
+    question: str, provider: LLMProvider, history: list[dict] | None = None
+) -> Domain:
+    """Classify one message (with optional recent turns for follow-up context).
+    Raises LLMUnavailableError when Ollama is down and ValueError when the
+    model can't produce a valid classification."""
+    prompt = _PROMPT.format(
+        question=question.strip(),
+        history_block=_history_block(history) if history else "",
+    )
     schema = RouteGen.model_json_schema()
     for attempt in range(MAX_RETRIES + 1):
         try:

@@ -10,6 +10,7 @@ counted.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -78,20 +79,26 @@ def generate_from_chunks(
     types: list[str],
     base_temp: float = 0.1,
     progress_cb: Callable[[int, int, int], None] | None = None,
+    discipline: str = "general",
 ) -> tuple[GenerationResult, dict[str, GenStats]]:
     """Generate the requested item types from every chunk. Returns the kept
     items plus per-type stats (for the quality report). `progress_cb`, if given,
     is called after each chunk with (chunks_done, chunks_total, accepted_so_far)
-    so a long run can stream progress."""
+    so a long run can stream progress. `discipline` steers subject-aware
+    formatting (math → LaTeX, cs → code); see prompts.discipline_overlay."""
     result = GenerationResult()
     stats = {t: GenStats() for t in types}
     seen_fronts: set[str] = set()
+    seen_questions: set[str] = set()
     total = len(chunks)
 
     for done, chunk in enumerate(chunks, start=1):
         if "cards" in types:
             st = stats["cards"]
             st.attempts += 1
+            # Cards stay plain-text for now: the flashcard/quiz surfaces and TTS
+            # don't render LaTeX yet, so a math overlay here would show raw `$…$`
+            # and read it aloud. Notes are the first math-rendered surface.
             gen = _generate_valid(provider, card_prompt(chunk), CardGen, base_temp)
             if gen is None:
                 st.structure_fails += 1
@@ -117,27 +124,38 @@ def generate_from_chunks(
         if "quiz" in types:
             st = stats["quiz"]
             st.attempts += 1
-            gen = _generate_valid(provider, quiz_prompt(chunk), QuizGen, base_temp)
+            gen = _generate_valid(provider, quiz_prompt(chunk), QuizGen, base_temp)  # plain-text (see cards)
             if gen is None:
                 st.structure_fails += 1
                 st._reason("invalid schema after retries")
             else:
+                # Small models put the correct option first far more often than
+                # 1-in-4; a deterministic per-chunk shuffle removes the position
+                # tell without breaking reproducibility.
+                options = list(gen.options)
+                correct = options[gen.answer_index]
+                random.Random(chunk.index).shuffle(options)
                 quiz = QuizItemOut(
-                    question=gen.question, options=gen.options, answer_index=gen.answer_index,
+                    question=gen.question, options=options, answer_index=options.index(correct),
                     explanation=gen.explanation, source_ref=_cite(chunk, gen.excerpt),
                 )
                 reason = grounding.check_quiz(quiz, chunk)
+                key = normalize(quiz.question)
                 if reason:
                     st.grounding_drops += 1
                     st._reason(reason)
+                elif key in seen_questions:
+                    st.dedupe_drops += 1
+                    st._reason("duplicate question")
                 else:
+                    seen_questions.add(key)
                     result.quiz_items.append(quiz)
                     st.accepted += 1
 
         if "notes" in types:
             st = stats["notes"]
             st.attempts += 1
-            gen = _generate_valid(provider, note_prompt(chunk), NoteGen, base_temp)
+            gen = _generate_valid(provider, note_prompt(chunk, discipline), NoteGen, base_temp)
             if gen is None:
                 st.structure_fails += 1
                 st._reason("invalid schema after retries")

@@ -13,12 +13,14 @@ class _FakeProvider(LLMProvider):
     def __init__(self, responses):
         self.responses = list(responses)
         self.calls = 0
+        self.prompts: list[str] = []
 
     def health(self) -> bool:
         return True
 
     def generate(self, prompt, schema=None, temperature=0.1) -> dict:
         self.calls += 1
+        self.prompts.append(prompt)
         resp = self.responses.pop(0)
         if isinstance(resp, Exception):
             raise resp
@@ -46,9 +48,28 @@ def test_route_gives_up_after_retries():
         pass
 
 
+def test_route_with_history_shows_conversation():
+    provider = _FakeProvider([{"domain": "lesson"}])
+    history = [
+        {"role": "user", "content": "What does the Krebs cycle produce?"},
+        {"role": "assistant", "content": "It produces NADH and FADH2 [1]."},
+    ]
+    assert route_question("why?", provider, history=history) == "lesson"
+    assert "Conversation so far:" in provider.prompts[0]
+    assert "Krebs cycle" in provider.prompts[0]
+
+
+def test_route_without_history_has_no_conversation_block():
+    provider = _FakeProvider([{"domain": "lesson"}])
+    route_question("what is osmosis?", provider)
+    assert "Conversation so far:" not in provider.prompts[0]
+
+
 def test_pet_route_endpoint(monkeypatch):
     monkeypatch.setenv("ARBORA_SIDECAR_TOKEN", "secret")
-    monkeypatch.setattr("arbora_ai.server.route_question", lambda q, p: "app_help")
+    monkeypatch.setattr(
+        "arbora_ai.server.route_question", lambda q, p, history=None: "app_help"
+    )
     client = TestClient(app)
 
     assert client.post("/pet/route", json={"question": "hi"}).status_code == 401
@@ -62,7 +83,7 @@ def test_pet_route_endpoint(monkeypatch):
 def test_pet_route_unavailable_maps_to_503(monkeypatch):
     monkeypatch.setenv("ARBORA_SIDECAR_TOKEN", "secret")
 
-    def _boom(q, p):
+    def _boom(q, p, history=None):
         raise LLMUnavailableError("connection refused")
 
     monkeypatch.setattr("arbora_ai.server.route_question", _boom)

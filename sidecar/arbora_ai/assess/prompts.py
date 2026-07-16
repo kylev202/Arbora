@@ -7,9 +7,14 @@ from __future__ import annotations
 from ..ingest.chunk import Chunk
 
 _RULES = (
-    "Use ONLY the passage below. Do not add any fact that is not stated in it. "
-    "The excerpt MUST be copied word-for-word from the passage (a real substring), "
-    "max 200 characters."
+    "GROUNDING RULES:\n"
+    "- Use ONLY the passage below. Never add facts, numbers, names, or examples "
+    "that are not stated in it, even if you know them to be true.\n"
+    "- The excerpt MUST be copied word-for-word from the passage (a real "
+    "substring), max 200 characters.\n"
+    '- Write self-contained content: never write "the passage", "the text", '
+    '"this excerpt", or "the source" — the student reads your output without '
+    "seeing the passage."
 )
 
 
@@ -19,11 +24,14 @@ def _ctx(chunk: Chunk) -> str:
 
 def short_answer_prompt(chunk: Chunk) -> str:
     return (
-        f"You write short-answer study questions. {_RULES}\n\n"
+        f"You are an expert university examiner writing short-answer questions.\n\n{_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
         "Create ONE short-answer question from the passage:\n"
-        "- question: clear, answerable from the passage alone in one or two sentences.\n"
-        "- expected_answer: the model answer, concise, supported by the passage.\n"
+        "- question: clear, self-contained, answerable from the passage alone in one "
+        "or two sentences. Ask WHY or HOW when the passage explains a mechanism or "
+        "reason; otherwise ask WHAT/WHICH/WHEN. Never a yes/no question.\n"
+        "- expected_answer: the model answer, concise, in the passage's own "
+        "terminology — every point in it must be supported by the passage.\n"
         "- excerpt: the exact phrase from the passage that supports the answer.\n"
         "Return only the JSON object."
     )
@@ -31,7 +39,8 @@ def short_answer_prompt(chunk: Chunk) -> str:
 
 def matching_prompt(chunk: Chunk) -> str:
     return (
-        f"You write matching exercises (terms to descriptions). {_RULES}\n\n"
+        f"You are an expert university tutor writing matching exercises "
+        f"(terms to descriptions).\n\n{_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
         "Create ONE matching exercise from the passage:\n"
         "- instruction: one short sentence telling the student what to match.\n"
@@ -45,7 +54,7 @@ def matching_prompt(chunk: Chunk) -> str:
 
 def ordering_prompt(chunk: Chunk) -> str:
     return (
-        f"You write sequencing exercises. {_RULES}\n\n"
+        f"You are an expert university tutor writing sequencing exercises.\n\n{_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
         "Create ONE put-in-order exercise from the passage (a process, sequence, "
         "or ranked structure described in it):\n"
@@ -58,7 +67,8 @@ def ordering_prompt(chunk: Chunk) -> str:
 
 def feynman_prompt(chunk: Chunk) -> str:
     return (
-        f"You design Feynman-technique exercises (explain it simply). {_RULES}\n\n"
+        f"You are an expert university tutor designing Feynman-technique exercises "
+        f"(explain it simply).\n\n{_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
         "Pick ONE central concept from the passage for the student to explain in "
         "their own words:\n"
