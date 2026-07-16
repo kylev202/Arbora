@@ -37,18 +37,27 @@ _NOTE_STYLE = (
 )
 
 
-# Subject-aware overlay (ADR-0011; math-scope extended 2026-07-11 — see the ADR's
-# Update note). The excerpt stays plain prose copied verbatim from the passage (law
-# #1 unchanged); the equation/code is a *rendered aid* the human approves at the
-# review gate (law #2). Maths is typeset for every quantitative discipline (math,
-# cs, science) because formulas turn up in all of them — a gradient-descent note is
-# as mathematical as a calculus one. general/humanities keep the plain-text style.
+# Subject-aware overlay (ADR-0011; math-scope extended 2026-07-11 and again
+# 2026-07-16 — see the ADR's Update notes). The excerpt stays plain prose copied
+# verbatim from the passage (law #1 unchanged); the equation/code is a *rendered
+# aid* the human approves at the review gate (law #2). On note surfaces the math
+# block rides along for every discipline — the instructions are self-conditional
+# ("when the passage states an equation"), and formulas turn up under any subject
+# label; card/quiz surfaces stay plain text (no LaTeX rendering or TTS support).
 _MATH_FMT = (
     "\nMATH FORMATTING:\n"
     "- When the passage states an equation, formula, or symbolic relationship, "
     "typeset it in LaTeX: inline maths as $...$ and a standalone equation as "
     "$$...$$ on its own line. Reproduce only the mathematics the passage states — "
     "never invent steps, values, or notation to fill it out.\n"
+    "- Immediately after a standalone equation, say in plain words what each "
+    'symbol in it stands for (e.g. "where $Q$ is the heat absorbed, $m$ is the '
+    'mass, and $L$ is the latent heat"), using only the meanings the passage '
+    "gives.\n"
+    "- When the passage works a result through several steps, keep the steps in "
+    "ONE display block aligned on the equals signs — "
+    "$$\\begin{aligned} a &= b \\\\ &= c \\end{aligned}$$ — never one $$ block "
+    "per step.\n"
     "- Write the $ delimiters tight against the maths, with no spaces just inside "
     "them: write $x$ and $$...$$, never $ x $ (the renderer treats a padded $ as "
     "plain text).\n"
@@ -66,11 +75,22 @@ _CODE_FMT = (
 
 
 def discipline_overlay(discipline: str) -> str:
+    """Overlay for the plain-text surfaces (cards/quizzes, which don't render
+    LaTeX yet): formatting only where the subject label promises it."""
     if discipline in ("math", "science"):
         return _MATH_FMT
     if discipline == "cs":  # ML/algorithms are code AND maths
         return _MATH_FMT + _CODE_FMT
     return ""
+
+
+def note_overlay(discipline: str) -> str:
+    """Overlay for the note surfaces (notes / overview / lessons), which render
+    KaTeX and fenced code. Math formatting is *material-driven* — the rules fire
+    only when a passage actually states an equation — so it applies under every
+    discipline label (a 'general' subject still meets formulas); code stays
+    cs-only. See ADR-0011's 2026-07-16 Update note."""
+    return _MATH_FMT + (_CODE_FMT if discipline == "cs" else "")
 
 
 def _ctx(chunk: Chunk) -> str:
@@ -138,18 +158,23 @@ def note_prompt(chunk: Chunk, discipline: str = "general") -> str:
         "You are an expert university tutor writing clear, well-structured study notes.\n\n"
         f"{_RULES}\n\n"
         f"{_ctx(chunk)}\n\n"
-        "Write ONE study note on the passage as Markdown, in order:\n"
-        "1. A `## ` heading naming the topic of the passage (a few words).\n"
+        "Write ONE study note that teaches the passage as Markdown, in order:\n"
+        "1. A `## ` heading that names the specific concept the passage teaches, in "
+        "plain words (e.g. `## Latent heat: the energy a state change needs`) — never "
+        "a vague label like `## Overview`, `## Notes`, or `## Key points`.\n"
         "2. A one-sentence summary of what the passage covers (plain text, no heading).\n"
-        "3. A few `- ` bullets on the key points, using `**bold**` to mark key terms. "
-        "Define each key term in plain words the first time it appears, and when the "
-        "passage explains why or how something happens, capture the mechanism, not "
-        "just the fact.\n"
+        "3. The explanation: a short `### ` subheading named after each distinct idea "
+        "in the passage (just one if the passage makes a single point), each followed "
+        "by a sentence or two explaining that idea in simple words a first-time "
+        "student understands, then `- ` bullets for the supporting facts. Use "
+        "`**bold**` to mark key terms and define each in plain words on first "
+        "mention; when the passage explains why or how something happens, teach the "
+        "mechanism, not just the fact.\n"
         "Return a JSON object with:\n"
         "- content: the structured Markdown note above, at least 20 characters.\n"
         '- format: "outline".\n'
         "- excerpt: an exact phrase copied from the passage.\n"
-        f"{_NOTE_STYLE}{discipline_overlay(discipline)}\n"
+        f"{_NOTE_STYLE}{note_overlay(discipline)}\n"
         "Return only the JSON object."
     )
 
@@ -180,11 +205,13 @@ def walkthrough_overview_prompt(
         "Write the week's overview note as Markdown with this structure, in order:\n"
         "1. A one- or two-sentence summary of what the week is about (plain text, no heading).\n"
         "2. Two or three `## ` sections covering the main ideas and how they connect — a "
-        "short sentence or two then `- ` bullets in each. Prefer explaining how the "
+        "short sentence or two then `- ` bullets in each. Name each section after the "
+        "specific idea it covers, in plain words — never a generic label like "
+        "`## Key ideas` or `## Overview`. Prefer explaining how the "
         "ideas relate (what leads to what, what depends on what) over listing them.\n"
         "3. A final `## Key takeaways` section: 2-4 bullets of what to remember.\n"
         "Do not repeat the week title as a heading.\n"
-        f"{_NOTE_STYLE}{discipline_overlay(discipline)}\n"
+        f"{_NOTE_STYLE}{note_overlay(discipline)}\n"
         "Return a JSON object with:\n"
         "- content: the structured Markdown note above.\n"
         "- excerpts: 2-4 exact phrases copied from the passages that support the overview.\n"
@@ -202,32 +229,38 @@ _LESSON_EXAMPLE = (
     "\nEXAMPLE (a different topic — copy this SHAPE and length, never its content):\n"
     '{"title": "Changes of state", '
     '"content": "Matter changes state when heat is added or removed.\\n\\n'
-    "## Key ideas\\nState changes are driven by energy transfer between a "
-    "substance and its surroundings.\\n"
+    "## Melting: solid to liquid\\nWhen a solid absorbs heat, its particles "
+    "vibrate faster until they break out of their fixed positions.\\n"
     "- **Melting** is the change from solid to liquid as heat is absorbed.\\n"
+    "- The temperature where this happens is the **melting point**.\\n\\n"
+    "## Evaporation: liquid to gas\\nParticles at a liquid's surface can gain "
+    "enough energy to escape into the air.\\n"
     "- **Evaporation** turns a liquid into a gas at its surface.\\n\\n"
-    "## How it works\\n1. Adding heat raises the average kinetic energy of the "
-    "molecules.\\n2. Once their bonds break, the substance shifts to the next "
-    'state.\\n\\n## Takeaway\\n- A state change is an energy change, not a change '
-    'of substance.", '
+    "## How a state change unfolds\\n1. Adding heat raises the average kinetic "
+    "energy of the molecules.\\n2. Once their bonds break, the substance shifts "
+    'to the next state.\\n\\n## Takeaway\\n- A state change is an energy change, '
+    'not a change of substance.", '
     '"excerpts": ["Melting is the change from solid to liquid", '
     '"Evaporation turns a liquid into a gas"]}\n'
 )
 
 # Math-discipline variant: same shape, but demonstrates tight inline/display LaTeX
-# so the model typesets the passage's formulas (ADR-0011) instead of leaving them
-# as ASCII. Used for math/science/cs; the plain example above is used otherwise.
+# and the "where each symbol means…" line (ADR-0011) so the model typesets the
+# passage's formulas instead of leaving them as ASCII, and explains the notation.
+# Used for math/science/cs; the plain example above is used otherwise.
 _LESSON_EXAMPLE_MATH = (
     "\nEXAMPLE (a different topic — copy this SHAPE, formatting, and length, never "
     "its content):\n"
     '{"title": "Latent heat", '
     '"content": "The heat a state change needs depends on the mass and the material.\\n\\n'
-    "## Key ideas\\nA state change absorbs or releases energy at constant temperature.\\n"
-    "- **Latent heat** $L$ is the energy per unit mass to change state, so the total "
-    "heat is $Q=mL$.\\n"
+    "## Latent heat: energy without temperature change\\nDuring a state change, "
+    "added heat breaks bonds between molecules instead of raising the temperature.\\n"
+    "- **Latent heat** $L$ is the energy per unit mass needed to change state.\\n"
     "- **Melting** absorbs heat without raising the temperature.\\n\\n"
-    "## How it works\\n1. Added heat breaks intermolecular bonds rather than raising "
-    "temperature.\\n2. The energy for a sample of mass $m$ follows $$Q=mL.$$\\n\\n"
+    "## The heat equation $Q=mL$\\nThe total heat a sample needs grows with its "
+    "mass:\\n$$Q=mL$$\\nwhere $Q$ is the heat absorbed, $m$ is the mass of the "
+    "sample, and $L$ is the latent heat of the material.\\n"
+    "- Doubling the mass doubles the heat the state change needs.\\n\\n"
     '## Takeaway\\n- A state change is an energy change described by $Q=mL$.", '
     '"excerpts": ["Latent heat is the energy per unit mass", '
     '"Melting absorbs heat"]}\n'
@@ -259,23 +292,28 @@ def walkthrough_lesson_prompt(
         f"{_multi_ctx(chunks)}\n\n"
         "Write this lesson note as Markdown with this structure, in order:\n"
         "1. A one- or two-sentence summary of the lesson (plain text, no heading).\n"
-        "2. A `## Key ideas` section: a short explanation then 3-6 `- ` bullets of the "
-        "key facts from the passages. Define each key term in plain words on first "
-        "mention; when the passages explain why or how something works, capture the "
-        "mechanism, not just the fact.\n"
-        "3. THEN add whichever ONE of these sections best fits the material — pick the "
-        "single most useful one, and skip this step entirely if none fits, never "
-        "inventing content to fill it:\n"
-        "   - `## How it works` with numbered `1. ` steps, when the passages describe "
-        "a process, derivation, or algorithm; or\n"
-        "   - `## Example` with one concrete worked example, when the passages give one; or\n"
-        "   - `## Diagram` with a Mermaid diagram in a ```mermaid fenced block, when the "
-        "passages describe how things relate, connect, or flow. Use `graph TD` syntax, short "
+        "2. One `## ` section for EACH distinct concept, formula, or idea the "
+        "passages teach (usually 2-6 sections). Name each heading after the specific "
+        "thing it explains, in plain words — never a generic label like "
+        "`## Key ideas`, `## Overview`, or `## Details`. Together the sections must "
+        "cover everything the passages teach: a student who reads only this note "
+        "should not miss a topic. In each section, first explain the concept in one "
+        "to three sentences of simple words a first-time student understands — define "
+        "each key term in plain words on first mention, and when the passages explain "
+        "why or how something works, teach the mechanism, not just the fact — then "
+        "add `- ` bullets for the supporting facts.\n"
+        "3. Inside a section, when (and only when) the material fits, also use:\n"
+        "   - numbered `1. ` steps, when the passages describe a process, derivation, "
+        "or algorithm; or\n"
+        "   - one concrete worked example, when the passages give one; or\n"
+        "   - a Mermaid diagram in a ```mermaid fenced block, when the passages "
+        "describe how things relate, connect, or flow. Use `graph TD` syntax, short "
         "node labels of 2-5 words, at most 8 nodes; base every node and edge only on the "
         "passages.\n"
-        "4. A `## Takeaway` section: one or two bullets on what matters most.\n"
+        "Never invent content to fill a section.\n"
+        "4. A final `## Takeaway` section: one or two bullets on what matters most.\n"
         "Do not repeat the title as a heading.\n"
-        f"{_NOTE_STYLE}{discipline_overlay(discipline)}{figures_offer}\n"
+        f"{_NOTE_STYLE}{note_overlay(discipline)}{figures_offer}\n"
         "Return a JSON object with:\n"
         "- title: a short name for what this lesson teaches (a few words).\n"
         "- content: the structured Markdown lesson above.\n"

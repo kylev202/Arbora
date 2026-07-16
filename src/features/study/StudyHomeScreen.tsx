@@ -17,7 +17,7 @@ import {
 import { Button, CitationChip, EmptyState, SproutMotif } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
-import type { CardState, PathStage } from "../../lib/types";
+import type { CardState, Note, PathStage } from "../../lib/types";
 import { WeekMaterials } from "./WeekMaterials";
 import { NoteMarkdown } from "./NoteMarkdown";
 import { JourneyOutline, journeyCta, journeyUrl } from "./JourneyPanel";
@@ -283,11 +283,28 @@ function WeekGallery({
 }
 
 /** Every grounded note from this subject's sources, tucked in a quiet
- * disclosure — reference, not a task. Each note is rendered as real structure
- * (heading, summary, bullets, section breaks) and kept clearly apart from the
- * next; every note carries its citations. */
+ * disclosure — reference, not a task. Notes are grouped under the source
+ * document they came from (a visible divider names it), so the reader always
+ * knows which material a note belongs to instead of guessing from its heading;
+ * every note carries its citations. */
 function NotesSection({ subjectId }: { subjectId: string }) {
   const notes = useAsync(() => api.listNotes(subjectId), [subjectId]);
+  // Group by originating source, keeping the incoming (reading) order both of
+  // groups and of notes within a group.
+  const groups = useMemo(() => {
+    const out: { id: string; title: string; notes: Note[] }[] = [];
+    for (const n of notes.data ?? []) {
+      const ref = n.source_refs[0];
+      const id = ref?.source_id ?? "unknown";
+      let g = out.find((x) => x.id === id);
+      if (!g) {
+        g = { id, title: ref?.source_title ?? "Unknown source", notes: [] };
+        out.push(g);
+      }
+      g.notes.push(n);
+    }
+    return out;
+  }, [notes.data]);
   if (!notes.data || notes.data.length === 0) return null;
   return (
     <details className={styles.notes}>
@@ -301,15 +318,20 @@ function NotesSection({ subjectId }: { subjectId: string }) {
         Everything Arbora noted from your sources — grounded and cited.
       </p>
       <div className={styles.notesList}>
-        {notes.data.map((n) => (
-          <article key={n.id} className={styles.note}>
-            <NoteMarkdown content={n.content} />
-            <div className={styles.noteCitations}>
-              {n.source_refs.map((ref, i) => (
-                <CitationChip key={i} source={ref} />
-              ))}
-            </div>
-          </article>
+        {groups.map((g) => (
+          <section key={g.id} className={styles.notesGroup} aria-label={`Notes from ${g.title}`}>
+            <h3 className={styles.notesGroupTitle}>{g.title}</h3>
+            {g.notes.map((n) => (
+              <article key={n.id} className={styles.note}>
+                <NoteMarkdown content={n.content} />
+                <div className={styles.noteCitations}>
+                  {n.source_refs.map((ref, i) => (
+                    <CitationChip key={i} source={ref} />
+                  ))}
+                </div>
+              </article>
+            ))}
+          </section>
         ))}
       </div>
     </details>

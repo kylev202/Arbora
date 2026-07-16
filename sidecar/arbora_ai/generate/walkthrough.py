@@ -34,6 +34,7 @@ from .figures import (
     resolve_figure_refs,
 )
 from .grounding import excerpt_grounded, location_from_chunk
+from .mathfmt import tighten_math
 from .prompts import walkthrough_lesson_prompt, walkthrough_overview_prompt
 
 MAX_STRUCTURE_RETRIES = 3
@@ -182,7 +183,7 @@ def generate_walkthrough(
                 # and strip any other image the model emitted (no arbitrary/invented
                 # figures reach the reader). On low the model wasn't offered figures,
                 # so we then append the largest one deterministically.
-                content = resolve_figure_refs(lesson.content, bucket_figures)
+                content = resolve_figure_refs(tighten_math(lesson.content), bucket_figures)
                 if not capable:
                     content = append_figure(content, bucket_figures)
                 lessons.append(
@@ -203,6 +204,6 @@ def generate_walkthrough(
         raise ValueError("NO_LESSONS: no lesson could be grounded in the material")
 
     result = WalkthroughResult(
-        overview=overview.content, overview_refs=overview_refs, lessons=lessons
+        overview=tighten_math(overview.content), overview_refs=overview_refs, lessons=lessons
     )
     return result, stats

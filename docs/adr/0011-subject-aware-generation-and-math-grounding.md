@@ -3,6 +3,40 @@
 - **Status:** Accepted
 - **Date:** 2026-07-08
 
+## Update (2026-07-16b): padded `$ x $` delimiters normalized deterministically
+
+The prompt's tight-delimiter rule ("write $x$, never $ x $") is followed only
+inconsistently by small local models — the same material renders perfectly one run
+and as raw dollar signs the next, because the note renderer deliberately treats a
+padded `$` as plain text (so "$5 and $10" in prose is never math). Prompting cannot
+make a 4B/8B model deterministic, so the pipeline now normalizes after validation
+(`generate/mathfmt.py`, applied to note/overview/lesson content in `pipeline.py`
+and `walkthrough.py`) — the same posture as the quiz option shuffle. Every minimal
+single-`$` pair is consumed leftmost the way a renderer pairs them, and only
+symmetrically padded pairs are rewritten: currency never puts a space *after* the
+`$`, and consuming non-math pairs stops a stray closing `$` from opening a false
+span across prose. `NoteMarkdown.tsx` mirrors the same rewrite so notes persisted
+before this fix render without regeneration. Grounding posture unchanged — the
+excerpt fields are never touched.
+
+## Update (2026-07-16): note surfaces typeset math material-driven, with symbol explanations
+
+The discipline gate kept biting on note surfaces: a `general` subject whose material
+contains formulas still rendered them as raw text, because the label — not the
+material — decided. Since the math instructions are self-conditional ("**when** the
+passage states an equation…"), gating them adds nothing on surfaces that can render
+the result. Prompts now split into two overlays: `discipline_overlay` (cards/quizzes,
+unchanged — those surfaces still render plain text and speak answers via TTS) and
+`note_overlay` (notes / week overview / lessons), which carries the math block under
+**every** discipline and keeps code cs-only. The math block additionally requires a
+plain-words meaning for each symbol right after a display equation ("where $Q$ is the
+heat absorbed…", meanings only from the passage) and multi-step derivations in one
+`aligned` display block. Grounding posture unchanged: verbatim excerpt grounds the
+prose, typeset maths is the review-gated aid. In the same change, the fixed lesson
+template (`## Key ideas` / one-of / `## Takeaway`) became concept-named sections —
+one `## ` section per distinct idea the passages teach, covering all of them — but
+that is prompt pedagogy, not a grounding decision, so it is only noted here.
+
 ## Update (2026-07-11): math typesetting extended beyond `math`
 
 The original decision typeset LaTeX only for `discipline == "math"` and gave `cs`

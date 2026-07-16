@@ -30,6 +30,7 @@ from ..schemas.output import (
 )
 from . import grounding
 from .grounding import location_from_chunk, normalize
+from .mathfmt import tighten_math
 from .prompts import card_prompt, note_prompt, quiz_prompt
 
 MAX_STRUCTURE_RETRIES = 3
@@ -161,7 +162,9 @@ def generate_from_chunks(
                 st._reason("invalid schema after retries")
             else:
                 note = NoteOut(
-                    content=gen.content, format=gen.format, source_refs=[_cite(chunk, gen.excerpt)]
+                    content=tighten_math(gen.content),
+                    format=gen.format,
+                    source_refs=[_cite(chunk, gen.excerpt)],
                 )
                 reason = grounding.check_note(note, chunk)
                 if reason:

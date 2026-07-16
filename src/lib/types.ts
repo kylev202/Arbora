@@ -65,7 +65,8 @@ export type SourceRef = {
 // ── Library ──────────────────────────────────────────────────────────────
 
 /** What kind of course a subject is — steers subject-aware generation (math
- * emits LaTeX, cs emits fenced code, …). 'general' keeps the plain-text output. */
+ * emits LaTeX, cs emits fenced code, …). Notes typeset any formula the material
+ * itself states under every discipline; cards/quizzes stay plain text. */
 export type Discipline = "general" | "math" | "cs" | "science" | "humanities";
 
 /** Picker options, in display order. `hint` explains what the discipline

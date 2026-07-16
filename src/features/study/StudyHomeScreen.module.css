@@ -360,6 +360,30 @@
   gap: var(--space-6);
 }
 
+/* Notes from one source document, under a divider that names it. */
+.notesGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.notesGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+.notesGroupTitle::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
 .note {
   display: flex;
   flex-direction: column;

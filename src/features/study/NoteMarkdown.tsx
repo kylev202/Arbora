@@ -37,8 +37,22 @@ function tex(src: string, displayMode: boolean): string {
   return katex.renderToString(src, { throwOnError: false, displayMode });
 }
 
+// Padded inline math (`$ x $`) tightened to `$x$` — the sidecar does this at
+// generation time (mathfmt.py), but notes saved before that fix still carry the
+// padded form small models emit. Mirrors mathfmt.py exactly: every minimal `$`
+// pair is consumed leftmost (so a closing `$` can never open a false span), but
+// only symmetric padding is rewritten — currency prose ("$5 and $10", "5$ to
+// 10$") never puts a space after the `$`, so it stays verbatim.
+const MATH_PAIR = /(?<!\$)\$(?!\$)((?:\\\$|[^$\n])+?)\$(?!\$)/g;
+const tightenMath = (s: string) =>
+  s.replace(MATH_PAIR, (pair, body: string) => {
+    const tight = body.replace(/^[ \t]+|[ \t]+$/g, "");
+    return tight && /^[ \t]/.test(body) && /[ \t]$/.test(body) ? `$${tight}$` : pair;
+  });
+
 /** Inline: **bold**, `code`, and $math$; everything else stays plain text. */
-function inline(text: string): ReactNode[] {
+function inline(raw: string): ReactNode[] {
+  const text = tightenMath(raw);
   const out: ReactNode[] = [];
   // code and math consume their whole span, so a `$` inside `code` never starts
   // math. Math requires non-space just inside the delimiters, so "$5 and $10"
