@@ -3,16 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Arbora</title>
+    <title>Arbora — study from your own material, grounded and cited</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta
       name="description"
       content="Arbora turns your own documents and lectures into grounded, cited notes, flashcards, and quizzes — then helps you remember them with calm spaced repetition. Local-first, runs on your device."
     />
+    <meta name="theme-color" content="#edf3ee" />
+    <meta property="og:title" content="Arbora — study from your own material" />
+    <meta
+      property="og:description"
+      content="Grounded, cited notes, flashcards, and quizzes from your own files. Calm spaced repetition. Local-first, on your device."
+    />
+    <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <!-- Mark the document as JS-enabled so scroll-reveal never hides content
@@ -21,78 +28,101 @@
       document.documentElement.classList.add("js");
     </script>
     <style>
+      /* ══════════════════════════════════════════════════════════════════
+         Aurora Canopy — the app's design tokens, ported to the landing page.
+         Light = "Aurora Day", dark = "Aurora Night". Values mirror the app's
+         src/styles/tokens.css so the site and the product feel like one world.
+         ══════════════════════════════════════════════════════════════════ */
       :root {
-        /* Aurora Canopy — the app's tokens, light "Aurora Day". */
+        color-scheme: light;
+
+        /* Surface & ink */
         --paper: #edf3ee;
-        --paper-2: rgba(255, 255, 255, 0.64);
-        --paper-3: rgba(255, 255, 255, 0.4);
         --ink: #1d241e;
-        --ink-soft: #525c52;
+        --ink-soft: #4a544a;
         --line: rgba(47, 82, 60, 0.14);
         --line-strong: #7c8a7d;
+
+        /* Brand greens */
         --forest: #2f7d54;
         --forest-deep: #276b47;
+        --forest-tint: rgba(47, 125, 84, 0.12);
+        --on-forest: #ffffff;
+        --leaf: #55b378;
+        --gold: #b98a12;
+        --gold-fill: #d9a520;
+
+        /* Nature accents (the product glimpse) */
+        --bark: #6f5138;
+        --fruit: #c46a4f;
+
+        /* Citations */
+        --cite-bg: rgba(90, 125, 154, 0.14);
+        --cite-text: #3a5a72;
+
+        /* Radii */
         --radius-sm: 8px;
         --radius: 14px;
         --radius-lg: 18px;
+        --radius-xl: 26px;
         --radius-full: 9999px;
-        --maxw: 1080px;
+        --maxw: 1120px;
 
-        /* Glass — the material. */
+        /* Glass — the material */
         --glass-bg: rgba(255, 255, 255, 0.64);
         --glass-bg-strong: rgba(255, 255, 255, 0.84);
+        --glass-bg-soft: rgba(255, 255, 255, 0.4);
         --glass-border: rgba(255, 255, 255, 0.65);
         --glass-blur: blur(20px) saturate(160%);
         --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
-        /* Aurora light layers. */
+        /* Aurora light layers */
         --aurora-a: rgba(85, 179, 120, 0.3);
         --aurora-b: rgba(217, 165, 32, 0.18);
         --aurora-c: rgba(74, 123, 166, 0.18);
 
-        /* Ambient depth — glass floats, it doesn't sit. */
+        /* Ambient depth — glass floats, it doesn't sit */
         --shadow-sm: 0 1px 3px rgba(23, 42, 30, 0.07);
         --shadow-md: 0 6px 20px rgba(23, 42, 30, 0.09);
         --shadow-lg: 0 16px 40px rgba(23, 42, 30, 0.13);
+        --shadow-xl: 0 30px 70px rgba(23, 42, 30, 0.18);
         --shadow-glow: 0 0 0 1px rgba(47, 125, 84, 0.18),
           0 4px 20px rgba(47, 125, 84, 0.22);
 
-        /* Motion. */
+        /* Motion */
         --motion-fast: 140ms;
-        --motion-base: 220ms;
-        --motion-slow: 560ms;
+        --motion-base: 240ms;
+        --motion-slow: 620ms;
         --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
         --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
         --ease-spring: cubic-bezier(0.3, 1.32, 0.45, 1);
-        --rise-distance: 16px;
+        --rise: 18px;
 
-        /* Type voices — Fraunces (emotional) + Space Grotesk (structural). */
+        /* Type voices — Fraunces (emotional) + Space Grotesk (structural) */
         --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+        --font-display: "Fraunces", Georgia, serif;
       }
+
       * {
         box-sizing: border-box;
       }
       html {
         scroll-behavior: smooth;
-        color-scheme: light;
         background: var(--paper);
       }
       body {
         margin: 0;
         color: var(--ink);
-        font-family:
-          "Inter",
-          system-ui,
-          -apple-system,
-          sans-serif;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
         position: relative;
         overflow-x: hidden;
       }
 
-      /* ── Aurora canopy: two slow-drifting light layers behind everything ──
-         Oversized fixed panes animated with transform only (cheap, GPU). */
+      /* ── Aurora canopy: two slow-drifting light layers behind everything.
+         Oversized fixed panes animated with transform only (cheap, GPU). ── */
       body::before,
       body::after {
         content: "";
@@ -100,6 +130,7 @@
         inset: -30%;
         z-index: -1;
         pointer-events: none;
+        will-change: transform;
       }
       body::before {
         background:
@@ -117,25 +148,35 @@
       h1,
       h2,
       h3 {
-        font-family: "Fraunces", Georgia, serif;
+        font-family: var(--font-display);
         font-weight: 500;
         line-height: 1.12;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.015em;
         text-wrap: balance;
+        margin: 0;
       }
       p {
         text-wrap: pretty;
+        margin: 0;
       }
       a {
         color: inherit;
       }
       section[id] {
-        scroll-margin-top: 84px;
+        scroll-margin-top: 88px;
       }
       .wrap {
         max-width: var(--maxw);
         margin: 0 auto;
         padding: 0 24px;
+      }
+      .eyebrow {
+        font-family: var(--font-head);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--forest-deep);
       }
 
       :focus-visible {
@@ -144,29 +185,49 @@
         border-radius: var(--radius-sm);
       }
 
-      /* ── Header ── */
+      /* Scroll progress: a thin canopy-green thread across the top. */
+      .progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 2px;
+        width: 100%;
+        transform: scaleX(0);
+        transform-origin: left;
+        background: linear-gradient(90deg, var(--leaf), var(--forest));
+        z-index: 20;
+        pointer-events: none;
+      }
+
+      /* ════════════════════════════ Header ════════════════════════════ */
       header {
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 15;
         -webkit-backdrop-filter: var(--glass-blur);
         backdrop-filter: var(--glass-blur);
-        background: color-mix(in srgb, var(--glass-bg-strong) 90%, transparent);
-        border-bottom: 1px solid var(--line);
-        box-shadow: var(--glass-highlight);
+        background: color-mix(in srgb, var(--glass-bg-strong) 88%, transparent);
+        border-bottom: 1px solid transparent;
+        transition:
+          border-color var(--motion-base) var(--ease-out),
+          box-shadow var(--motion-base) var(--ease-out);
+      }
+      header.stuck {
+        border-bottom-color: var(--line);
+        box-shadow: var(--shadow-sm), var(--glass-highlight);
       }
       .nav {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        height: 64px;
+        height: 66px;
       }
       .brand {
         display: inline-flex;
         align-items: center;
-        gap: 9px;
-        font-family: "Fraunces", serif;
-        font-size: 20px;
+        gap: 10px;
+        font-family: var(--font-display);
+        font-size: 21px;
         font-weight: 600;
         text-decoration: none;
         color: var(--ink);
@@ -178,12 +239,12 @@
       }
       .brand:hover .brand-mark {
         filter: drop-shadow(
-          0 2px 7px color-mix(in srgb, var(--forest) 55%, transparent)
+          0 3px 9px color-mix(in srgb, var(--forest) 55%, transparent)
         );
       }
       .nav-links {
         display: flex;
-        gap: 22px;
+        gap: 26px;
         align-items: center;
         font-family: var(--font-head);
         font-size: 15px;
@@ -191,18 +252,16 @@
       }
       .nav-links a {
         text-decoration: none;
+        position: relative;
         transition: color var(--motion-fast) var(--ease-out);
       }
-      .nav-links a:not(.gh) {
-        position: relative;
-      }
-      /* Animated underline grows from the left on hover. */
+      /* Animated underline grows from the left on hover / active section. */
       .nav-links a:not(.gh)::after {
         content: "";
         position: absolute;
         left: 0;
         right: 0;
-        bottom: -5px;
+        bottom: -6px;
         height: 2px;
         border-radius: 2px;
         background: var(--forest);
@@ -213,22 +272,31 @@
       .nav-links a:hover {
         color: var(--ink);
       }
-      .nav-links a:not(.gh):hover::after {
+      .nav-links a:not(.gh):hover::after,
+      .nav-links a.active::after {
         transform: scaleX(1);
       }
-      @media (max-width: 640px) {
+      .nav-links a.active {
+        color: var(--ink);
+      }
+      .gh {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      @media (max-width: 680px) {
         .nav-links a:not(.gh) {
           display: none;
         }
       }
 
-      /* ── Buttons ── */
+      /* ════════════════════════════ Buttons ═══════════════════════════ */
       .btn {
         display: inline-flex;
         align-items: center;
         gap: 9px;
-        padding: 13px 22px;
-        border-radius: 11px;
+        padding: 14px 24px;
+        border-radius: 12px;
         font-family: var(--font-head);
         font-weight: 600;
         font-size: 15px;
@@ -246,13 +314,10 @@
       }
       .btn-primary {
         background: var(--forest);
-        color: #fff;
+        color: var(--on-forest);
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.22),
           var(--shadow-sm);
-      }
-      .btn-primary span {
-        color: #fff;
       }
       .btn-primary:hover {
         transform: translateY(-2px);
@@ -269,7 +334,7 @@
         transform: translateY(0) scale(0.97);
       }
       .btn-ghost {
-        background: var(--paper-2);
+        background: var(--glass-bg);
         -webkit-backdrop-filter: var(--glass-blur);
         backdrop-filter: var(--glass-blur);
         border-color: var(--line-strong);
@@ -285,47 +350,74 @@
         transform: translateY(0) scale(0.98);
       }
 
-      /* ── Hero ── */
+      /* ════════════════════════════ Hero ══════════════════════════════ */
       .hero {
-        padding: 88px 0 72px;
-        text-align: center;
+        padding: clamp(56px, 8vw, 104px) 0 clamp(48px, 6vw, 84px);
         position: relative;
         overflow: hidden;
       }
-      .eyebrow {
-        display: inline-block;
-        font-family: var(--font-head);
-        font-size: 13px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--forest-deep);
-        background: color-mix(in srgb, var(--forest) 14%, transparent);
-        padding: 6px 14px;
-        border-radius: 999px;
-        margin-bottom: 24px;
-        font-weight: 600;
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: clamp(32px, 5vw, 72px);
+        align-items: center;
+      }
+      @media (max-width: 900px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+          text-align: center;
+        }
+      }
+      .hero-copy .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--forest-tint);
+        padding: 7px 15px;
+        border-radius: var(--radius-full);
+        margin-bottom: 22px;
+      }
+      .eyebrow .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--forest);
+        box-shadow: 0 0 0 3px var(--forest-tint);
       }
       .hero h1 {
-        font-size: clamp(38px, 6vw, 66px);
+        font-size: clamp(36px, 5.4vw, 62px);
         margin: 0 0 20px;
         max-width: 15ch;
-        margin-inline: auto;
+      }
+      @media (max-width: 900px) {
+        .hero h1 {
+          margin-inline: auto;
+        }
       }
       .hero .lead {
-        font-size: clamp(17px, 2.2vw, 21px);
+        font-size: clamp(17px, 2vw, 20px);
         color: var(--ink-soft);
-        max-width: 56ch;
-        margin: 0 auto 34px;
+        max-width: 52ch;
+        margin: 0 0 32px;
+      }
+      @media (max-width: 900px) {
+        .hero .lead {
+          margin-inline: auto;
+        }
       }
       .cta {
         display: flex;
         gap: 14px;
-        justify-content: center;
         flex-wrap: wrap;
         align-items: center;
       }
+      @media (max-width: 900px) {
+        .cta {
+          justify-content: center;
+        }
+      }
       .dl-sub {
-        margin-top: 14px;
+        margin-top: 16px;
         font-size: 14px;
         color: var(--ink-soft);
       }
@@ -337,192 +429,528 @@
       .dl-sub a:hover {
         text-decoration: underline;
       }
+
       /* Hero enters on load — staggered rise, above the fold (no JS needed). */
-      .hero .eyebrow {
+      .hero-copy > * {
         animation: rise var(--motion-slow) var(--ease-out) both;
       }
-      .hero h1 {
-        animation: rise var(--motion-slow) var(--ease-out) 90ms both;
+      .hero-copy > :nth-child(1) { animation-delay: 40ms; }
+      .hero-copy > :nth-child(2) { animation-delay: 120ms; }
+      .hero-copy > :nth-child(3) { animation-delay: 200ms; }
+      .hero-copy > :nth-child(4) { animation-delay: 280ms; }
+      .hero-copy > :nth-child(5) { animation-delay: 380ms; }
+
+      /* ── The product glimpse: layered glass that assembles on load ── */
+      .glimpse {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 5 / 4.4;
+        max-width: 520px;
+        margin-inline: auto;
+        transform-style: preserve-3d;
+        perspective: 1200px;
       }
-      .hero .lead {
-        animation: rise var(--motion-slow) var(--ease-out) 180ms both;
+      @media (max-width: 900px) {
+        .glimpse {
+          margin-top: 8px;
+        }
       }
-      .hero .cta {
-        animation: rise var(--motion-slow) var(--ease-out) 270ms both;
+      .glimpse-layer {
+        position: absolute;
+        will-change: transform;
+        transition: transform var(--motion-base) var(--ease-out);
       }
-      .hero .dl-sub {
-        animation: fade var(--motion-base) var(--ease-out) 420ms both;
+      .glass {
+        background: var(--glass-bg);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-lg), var(--glass-highlight);
+      }
+      .glass-strong {
+        background: var(--glass-bg-strong);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-xl), var(--glass-highlight);
       }
 
-      /* ── Section scaffolding ── */
-      section {
-        padding: 64px 0;
+      /* Note card — the back plate */
+      .g-note {
+        top: 4%;
+        left: 2%;
+        width: 78%;
+        border-radius: var(--radius-lg);
+        padding: 22px 22px 18px;
+        animation: rise-in 720ms var(--ease-out) 240ms both;
       }
-      .section-head {
-        text-align: center;
-        max-width: 56ch;
-        margin: 0 auto 44px;
+      .g-note-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
       }
-      .section-head h2 {
+      .g-badge {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        background: var(--forest-tint);
+        color: var(--forest-deep);
+        flex: none;
+      }
+      .g-note-title {
         font-family: var(--font-head);
         font-weight: 600;
-        letter-spacing: -0.02em;
-        font-size: clamp(28px, 4vw, 40px);
+        font-size: 15px;
+      }
+      .g-note-sub {
+        font-size: 12px;
+        color: var(--ink-soft);
+        font-family: var(--font-head);
+      }
+      .g-line {
+        height: 9px;
+        border-radius: 5px;
+        background: var(--line);
+        margin: 9px 0;
+      }
+      .g-line.w1 { width: 100%; }
+      .g-line.w2 { width: 86%; }
+      .g-line.w3 { width: 62%; }
+      .g-line.mark {
+        background: color-mix(in srgb, var(--leaf) 42%, transparent);
+        width: 74%;
+      }
+      .g-cite {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 14px;
+        padding: 6px 11px;
+        border-radius: var(--radius-full);
+        background: var(--cite-bg);
+        color: var(--cite-text);
+        font-family: var(--font-head);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      /* Flashcard — floats in front, gently tilted */
+      .g-card {
+        bottom: 6%;
+        right: 0;
+        width: 52%;
+        border-radius: var(--radius);
+        padding: 18px;
+        transform: rotate(3deg);
+        animation: card-in 760ms var(--ease-spring) 460ms both;
+      }
+      .g-card .q-tag {
+        font-family: var(--font-head);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--forest-deep);
+      }
+      .g-card .q-text {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 6px 0 14px;
+        line-height: 1.4;
+      }
+      .g-ratings {
+        display: flex;
+        gap: 6px;
+      }
+      .g-pill {
+        flex: 1;
+        height: 22px;
+        border-radius: 6px;
+        font-family: var(--font-head);
+        font-size: 10px;
+        font-weight: 600;
+        display: grid;
+        place-items: center;
+        color: var(--ink-soft);
+        background: var(--glass-bg-soft);
+        border: 1px solid var(--line);
+      }
+      .g-pill.good {
+        color: var(--on-forest);
+        background: var(--forest);
+        border-color: var(--forest);
+      }
+
+      /* Little mastery tree, rooted bottom-left */
+      .g-tree {
+        left: -2%;
+        bottom: -3%;
+        width: 30%;
+        animation: fade var(--motion-slow) var(--ease-out) 700ms both;
+        filter: drop-shadow(var(--shadow-sm));
+      }
+      .g-tree .leaves {
+        transform-origin: 50% 82%;
+        animation: sway 7s var(--ease-standard) infinite;
+      }
+
+      /* ═══════════════════════ Section scaffolding ════════════════════ */
+      section {
+        padding: clamp(56px, 8vw, 96px) 0;
+      }
+      .section-head {
+        max-width: 60ch;
+        margin: 0 auto clamp(36px, 5vw, 56px);
+        text-align: center;
+      }
+      .section-head h2 {
+        font-family: var(--font-display);
+        font-size: clamp(28px, 4vw, 42px);
         margin: 0 0 14px;
       }
       .section-head p {
         color: var(--ink-soft);
         font-size: 17px;
-        margin: 0;
       }
 
-      /* ── Cards / grids ── */
-      .grid {
+      /* ═════════════════════ Trust: the three laws ════════════════════ */
+      /* One cohesive "tablet of principles" rather than three floating cards. */
+      .laws {
+        border-radius: var(--radius-xl);
+        overflow: hidden;
         display: grid;
-        gap: 20px;
-      }
-      .grid-3 {
         grid-template-columns: repeat(3, 1fr);
       }
-      .grid-4 {
-        grid-template-columns: repeat(4, 1fr);
-      }
-      @media (max-width: 860px) {
-        .grid-3,
-        .grid-4 {
+      @media (max-width: 820px) {
+        .laws {
           grid-template-columns: 1fr;
         }
       }
-      /* A pane of real glass — frosted, edge-lit, floating. */
-      .card {
-        background: var(--glass-bg);
-        -webkit-backdrop-filter: var(--glass-blur);
-        backdrop-filter: var(--glass-blur);
-        border: 1px solid var(--glass-border);
-        border-radius: var(--radius-lg);
-        padding: 28px;
-        box-shadow: var(--shadow-md), var(--glass-highlight);
-        transition:
-          transform var(--motion-base) var(--ease-spring),
-          box-shadow var(--motion-base) var(--ease-out),
-          border-color var(--motion-base) var(--ease-out);
+      .law {
+        padding: clamp(26px, 3vw, 40px);
+        position: relative;
+        transition: background var(--motion-base) var(--ease-out);
       }
-      .card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg), var(--glass-highlight);
-        border-color: color-mix(in srgb, var(--forest) 45%, var(--glass-border));
+      .law + .law {
+        border-left: 1px solid var(--line);
       }
-      .card .ico {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
+      @media (max-width: 820px) {
+        .law + .law {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+      }
+      .law:hover {
+        background: color-mix(in srgb, var(--forest) 5%, transparent);
+      }
+      .law-ico {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
         display: grid;
         place-items: center;
-        background: color-mix(in srgb, var(--forest) 16%, transparent);
+        background: var(--forest-tint);
         color: var(--forest-deep);
-        margin-bottom: 16px;
+        margin-bottom: 18px;
         transition:
           transform var(--motion-base) var(--ease-spring),
           background var(--motion-base) var(--ease-out);
       }
-      .card:hover .ico {
-        transform: scale(1.1) rotate(-5deg);
-        background: color-mix(in srgb, var(--forest) 24%, transparent);
+      .law:hover .law-ico {
+        transform: translateY(-3px) rotate(-4deg);
+        background: color-mix(in srgb, var(--forest) 22%, transparent);
       }
-      .card h3 {
-        font-size: 20px;
-        margin: 0 0 8px;
+      .law h3 {
+        font-family: var(--font-head);
+        font-weight: 600;
+        font-size: 19px;
+        letter-spacing: -0.01em;
+        margin: 0 0 9px;
       }
-      .card p {
-        margin: 0;
+      .law p {
         color: var(--ink-soft);
         font-size: 15px;
       }
 
-      /* ── Steps ── */
+      /* ═══════════════════════ How it works: steps ════════════════════ */
       .steps {
-        counter-reset: step;
+        position: relative;
+        max-width: 720px;
+        margin: 0 auto;
+        padding-left: 8px;
+      }
+      /* The growth spine: a track behind the numbers + a green fill that
+         climbs as steps enter the viewport. */
+      .spine {
+        position: absolute;
+        left: 27px;
+        top: 40px;
+        bottom: 52px;
+        width: 2px;
+        border-radius: 2px;
+        background: var(--line);
+      }
+      .spine-fill {
+        position: absolute;
+        inset: 0;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--leaf), var(--forest));
+        transform: scaleY(0);
+        transform-origin: top;
+        transition: transform 700ms var(--ease-out);
       }
       .step {
         display: flex;
-        gap: 20px;
+        gap: 22px;
         align-items: flex-start;
-        padding: 22px var(--space, 16px);
-        margin-inline: -16px;
+        padding: 22px 8px;
         border-radius: var(--radius);
-        border-bottom: 1px solid var(--line);
+        position: relative;
         transition: background var(--motion-base) var(--ease-out);
       }
-      .step:last-child {
-        border-bottom: 0;
-      }
       .step:hover {
-        background: color-mix(in srgb, var(--forest) 6%, transparent);
+        background: color-mix(in srgb, var(--forest) 5%, transparent);
       }
-      .step .num {
-        counter-increment: step;
+      .num {
         flex: none;
         width: 40px;
         height: 40px;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        font-family: "Fraunces", serif;
+        font-family: var(--font-display);
         font-weight: 600;
-        color: var(--forest-deep);
-        border: 1.5px solid rgba(79, 120, 97, 0.4);
+        font-size: 17px;
+        color: var(--ink-soft);
+        background: var(--glass-bg-strong);
+        -webkit-backdrop-filter: var(--glass-blur);
+        backdrop-filter: var(--glass-blur);
+        border: 1.5px solid var(--line-strong);
+        position: relative;
+        z-index: 1;
         transition:
           transform var(--motion-base) var(--ease-spring),
           background var(--motion-base) var(--ease-out),
           color var(--motion-base) var(--ease-out),
           border-color var(--motion-base) var(--ease-out);
       }
-      .step .num::before {
-        content: counter(step);
+      /* A number lights up "grown" once its step scrolls into view. */
+      .step.in .num {
+        background: var(--forest);
+        color: var(--on-forest);
+        border-color: var(--forest);
+        transform: scale(1.06);
       }
       .step:hover .num {
-        transform: scale(1.1);
-        background: var(--forest);
-        color: #fff;
-        border-color: var(--forest);
+        transform: scale(1.12);
       }
       .step h3 {
-        margin: 4px 0 6px;
+        font-family: var(--font-head);
+        font-weight: 600;
         font-size: 20px;
+        letter-spacing: -0.01em;
+        margin: 6px 0 7px;
       }
       .step p {
-        margin: 0;
         color: var(--ink-soft);
       }
 
-      /* ── Requirements strip ── */
-      .req {
-        background: var(--paper-3);
-        -webkit-backdrop-filter: var(--glass-blur);
-        backdrop-filter: var(--glass-blur);
-        border-top: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
+      /* ══════════════════ Grounded: interactive citation ══════════════ */
+      .ground {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: clamp(20px, 3vw, 40px);
+        align-items: center;
+        max-width: 960px;
+        margin: 0 auto;
       }
-      .req .grid-3 {
-        gap: 32px;
+      @media (max-width: 820px) {
+        .ground {
+          grid-template-columns: 1fr;
+        }
       }
-      .req .item h3 {
+      .ground-copy h2 {
+        font-family: var(--font-display);
+        font-size: clamp(26px, 3.6vw, 38px);
+        margin: 0 0 16px;
+      }
+      .ground-copy p {
+        color: var(--ink-soft);
+        font-size: 17px;
+        margin-bottom: 18px;
+      }
+      .ground-hint {
+        font-family: var(--font-head);
+        font-size: 13px;
+        color: var(--forest-deep);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .ground-demo {
+        position: relative;
+        display: grid;
+        gap: 16px;
+      }
+      .demo-note {
+        border-radius: var(--radius-lg);
+        padding: 22px;
+      }
+      .demo-note .lbl,
+      .demo-src .lbl {
+        font-family: var(--font-head);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        margin-bottom: 10px;
+      }
+      .demo-note p {
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .claim {
+        background: color-mix(in srgb, var(--leaf) 26%, transparent);
+        border-radius: 4px;
+        padding: 1px 3px;
+        transition: background var(--motion-base) var(--ease-out);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 14px;
+        padding: 6px 12px;
+        border-radius: var(--radius-full);
+        background: var(--cite-bg);
+        color: var(--cite-text);
+        font-family: var(--font-head);
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition:
+          transform var(--motion-fast) var(--ease-spring),
+          border-color var(--motion-fast) var(--ease-out);
+      }
+      .chip:hover {
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--cite-text) 45%, transparent);
+      }
+      .demo-src {
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        opacity: 0.72;
+        transition:
+          opacity var(--motion-base) var(--ease-out),
+          box-shadow var(--motion-base) var(--ease-out),
+          transform var(--motion-base) var(--ease-out);
+      }
+      .demo-src .src-line {
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--ink-soft);
+      }
+      .demo-src .src-hit {
+        border-radius: 4px;
+        padding: 1px 3px;
+        transition: background var(--motion-base) var(--ease-out);
+      }
+      /* When the citation is active (hover / focus), the source lights up. */
+      .ground-demo.lit .demo-src {
+        opacity: 1;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-glow);
+      }
+      .ground-demo.lit .demo-src .src-hit {
+        background: color-mix(in srgb, var(--leaf) 30%, transparent);
+      }
+      .ground-demo.lit .chip {
+        border-color: color-mix(in srgb, var(--cite-text) 55%, transparent);
+      }
+
+      /* ══════════════════════ Requirements strip ══════════════════════ */
+      .req-band {
+        border-radius: var(--radius-xl);
+        padding: clamp(28px, 4vw, 44px);
+      }
+      .req-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: clamp(20px, 3vw, 40px);
+      }
+      @media (max-width: 720px) {
+        .req-grid {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+      }
+      .req-item {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .req-item .req-ico {
+        flex: none;
+        color: var(--forest-deep);
+        margin-top: 2px;
+      }
+      .req-item h3 {
+        font-family: var(--font-head);
+        font-weight: 600;
         font-size: 16px;
         margin: 0 0 6px;
-        transition: color var(--motion-fast) var(--ease-out);
       }
-      .req .item:hover h3 {
-        color: var(--forest-deep);
-      }
-      .req .item p {
-        margin: 0;
+      .req-item p {
         color: var(--ink-soft);
-        font-size: 15px;
+        font-size: 14.5px;
       }
 
-      /* ── Footer ── */
+      /* ═══════════════════════════ Closing ════════════════════════════ */
+      .closing {
+        text-align: center;
+      }
+      .closing-inner {
+        border-radius: var(--radius-xl);
+        padding: clamp(40px, 6vw, 72px) clamp(24px, 4vw, 56px);
+        max-width: 760px;
+        margin: 0 auto;
+        position: relative;
+        overflow: hidden;
+      }
+      .closing-tree {
+        width: 64px;
+        margin: 0 auto 22px;
+      }
+      .closing-tree .leaves {
+        transform-origin: 50% 82%;
+        animation: sway 7s var(--ease-standard) infinite;
+      }
+      .closing h2 {
+        font-size: clamp(28px, 4vw, 42px);
+        margin: 0 0 14px;
+      }
+      .closing p {
+        color: var(--ink-soft);
+        font-size: 17px;
+        max-width: 48ch;
+        margin: 0 auto 28px;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--ink-soft);
+        margin-top: 18px;
+        max-width: 52ch;
+        margin-inline: auto;
+      }
+
+      /* ════════════════════════════ Footer ════════════════════════════ */
       footer {
-        padding: 48px 0;
+        padding: 44px 0;
         border-top: 1px solid var(--line);
         color: var(--ink-soft);
         font-size: 14px;
@@ -543,99 +971,52 @@
         color: var(--ink);
       }
 
-      .note {
-        font-size: 13px;
-        color: var(--ink-soft);
-        text-align: center;
-        margin-top: 10px;
-      }
-
-      /* ════════════════════════════════════════════════════════════════
-         Motion library — entrances, transform/opacity only.
-         ════════════════════════════════════════════════════════════════ */
+      /* ════════════════════════ Motion library ════════════════════════ */
       @keyframes rise {
-        from {
-          opacity: 0;
-          transform: translateY(var(--rise-distance));
-        }
-        to {
-          opacity: 1;
-          transform: none;
-        }
+        from { opacity: 0; transform: translateY(var(--rise)); }
+        to { opacity: 1; transform: none; }
+      }
+      @keyframes rise-in {
+        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+        to { opacity: 1; transform: none; }
+      }
+      @keyframes card-in {
+        from { opacity: 0; transform: translateY(26px) rotate(-3deg); }
+        to { opacity: 1; transform: rotate(3deg); }
       }
       @keyframes fade {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
       @keyframes float-y {
-        0%,
-        100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-4px);
-        }
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+      @keyframes sway {
+        0%, 100% { transform: rotate(-1.4deg); }
+        50% { transform: rotate(1.4deg); }
       }
       @keyframes aurora-drift-a {
-        from {
-          transform: translate3d(-4%, -3%, 0) rotate(-2deg) scale(1);
-        }
-        to {
-          transform: translate3d(5%, 4%, 0) rotate(3deg) scale(1.08);
-        }
+        from { transform: translate3d(-4%, -3%, 0) rotate(-2deg) scale(1); }
+        to { transform: translate3d(5%, 4%, 0) rotate(3deg) scale(1.08); }
       }
       @keyframes aurora-drift-b {
-        from {
-          transform: translate3d(3%, 4%, 0) rotate(2deg) scale(1.06);
-        }
-        to {
-          transform: translate3d(-5%, -3%, 0) rotate(-3deg) scale(1);
-        }
+        from { transform: translate3d(3%, 4%, 0) rotate(2deg) scale(1.06); }
+        to { transform: translate3d(-5%, -3%, 0) rotate(-3deg) scale(1); }
       }
 
-      /* Scroll reveal. Blocks (section heads, steps, items) rise into place;
-         hover-lifted cards fade only, so their entrance never fights the hover
-         transform. Hidden state is gated behind .js so content is never lost. */
-      .js [data-reveal],
-      .js [data-reveal-fade] {
+      /* Scroll reveal. Blocks rise into place; content is only hidden behind
+         .js, so scripts-off never loses a section. */
+      .js [data-reveal] {
         opacity: 0;
+        transform: translateY(var(--rise));
         transition:
           opacity var(--motion-slow) var(--ease-out),
           transform var(--motion-slow) var(--ease-out);
       }
-      .js [data-reveal] {
-        transform: translateY(var(--rise-distance));
-      }
-      .js [data-reveal].in,
-      .js [data-reveal-fade].in {
+      .js [data-reveal].in {
         opacity: 1;
         transform: none;
-      }
-      /* Staggered cascades within a row. */
-      .js .grid > [data-reveal-fade]:nth-child(2) {
-        transition-delay: 90ms;
-      }
-      .js .grid > [data-reveal-fade]:nth-child(3) {
-        transition-delay: 180ms;
-      }
-      .js .req .grid > [data-reveal]:nth-child(2) {
-        transition-delay: 90ms;
-      }
-      .js .req .grid > [data-reveal]:nth-child(3) {
-        transition-delay: 180ms;
-      }
-      .js .steps > [data-reveal]:nth-child(2) {
-        transition-delay: 70ms;
-      }
-      .js .steps > [data-reveal]:nth-child(3) {
-        transition-delay: 140ms;
-      }
-      .js .steps > [data-reveal]:nth-child(4) {
-        transition-delay: 210ms;
       }
 
       /* ── Reduced motion: freeze everything, reveal instantly (a11y). ── */
@@ -648,22 +1029,26 @@
           transition-duration: 0.01ms !important;
           scroll-behavior: auto !important;
         }
-        .js [data-reveal],
-        .js [data-reveal-fade] {
+        .js [data-reveal] {
           opacity: 1 !important;
           transform: none !important;
+        }
+        .g-card {
+          transform: rotate(3deg) !important;
         }
       }
     </style>
   </head>
   <body>
-    <header>
+    <div class="progress" id="progress" aria-hidden="true"></div>
+
+    <header id="header">
       <div class="wrap nav">
         <a class="brand" href="#top" aria-label="Arbora — home">
           <svg
             class="brand-mark"
-            width="24"
-            height="24"
+            width="26"
+            height="26"
             viewBox="0 0 256 256"
             aria-hidden="true"
           >
@@ -674,84 +1059,126 @@
           </svg>
           <span>Arbora</span>
         </a>
-        <nav class="nav-links">
-          <a href="#how">How it works</a>
-          <a href="#trust">Trust</a>
-          <a href="#requirements">Requirements</a>
-          <a class="gh" href="https://github.com/kylev202/Arbora">GitHub</a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#trust" data-spy="trust">Trust</a>
+          <a href="#how" data-spy="how">How it works</a>
+          <a href="#grounded" data-spy="grounded">Grounding</a>
+          <a href="#requirements" data-spy="requirements">Requirements</a>
+          <a class="gh" href="https://github.com/kylev202/Arbora">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.74 1.27 3.4.97.1-.76.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.42.36.8 1.08.8 2.18v3.23c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z" />
+            </svg>
+            GitHub
+          </a>
         </nav>
       </div>
     </header>
 
     <main>
+      <!-- ═══════════════════════════ Hero ═══════════════════════════ -->
       <section class="hero" id="top">
-        <div class="wrap">
-          <span class="eyebrow">Local-first study assistant</span>
-          <h1>Study from your own material — grounded and cited.</h1>
-          <p class="lead">
-            Arbora turns your documents and lectures into notes, flashcards, and
-            quizzes where every item traces back to a source. Then it helps you
-            remember them with calm spaced repetition. Everything runs on your
-            device.
-          </p>
-          <div class="cta">
-            <a
-              class="btn btn-primary"
-              id="download"
-              href="https://github.com/kylev202/Arbora/releases"
-            >
-              <span id="download-label">Download Arbora</span>
-              <svg
-                class="btn-arrow"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <span class="eyebrow"><span class="dot"></span>Local-first study assistant</span>
+            <h1>Study from your own material, grounded and cited.</h1>
+            <p class="lead">
+              Arbora turns your documents and lectures into notes, flashcards,
+              and quizzes where every item traces back to a source. Then it helps
+              you remember them with calm spaced repetition, all on your device.
+            </p>
+            <div class="cta">
+              <a
+                class="btn btn-primary"
+                id="download"
+                href="https://github.com/kylev202/Arbora/releases"
               >
-                <path d="M12 4v12" />
-                <path d="m7 11 5 5 5-5" />
-                <path d="M5 20h14" />
-              </svg>
-            </a>
-            <a class="btn btn-ghost" href="#how">See how it works</a>
+                <span id="download-label">Download Arbora</span>
+                <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 4v12" />
+                  <path d="m7 11 5 5 5-5" />
+                  <path d="M5 20h14" />
+                </svg>
+              </a>
+              <a class="btn btn-ghost" href="#how">See how it works</a>
+            </div>
+            <p class="dl-sub" id="download-sub">
+              Free &amp; open source ·
+              <a href="https://github.com/kylev202/Arbora/releases">All downloads</a>
+            </p>
           </div>
-          <p class="dl-sub" id="download-sub">
-            Free &amp; open source ·
-            <a href="https://github.com/kylev202/Arbora/releases"
-              >All downloads</a
-            >
-          </p>
+
+          <!-- Product glimpse: a small, honest picture of what Arbora makes. -->
+          <div class="glimpse" aria-hidden="true">
+            <div class="glimpse-layer g-note glass" data-depth="10">
+              <div class="g-note-head">
+                <span class="g-badge">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z" />
+                    <path d="M14 4v5h5" />
+                  </svg>
+                </span>
+                <div>
+                  <div class="g-note-title">The auditory system</div>
+                  <div class="g-note-sub">Note · Biology · Week 4</div>
+                </div>
+              </div>
+              <div class="g-line w1"></div>
+              <div class="g-line w2"></div>
+              <div class="g-line mark"></div>
+              <div class="g-line w3"></div>
+              <span class="g-cite">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z" />
+                </svg>
+                Slide 12 · 03:41
+              </span>
+            </div>
+
+            <div class="glimpse-layer g-card glass-strong" data-depth="26">
+              <span class="q-tag">Flashcard</span>
+              <p class="q-text">Which structure converts sound waves into neural signals?</p>
+              <div class="g-ratings">
+                <span class="g-pill">Again</span>
+                <span class="g-pill">Hard</span>
+                <span class="g-pill good">Good</span>
+                <span class="g-pill">Easy</span>
+              </div>
+            </div>
+
+            <div class="glimpse-layer g-tree" data-depth="16">
+              <svg viewBox="0 0 120 150" fill="none" aria-hidden="true">
+                <path d="M60 150 L60 92" stroke="var(--bark)" stroke-width="7" stroke-linecap="round" />
+                <path d="M60 112 C60 112 44 104 38 90" stroke="var(--bark)" stroke-width="5" stroke-linecap="round" />
+                <path d="M60 104 C60 104 78 98 84 84" stroke="var(--bark)" stroke-width="5" stroke-linecap="round" />
+                <g class="leaves">
+                  <ellipse cx="60" cy="58" rx="40" ry="36" fill="var(--leaf)" opacity="0.9" />
+                  <ellipse cx="36" cy="74" rx="22" ry="20" fill="var(--forest)" opacity="0.85" />
+                  <ellipse cx="86" cy="70" rx="22" ry="20" fill="var(--forest)" opacity="0.8" />
+                  <circle cx="74" cy="48" r="5" fill="var(--fruit)" />
+                  <circle cx="48" cy="64" r="4.5" fill="var(--fruit)" opacity="0.9" />
+                </g>
+              </svg>
+            </div>
+          </div>
         </div>
       </section>
 
+      <!-- ═══════════════════════════ Trust ══════════════════════════ -->
       <section id="trust">
         <div class="wrap">
           <div class="section-head" data-reveal>
-            <h2>Built so you can trust what it makes</h2>
+            <span class="eyebrow">Why you can rely on it</span>
+            <h2>Three rules Arbora never breaks</h2>
             <p>
-              AI that helps you study is only useful if you can rely on it.
-              Arbora is built on three rules it never breaks.
+              AI that helps you study is only worth using if you can trust what it
+              makes. These rules are enforced in the code, not just promised.
             </p>
           </div>
-          <div class="grid grid-3">
-            <div class="card" data-reveal-fade>
-              <div class="ico">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z"
-                  />
+          <div class="laws glass" data-reveal>
+            <div class="law">
+              <div class="law-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z" />
                   <path d="M14 4v5h5" />
                 </svg>
               </div>
@@ -762,36 +1189,22 @@
                 timestamp. No source, no item.
               </p>
             </div>
-            <div class="card" data-reveal-fade>
-              <div class="ico">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
+            <div class="law">
+              <div class="law-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
               </div>
               <h3>You review before you trust</h3>
               <p>
-                AI output is staged, never silently added to your deck. You
-                approve each item in a review gate — nothing enters your study
-                set without your say-so.
+                AI output is staged, never silently added to your deck. You approve
+                each item in a review gate, so nothing enters your study set
+                without your say-so.
               </p>
             </div>
-            <div class="card" data-reveal-fade>
-              <div class="ico">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
+            <div class="law">
+              <div class="law-ico">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="4" y="10" width="16" height="10" rx="2" />
                   <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                 </svg>
@@ -799,48 +1212,50 @@
               <h3>Local-first, private</h3>
               <p>
                 The core never sends your data off your device. It runs a local
-                model through Ollama; using an online key is an explicit,
-                optional opt-in.
+                model through Ollama; using an online key is an explicit, optional
+                opt-in.
               </p>
             </div>
           </div>
         </div>
       </section>
 
+      <!-- ═════════════════════════ How it works ═════════════════════ -->
       <section id="how">
         <div class="wrap">
           <div class="section-head" data-reveal>
+            <span class="eyebrow">How it works</span>
             <h2>From your files to lasting memory</h2>
             <p>
-              Four calm steps — no pressure, no streak anxiety, and a tree that
-              only ever grows.
+              Four calm steps. No pressure, no streak anxiety, and a tree that only
+              ever grows.
             </p>
           </div>
-          <div class="steps">
-            <div class="step" data-reveal>
-              <div class="num"></div>
+          <div class="steps" id="steps">
+            <div class="spine" aria-hidden="true"><div class="spine-fill" id="spineFill"></div></div>
+
+            <div class="step" data-step>
+              <div class="num">1</div>
               <div>
                 <h3>Add your material</h3>
                 <p>
                   Drop in PDFs, slides, documents, and lecture recordings or
-                  videos. Arbora transcribes and indexes them, subject by
-                  subject.
+                  videos. Arbora transcribes and indexes them, subject by subject.
                 </p>
               </div>
             </div>
-            <div class="step" data-reveal>
-              <div class="num"></div>
+            <div class="step" data-step>
+              <div class="num">2</div>
               <div>
                 <h3>Generate grounded study items</h3>
                 <p>
-                  Ask for notes, flashcards, and quizzes. Each one is drafted
-                  from your sources and comes with a citation you can click back
-                  to.
+                  Ask for notes, flashcards, and quizzes. Each one is drafted from
+                  your sources and comes with a citation you can click back to.
                 </p>
               </div>
             </div>
-            <div class="step" data-reveal>
-              <div class="num"></div>
+            <div class="step" data-step>
+              <div class="num">3</div>
               <div>
                 <h3>Review and approve</h3>
                 <p>
@@ -849,14 +1264,13 @@
                 </p>
               </div>
             </div>
-            <div class="step" data-reveal>
-              <div class="num"></div>
+            <div class="step" data-step>
+              <div class="num">4</div>
               <div>
                 <h3>Remember it, calmly</h3>
                 <p>
-                  Approved cards are scheduled with FSRS spaced repetition.
-                  Short, low-pressure sessions — and your tree keeps growing as
-                  you learn.
+                  Approved cards are scheduled with FSRS spaced repetition. Short,
+                  low-pressure sessions, and your tree keeps growing as you learn.
                 </p>
               </div>
             </div>
@@ -864,80 +1278,154 @@
         </div>
       </section>
 
-      <section id="requirements" class="req">
+      <!-- ═══════════════════════════ Grounded ═══════════════════════ -->
+      <section id="grounded">
+        <div class="wrap">
+          <div class="ground">
+            <div class="ground-copy" data-reveal>
+              <span class="eyebrow">Grounding, shown</span>
+              <h2>Follow any claim back to where it came from</h2>
+              <p>
+                Nothing Arbora writes is a guess. Each generated line keeps the
+                citation it was built from, so you can check the original page or
+                lecture moment in one click.
+              </p>
+              <span class="ground-hint">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+                Hover the citation to see its source
+              </span>
+            </div>
+
+            <div class="ground-demo" id="groundDemo" data-reveal>
+              <div class="demo-note glass">
+                <div class="lbl">Generated note</div>
+                <p>
+                  The cochlea contains hair cells that
+                  <span class="claim">convert sound vibrations into electrical
+                  nerve impulses</span>, which the auditory nerve carries to the
+                  brain.
+                </p>
+                <button class="chip" id="citeChip" type="button" aria-describedby="srcLine">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5Z" />
+                  </svg>
+                  Lecture 4 · Slide 12
+                </button>
+              </div>
+              <div class="demo-src glass-strong" id="srcCard">
+                <div class="lbl">Source · Slide 12</div>
+                <p class="src-line" id="srcLine">
+                  “Within the cochlea, sensory
+                  <span class="src-hit">hair cells transduce mechanical sound
+                  vibrations into electrical signals</span> that travel along the
+                  auditory nerve.”
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════════════════ Requirements ═════════════════════ -->
+      <section id="requirements">
         <div class="wrap">
           <div class="section-head" data-reveal>
+            <span class="eyebrow">Requirements</span>
             <h2>Runs on your machine</h2>
             <p>
               No account, no cloud. On first launch, Arbora sets up its local AI
               engine and downloads a model sized for your computer.
             </p>
           </div>
-          <div class="grid grid-3">
-            <div class="item" data-reveal>
-              <h3>Windows &amp; macOS</h3>
-              <p>
-                Windows 10/11 (64-bit) or macOS on Apple Silicon. One installer,
-                then just open it.
-              </p>
-            </div>
-            <div class="item" data-reveal>
-              <h3>~8 GB RAM and up</h3>
-              <p>
-                Works on modest hardware with a smaller model; more memory
-                unlocks larger, sharper models.
-              </p>
-            </div>
-            <div class="item" data-reveal>
-              <h3>A few GB of disk</h3>
-              <p>
-                For the local AI engine and model. The one-time setup download
-                runs entirely on your device.
-              </p>
+          <div class="req-band glass" data-reveal>
+            <div class="req-grid">
+              <div class="req-item">
+                <span class="req-ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="13" rx="2" />
+                    <path d="M8 21h8M12 17v4" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>Windows &amp; macOS</h3>
+                  <p>
+                    Windows 10/11 (64-bit) or macOS on Apple Silicon. One
+                    installer, then just open it.
+                  </p>
+                </div>
+              </div>
+              <div class="req-item">
+                <span class="req-ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="6" width="16" height="12" rx="2" />
+                    <path d="M8 6V4h8v2M9 11h6" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>~8 GB RAM and up</h3>
+                  <p>
+                    Works on modest hardware with a smaller model; more memory
+                    unlocks larger, sharper models.
+                  </p>
+                </div>
+              </div>
+              <div class="req-item">
+                <span class="req-ico">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12A10 10 0 1 1 12 2" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                </span>
+                <div>
+                  <h3>A few GB of disk</h3>
+                  <p>
+                    For the local AI engine and model. The one-time setup download
+                    runs entirely on your device.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section style="text-align: center">
+      <!-- ═══════════════════════════ Closing ════════════════════════ -->
+      <section class="closing">
         <div class="wrap">
-          <div class="section-head" data-reveal style="margin-bottom: 28px">
+          <div class="closing-inner glass" data-reveal>
+            <div class="closing-tree" aria-hidden="true">
+              <svg viewBox="0 0 120 150" fill="none">
+                <path d="M60 150 L60 92" stroke="var(--bark)" stroke-width="7" stroke-linecap="round" />
+                <path d="M60 112 C60 112 44 104 38 90" stroke="var(--bark)" stroke-width="5" stroke-linecap="round" />
+                <path d="M60 104 C60 104 78 98 84 84" stroke="var(--bark)" stroke-width="5" stroke-linecap="round" />
+                <g class="leaves">
+                  <ellipse cx="60" cy="58" rx="40" ry="36" fill="var(--leaf)" opacity="0.9" />
+                  <ellipse cx="36" cy="74" rx="22" ry="20" fill="var(--forest)" opacity="0.85" />
+                  <ellipse cx="86" cy="70" rx="22" ry="20" fill="var(--forest)" opacity="0.8" />
+                  <circle cx="74" cy="48" r="5" fill="var(--fruit)" />
+                </g>
+              </svg>
+            </div>
             <h2>Start studying from your own notes</h2>
-            <p>
-              Download Arbora, open it, and let the one-time setup handle the
-              rest.
+            <p>Download Arbora, open it, and let the one-time setup handle the rest.</p>
+            <div class="cta" style="justify-content: center">
+              <a class="btn btn-primary" id="download-2" href="https://github.com/kylev202/Arbora/releases">
+                <span id="download-label-2">Download Arbora</span>
+                <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 4v12" />
+                  <path d="m7 11 5 5 5-5" />
+                  <path d="M5 20h14" />
+                </svg>
+              </a>
+            </div>
+            <p class="note" id="first-run-note">
+              First launch installs the local AI engine (Ollama) and downloads your
+              model, a one-time setup with a progress bar. After that, it works
+              offline.
             </p>
           </div>
-          <div class="cta" data-reveal>
-            <a
-              class="btn btn-primary"
-              id="download-2"
-              href="https://github.com/kylev202/Arbora/releases"
-            >
-              <span id="download-label-2">Download Arbora</span>
-              <svg
-                class="btn-arrow"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 4v12" />
-                <path d="m7 11 5 5 5-5" />
-                <path d="M5 20h14" />
-              </svg>
-            </a>
-          </div>
-          <p class="note" id="first-run-note">
-            First launch installs the local AI engine (Ollama) and downloads
-            your model — a one-time setup with a progress bar. After that, it
-            works offline.
-          </p>
         </div>
       </section>
     </main>
@@ -953,18 +1441,15 @@
     </footer>
 
     <script>
-      // Reveal-on-scroll: fade/rise each [data-reveal|data-reveal-fade] as it
-      // enters the viewport. Falls back to showing everything immediately when
-      // IntersectionObserver is unavailable or the visitor prefers reduced motion.
+      // Reveal-on-scroll: rise each [data-reveal] as it enters the viewport.
+      // Falls back to showing everything immediately when IntersectionObserver
+      // is unavailable or the visitor prefers reduced motion.
       (function () {
-        const els = document.querySelectorAll(
-          "[data-reveal], [data-reveal-fade]",
-        );
-        const reduce = window.matchMedia(
-          "(prefers-reduced-motion: reduce)",
-        ).matches;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const els = Array.from(document.querySelectorAll("[data-reveal]"));
+        const revealAll = () => els.forEach((el) => el.classList.add("in"));
         if (!("IntersectionObserver" in window) || reduce) {
-          els.forEach((el) => el.classList.add("in"));
+          revealAll();
           return;
         }
         const io = new IntersectionObserver(
@@ -976,9 +1461,141 @@
               }
             });
           },
-          { rootMargin: "0px 0px -10% 0px", threshold: 0.12 },
+          { rootMargin: "0px 0px -10% 0px", threshold: 0.15 },
         );
         els.forEach((el) => io.observe(el));
+        // Safety net: content must never ship blank. If the observer never
+        // fires (background tab, prerender, headless render), reveal anyway.
+        window.addEventListener("load", () => setTimeout(revealAll, 1500));
+      })();
+    </script>
+
+    <script>
+      // The growth spine: light up each step and climb the green fill as steps
+      // enter view. Reduced motion / no-IO: fill and light everything at once.
+      (function () {
+        const steps = Array.from(document.querySelectorAll("[data-step]"));
+        const fill = document.getElementById("spineFill");
+        if (!steps.length) return;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const setFill = (n) => {
+          if (fill) fill.style.transform = "scaleY(" + n / steps.length + ")";
+        };
+        if (!("IntersectionObserver" in window) || reduce) {
+          steps.forEach((s) => s.classList.add("in"));
+          setFill(steps.length);
+          return;
+        }
+        let reached = 0;
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+                reached = Math.max(reached, steps.indexOf(e.target) + 1);
+                setFill(reached);
+              }
+            });
+          },
+          { rootMargin: "0px 0px -25% 0px", threshold: 0.4 },
+        );
+        steps.forEach((s) => io.observe(s));
+      })();
+    </script>
+
+    <script>
+      // Interactive citation demo: hovering or focusing the chip lights up the
+      // matching source line. Pointer + keyboard both drive it.
+      (function () {
+        const demo = document.getElementById("groundDemo");
+        const chip = document.getElementById("citeChip");
+        if (!demo || !chip) return;
+        const on = () => demo.classList.add("lit");
+        const off = () => demo.classList.remove("lit");
+        chip.addEventListener("mouseenter", on);
+        chip.addEventListener("mouseleave", off);
+        chip.addEventListener("focus", on);
+        chip.addEventListener("blur", off);
+        // Tap toggles on touch, where there is no hover.
+        chip.addEventListener("click", () => demo.classList.toggle("lit"));
+      })();
+    </script>
+
+    <script>
+      // Header shadow on scroll, scroll-progress thread, and nav scroll-spy.
+      (function () {
+        const header = document.getElementById("header");
+        const progress = document.getElementById("progress");
+        const spyLinks = Array.from(document.querySelectorAll("[data-spy]"));
+        const sections = spyLinks
+          .map((a) => document.getElementById(a.dataset.spy))
+          .filter(Boolean);
+
+        let ticking = false;
+        const onScroll = () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            const y = window.scrollY;
+            if (header) header.classList.toggle("stuck", y > 8);
+            if (progress) {
+              const h = document.documentElement;
+              const max = h.scrollHeight - h.clientHeight;
+              const p = max > 0 ? y / max : 0;
+              progress.style.transform = "scaleX(" + p + ")";
+            }
+            ticking = false;
+          });
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+
+        // Scroll-spy: mark the nav link for the section nearest the top.
+        if ("IntersectionObserver" in window && sections.length) {
+          const spy = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((e) => {
+                if (e.isIntersecting) {
+                  spyLinks.forEach((a) =>
+                    a.classList.toggle("active", a.dataset.spy === e.target.id),
+                  );
+                }
+              });
+            },
+            { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+          );
+          sections.forEach((s) => spy.observe(s));
+        }
+      })();
+    </script>
+
+    <script>
+      // Subtle pointer parallax on the hero glimpse. Layers drift by their
+      // data-depth. Skipped for touch and reduced-motion visitors.
+      (function () {
+        const glimpse = document.querySelector(".glimpse");
+        if (!glimpse) return;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const fine = window.matchMedia("(pointer: fine)").matches;
+        if (reduce || !fine) return;
+        const layers = Array.from(glimpse.querySelectorAll(".glimpse-layer"));
+        const base = new WeakMap();
+        layers.forEach((l) => base.set(l, l.style.transform || ""));
+        glimpse.addEventListener("pointermove", (e) => {
+          const r = glimpse.getBoundingClientRect();
+          const dx = (e.clientX - r.left) / r.width - 0.5;
+          const dy = (e.clientY - r.top) / r.height - 0.5;
+          layers.forEach((l) => {
+            const d = parseFloat(l.dataset.depth || "0");
+            l.style.transform =
+              base.get(l) +
+              " translate3d(" + dx * d + "px," + dy * d + "px,0)";
+          });
+        });
+        glimpse.addEventListener("pointerleave", () => {
+          layers.forEach((l) => (l.style.transform = base.get(l)));
+        });
       })();
     </script>
 
@@ -988,7 +1605,6 @@
       // (e.g. before the first release exists, or if the API is unreachable).
       (function () {
         const REPO = "kylev202/Arbora";
-        const RELEASES = "https://github.com/" + REPO + "/releases";
 
         function detectOS() {
           const s = (
