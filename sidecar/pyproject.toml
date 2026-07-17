@@ -1,6 +1,6 @@
 [project]
 name = "arbora-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "Arbora AI sidecar — ingest, transcribe, RAG, LLM generation, FSRS."
 readme = "../README.md"
 license = { text = "MIT" }

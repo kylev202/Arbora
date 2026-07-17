@@ -905,8 +905,18 @@ mod tests {
             .unwrap();
 
         let figures = vec![
-            FigureRow { page: 3, path: "/lib/figures/a/12.png".into(), width: 400, height: 300 },
-            FigureRow { page: 5, path: "/lib/figures/a/34.png".into(), width: 800, height: 600 },
+            FigureRow {
+                page: 3,
+                path: "/lib/figures/a/12.png".into(),
+                width: 400,
+                height: 300,
+            },
+            FigureRow {
+                page: 5,
+                path: "/lib/figures/a/34.png".into(),
+                width: 800,
+                height: 600,
+            },
         ];
         insert_figures(&pool, &src.id, &figures).await.unwrap();
 

@@ -1,6 +1,6 @@
 {
   "name": "arbora",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first study space: documents → grounded notes, flashcards, quizzes → FSRS review.",
   "license": "MIT",
   "private": true,
