@@ -30,7 +30,7 @@ uuid = { version = "1", features = ["v4"] }
 # `tokio::time::sleep` for the ingest/generation status pollers (runs on Tauri's runtime).
 tokio = { version = "1", features = ["time"] }
 # Device RAM detection for the onboarding preset recommendation.
-sysinfo = { version = "0.33", default-features = false, features = ["system"] }
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }
 
 [dev-dependencies]
 # Drives async command tests (`#[tokio::test]`) against an in-memory SQLite.
