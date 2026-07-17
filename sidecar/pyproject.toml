@@ -32,7 +32,7 @@ dev = [
 ]
 # Freezing the sidecar into a shippable binary (scripts/build_sidecar.py).
 build = [
-    "pyinstaller==6.16.0",
+    "pyinstaller==6.21.0",
 ]
 
 [build-system]
