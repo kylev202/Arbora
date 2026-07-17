@@ -206,11 +206,19 @@ export function TodosScreen() {
               {visible.length === 0 ? (
                 <EmptyState
                   icon={<ListChecks weight="fill" />}
-                  title="Nothing here"
+                  title={
+                    list === "ai"
+                      ? "No suggestions yet"
+                      : list === "today"
+                        ? "Nothing due today"
+                        : "No tasks yet"
+                  }
                   description={
                     list === "ai"
-                      ? "Suggestions from the planner will appear here."
-                      : "Add a task to get started."
+                      ? "When the planner spots something worth doing, it lands here for you to accept or skip."
+                      : list === "today"
+                        ? "A clear day. Anything you add with a due date of today shows up here."
+                        : "Add a task above — small ones count."
                   }
                 />
               ) : (

@@ -267,6 +267,10 @@ export function StudyScreen() {
         </div>
       </div>
 
+      <div className={styles.track} aria-hidden="true">
+        <div className={styles.fill} style={{ width: `${(index / total) * 100}%` }} />
+      </div>
+
       <div className={styles.cardWrap}>
         {current && (
           <StudyCard

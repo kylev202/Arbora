@@ -1,7 +1,9 @@
 .screen {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  /* Fixed (not min-) height: the week grid scrolls INSIDE .weekScroll, so the
+     day headers and controls stay in view and scroll-to-now can work. */
+  height: 100vh;
 }
 
 .main {
@@ -155,6 +157,7 @@
 .weekWrap {
   display: flex;
   flex-direction: column;
+  flex: 1;
   background: var(--glass-bg-soft);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
@@ -418,7 +421,9 @@
   background: var(--color-border);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  /* The screen is viewport-locked; let a tall month scroll internally. */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .monthCell {

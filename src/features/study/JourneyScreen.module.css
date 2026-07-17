@@ -2,6 +2,7 @@
   height: 320px;
   border-radius: var(--radius-md);
   background: var(--color-surface-alt);
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
 .building {

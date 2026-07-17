@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SpeakerHigh } from "@phosphor-icons/react";
-import { CitationChip, IconButton, Tag, Textarea } from "../../components";
+import { Button, CitationChip, IconButton, Tag, Textarea } from "../../components";
 import { speak } from "../../lib/tts";
 import type { ReviewItem, SourceRef } from "../../lib/types";
 import styles from "./ReviewCard.module.css";
@@ -67,12 +67,12 @@ export function ReviewCard({ item, editing, onSaveEdit, onCancelEdit, onOpenCita
 
       {editing && (
         <div className={styles.editActions}>
-          <button type="button" className={styles.linkBtn} onClick={onCancelEdit}>
+          <Button variant="ghost" onClick={onCancelEdit}>
             Cancel
-          </button>
-          <button type="button" className={styles.saveBtn} onClick={() => onSaveEdit(draft)}>
+          </Button>
+          <Button variant="primary" onClick={() => onSaveEdit(draft)}>
             Save changes
-          </button>
+          </Button>
         </div>
       )}
     </article>

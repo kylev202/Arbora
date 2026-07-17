@@ -255,6 +255,7 @@
   height: 360px;
   border-radius: var(--radius-lg);
   background: var(--color-surface-alt);
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
 @media (max-width: 860px) {

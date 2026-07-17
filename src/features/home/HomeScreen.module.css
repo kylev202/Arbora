@@ -85,7 +85,7 @@
   border-radius: var(--radius-lg);
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  animation: pulse 1.4s ease-in-out infinite;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
 /* ── Edit-subject modal ── */
@@ -126,14 +126,4 @@
 .colorActive,
 .colorActive:hover {
   border-color: var(--color-text);
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
 }

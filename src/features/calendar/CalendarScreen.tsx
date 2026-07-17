@@ -92,12 +92,17 @@ export function CalendarScreen() {
   }, [view, anchor.getTime(), refreshTick]);
 
   // Open the day scrolled to roughly the current time — with the full 24h grid,
-  // landing on empty midnight would be useless.
+  // landing on empty midnight would be useless. Deferred a frame so the grid
+  // has its full height; setting scrollTop before layout clamps it to 0.
   useEffect(() => {
-    if (view !== "week" || !scrollRef.current) return;
-    const n = new Date();
-    const mins = n.getHours() * 60 + n.getMinutes() - DAY_START_HOUR * 60;
-    scrollRef.current.scrollTop = Math.max(0, mins * PX_PER_MIN - 120);
+    if (view !== "week") return;
+    const id = requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      const n = new Date();
+      const mins = n.getHours() * 60 + n.getMinutes() - DAY_START_HOUR * 60;
+      scrollRef.current.scrollTop = Math.max(0, mins * PX_PER_MIN - 120);
+    });
+    return () => cancelAnimationFrame(id);
   }, [view]);
 
   // ── AI week planner (proposals only until accepted — law #2) ─────────────

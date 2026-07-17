@@ -16,15 +16,5 @@
   height: 240px;
   border-radius: var(--radius-lg);
   background: var(--color-surface-alt);
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  animation: shimmer 1.6s ease-in-out infinite;
 }

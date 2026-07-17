@@ -34,6 +34,22 @@
   padding: 0 var(--space-2);
 }
 
+/* Thin session-progress fill under the bar — grows as cards are rated
+   (growth language: additive, never drains). The "n / total" text above is
+   the accessible progress; this is the glanceable version. */
+.track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width var(--motion-grow) var(--ease-growth);
+}
+
 .cardWrap {
   min-height: 320px;
 }
@@ -54,4 +70,5 @@
   height: 360px;
   border-radius: var(--radius-lg);
   background: var(--color-surface-alt);
+  animation: shimmer 1.6s ease-in-out infinite;
 }

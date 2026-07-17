@@ -155,6 +155,7 @@
   --z-nav: 100;
   --z-bubble: 899; /* pet suggestion bubble, under the pet itself */
   --z-pet: 900; /* floating pet — above screens, below modals */
+  --z-banner: 950; /* sidecar status strip — above the pet, below modals */
   --z-modal: 1000;
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import { IconButton } from "./IconButton";
@@ -38,6 +38,8 @@ export function Modal({
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
+  // Unique per instance so stacked modals (e.g. viewer + edit) don't share ids.
+  const titleId = useId();
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -79,7 +81,6 @@ export function Modal({
 
   if (!open) return null;
 
-  const titleId = "modal-title";
   return createPortal(
     <div className={styles.overlay} onMouseDown={onClose}>
       <div

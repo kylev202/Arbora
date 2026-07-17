@@ -30,7 +30,10 @@ async function ctxPage(viewport, init) {
   if (init) await ctx.addInitScript(init);
   return { ctx, page: await ctx.newPage() };
 }
-const skip = () => localStorage.setItem("arbora.onboarded", "1");
+const skip = () => {
+  localStorage.setItem("arbora.onboarded", "1");
+  localStorage.setItem("arbora.tutorialDone", "1");
+};
 const display = (d) => localStorage.setItem("arbora.display", JSON.stringify(d));
 async function shot(page, name) {
   await page.waitForTimeout(900);
@@ -104,6 +107,7 @@ function check(label, ok) {
 {
   const { ctx, page } = await ctxPage(undefined, () => {
     localStorage.setItem("arbora.onboarded", "1");
+    localStorage.setItem("arbora.tutorialDone", "1");
     localStorage.setItem("arbora.display", JSON.stringify({ theme: "dark", contrast: "normal", fontScale: 16, reducedMotion: true, focusMode: false }));
   });
   wire(page, "dark");
@@ -118,6 +122,7 @@ function check(label, ok) {
 {
   const { ctx, page } = await ctxPage({ width: 860, height: 900 }, () => {
     localStorage.setItem("arbora.onboarded", "1");
+    localStorage.setItem("arbora.tutorialDone", "1");
     localStorage.setItem("arbora.display", JSON.stringify({ theme: "light", contrast: "high", fontScale: 18, reducedMotion: false, focusMode: false }));
   });
   wire(page, "responsive");
