@@ -20,8 +20,8 @@
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-md), var(--glass-highlight);
 
   animation: banner-rise var(--motion-slow) var(--ease-out) both;
