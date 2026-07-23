@@ -164,6 +164,7 @@ export function PetPanel({
       const turn = next[turnIndex];
       if (turn.status !== "plan") return prev;
       const plan = {
+        ...turn.plan,
         sessions: turn.plan.sessions.filter((_, j) => j !== pick.session),
         moves: turn.plan.moves.filter((_, j) => j !== pick.move),
       };
@@ -292,7 +293,10 @@ export function PetPanel({
                       key={`s-${j}-${s.start_at}`}
                       proposal={s}
                       onAccept={(times) => void acceptFromTurn(i, { session: j, times })}
-                      onDismiss={() => dismissFromTurn(i, { session: j })}
+                      onDismiss={() => {
+                        void api.dismissProposal(s).catch(() => {});
+                        dismissFromTurn(i, { session: j });
+                      }}
                     />
                   ))}
                 </div>

@@ -27,8 +27,45 @@
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   font-weight: var(--weight-medium);
   font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Corner dismiss (×): the conventional "clear this suggestion" affordance.
+ * Kept out of the action row so Accept/Edit/Another-time never overflow the
+ * card into the neighbouring grid cell. */
+.dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+.dismiss:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+.dismiss:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.dismiss:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .when {
@@ -55,5 +92,6 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }

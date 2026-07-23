@@ -36,14 +36,18 @@ from .llm.models import model_ready, pull_model, warmup_model
 from .llm.provider import LLMSchemaError, LLMUnavailableError, get_provider
 from .pet import answer_app_help, route_question
 from .planner import (
+    AvoidSlotIn,
     BusyIn,
     DeadlineIn,
+    ExistingSessionIn,
     LectureIn,
     MissedIn,
     PlanOut,
+    SessionOut,
     SubjectIn,
     WindowIn,
     plan_week,
+    resuggest_session,
 )
 from .assignment import extract_rubric, extract_spec
 from .outline import extract_outline, extract_unit_info, syllabus_to_text
@@ -234,8 +238,23 @@ class SchedulePlanRequest(BaseModel):
     lectures: list[LectureIn] = []
     busy: list[BusyIn] = []
     missed: list[MissedIn] = []
+    existing: list[ExistingSessionIn] = []
     goal: str | None = None
     session_minutes: int = 50
+    preferred_hour: int | None = None
+    avoid_slots: list[AvoidSlotIn] = []
+
+
+class ResuggestRequest(BaseModel):
+    week_start: str  # ISO date (Monday)
+    windows: list[WindowIn] = []
+    busy: list[BusyIn] = []  # calendar events + the other pending proposals
+    subject_id: str | None = None
+    title: str
+    declined_start_at: str  # the slot the user can't make — never handed back
+    session_minutes: int = 50
+    preferred_hour: int | None = None
+    avoid_slots: list[AvoidSlotIn] = []
 
 
 class ParseOutlineRequest(BaseModel):
@@ -602,8 +621,31 @@ def create_app() -> FastAPI:
             lectures=req.lectures,
             busy=req.busy,
             missed=req.missed,
+            existing=req.existing,
             goal=req.goal,
             session_minutes=req.session_minutes,
+            preferred_hour=req.preferred_hour,
+            avoid_slots=req.avoid_slots,
+        )
+
+    @app.post("/resuggest-session", response_model=SessionOut | None, dependencies=guarded)
+    def resuggest(req: ResuggestRequest) -> SessionOut | None:
+        from datetime import date
+
+        try:
+            week_start = date.fromisoformat(req.week_start)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"bad week_start: {exc}") from exc
+        return resuggest_session(
+            week_start=week_start,
+            windows=req.windows,
+            busy=req.busy,
+            subject_id=req.subject_id,
+            title=req.title,
+            declined_start_at=req.declined_start_at,
+            session_minutes=req.session_minutes,
+            preferred_hour=req.preferred_hour,
+            avoid_slots=req.avoid_slots,
         )
 
     # ── Syllabus outline extraction ────────────────────────────────────────

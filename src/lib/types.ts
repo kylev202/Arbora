@@ -316,6 +316,13 @@ export type Deadline = {
   type: DeadlineType;
 };
 
+/** An approaching deadline for the app-wide alert banner (ADR-0013): a `Deadline`
+ * plus its subject name and whole days until due (0 = today). */
+export type DeadlineAlert = Deadline & {
+  subject_name: string;
+  days_until: number;
+};
+
 /** An assignment spec parsed by the AI sidecar but **not yet committed** —
  * reviewed/edited in a modal, then `commitAssignmentSpec` persists it. */
 export type ParsedSpec = {
@@ -564,9 +571,21 @@ export type ProposedMove = {
   reason: string;
 };
 
+/** How a subject's weekly study target is covered — for the calm "N of M
+ * planned" line and the keep-filling loop's stop condition. */
+export type SubjectCoverage = {
+  subject_id: string;
+  name: string;
+  needed: number;
+  scheduled: number;
+  proposed: number;
+};
+
 export type SchedulePlan = {
   sessions: ProposedSession[];
   moves: ProposedMove[];
+  coverage: SubjectCoverage[];
+  remaining: number;
 };
 
 // ── Mermaid diagrams ──────────────────────────────────────────────────────

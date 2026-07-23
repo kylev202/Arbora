@@ -31,10 +31,26 @@ pub struct ProposedMove {
     pub reason: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SubjectCoverage {
+    pub subject_id: String,
+    pub name: String,
+    pub needed: i64,
+    pub scheduled: i64,
+    pub proposed: i64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SchedulePlan {
     pub sessions: Vec<ProposedSession>,
     pub moves: Vec<ProposedMove>,
+    /// Per-subject weekly target vs. what's scheduled/proposed — drives the UI's
+    /// "N of M planned" line and the keep-filling loop's stop condition.
+    #[serde(default)]
+    pub coverage: Vec<SubjectCoverage>,
+    /// Total unmet sessions across subjects; zero = the week is covered.
+    #[serde(default)]
+    pub remaining: i64,
 }
 
 // ── Gather helpers (plain pool → unit-testable) ─────────────────────────────
@@ -88,6 +104,101 @@ async fn missed_sessions(pool: &SqlitePool, now: &str) -> Result<Vec<MissedRow>,
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())
+}
+
+#[derive(sqlx::FromRow, Serialize)]
+struct ExistingRow {
+    subject_id: Option<String>,
+    start_at: String,
+    end_at: String,
+}
+
+/// Study sessions already on this week's calendar that still count toward
+/// coverage — upcoming or done, never the missed ones (those are rescheduled
+/// via `moves`). The planner credits these so it fills only the gap and never
+/// double-books a subject the user already scheduled.
+async fn existing_sessions(
+    pool: &SqlitePool,
+    week_from: &str,
+    week_to: &str,
+    now: &str,
+) -> Result<Vec<ExistingRow>, String> {
+    sqlx::query_as::<_, ExistingRow>(
+        "SELECT subject_id, start_at, end_at FROM calendar_events
+         WHERE kind = 'study' AND start_at >= ?1 AND start_at < ?2
+           AND (status != 'planned' OR end_at >= ?3)
+         ORDER BY start_at",
+    )
+    .bind(week_from)
+    .bind(week_to)
+    .bind(now)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// The user's preferred session length in minutes — the median of their own
+/// recent study blocks, so proposals mirror how long they actually plan to
+/// study. Falls back to the calm 50-minute default with no history.
+async fn preferred_session_minutes(pool: &SqlitePool) -> i64 {
+    let mut mins = sqlx::query_as::<_, (i64,)>(
+        "SELECT CAST(ROUND((julianday(end_at) - julianday(start_at)) * 1440) AS INTEGER)
+         FROM calendar_events
+         WHERE kind = 'study' AND origin = 'user' AND end_at > start_at
+         ORDER BY start_at DESC LIMIT 20",
+    )
+    .fetch_all(pool)
+    .await
+    .map(|rows| rows.into_iter().map(|(m,)| m).collect::<Vec<_>>())
+    .unwrap_or_default();
+    if mins.is_empty() {
+        return 50;
+    }
+    mins.sort_unstable();
+    mins[mins.len() / 2].clamp(20, 120)
+}
+
+/// The hour of day (0–23) the user most often studies, from their own recent
+/// study blocks, so proposals land when they actually tend to sit down. `None`
+/// with no history — the planner then keeps plain chronological order.
+async fn preferred_study_hour(pool: &SqlitePool) -> Option<i64> {
+    let hours = sqlx::query_as::<_, (i64,)>(
+        "SELECT CAST(strftime('%H', start_at) AS INTEGER)
+         FROM calendar_events
+         WHERE kind = 'study' AND origin = 'user' AND end_at > start_at
+         ORDER BY start_at DESC LIMIT 20",
+    )
+    .fetch_all(pool)
+    .await
+    .map(|rows| rows.into_iter().map(|(h,)| h).collect::<Vec<_>>())
+    .unwrap_or_default();
+    if hours.is_empty() {
+        return None;
+    }
+    // Mode — the most-used hour; ties resolve to the earlier hour so the nudge
+    // stays gentle and stable.
+    let mut counts: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
+    for h in hours {
+        *counts.entry(h).or_default() += 1;
+    }
+    counts
+        .into_iter()
+        .max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0)))
+        .map(|(h, _)| h)
+}
+
+/// (weekday, hour) pairs the user recently dismissed a proposal on — soft
+/// "not this time" signals the planner steers future proposals away from.
+/// Distinct (one heavily-dismissed slot counts once) and recency-bounded, so a
+/// slot the user avoided months ago stops haunting the plan.
+async fn dismissed_slots(pool: &SqlitePool) -> Vec<(i64, i64)> {
+    sqlx::query_as::<_, (i64, i64)>(
+        "SELECT DISTINCT weekday, hour FROM dismissed_slots
+         WHERE dismissed_at >= strftime('%Y-%m-%dT%H:%M:%SZ','now','-28 days')",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default()
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -156,6 +267,10 @@ pub async fn propose_schedule(
     .map_err(|e| e.to_string())?;
 
     let missed = missed_sessions(pool, &now).await?;
+    let existing = existing_sessions(pool, &week_from, &week_to, &now).await?;
+    let session_minutes = preferred_session_minutes(pool).await;
+    let preferred_hour = preferred_study_hour(pool).await;
+    let avoid_slots = dismissed_slots(pool).await;
 
     let goal = sqlx::query_as::<_, (Option<String>,)>("SELECT goal FROM user_profile WHERE id = 1")
         .fetch_one(pool)
@@ -179,7 +294,13 @@ pub async fn propose_schedule(
             "start_at": start_at, "end_at": end_at,
         })).collect::<Vec<_>>(),
         "missed": missed,
+        "existing": existing,
         "goal": goal,
+        "session_minutes": session_minutes,
+        "preferred_hour": preferred_hour,
+        "avoid_slots": avoid_slots.iter().map(|(weekday, hour)| serde_json::json!({
+            "weekday": weekday, "hour": hour,
+        })).collect::<Vec<_>>(),
     });
 
     reqwest::Client::new()
@@ -192,6 +313,93 @@ pub async fn propose_schedule(
         .error_for_status()
         .map_err(|e| format!("SCHEDULE_FAILED: {e}"))?
         .json::<SchedulePlan>()
+        .await
+        .map_err(|e| format!("SCHEDULE_FAILED: {e}"))
+}
+
+/// Offer one different time for a proposed session the user can't make. Gathers
+/// the same week context as `propose_schedule`, treats the other still-pending
+/// proposals (`others`) as occupied so the alternative never collides with them,
+/// and asks the sidecar for a single replacement slot. Writes nothing (law #2) —
+/// the result is still a proposal the user accepts, edits, or re-rolls again.
+/// `None` means the week is fully booked and there is no other time to offer.
+#[tauri::command]
+pub async fn resuggest_session(
+    pool: State<'_, SqlitePool>,
+    sidecar: State<'_, Sidecar>,
+    week_start: String,
+    session: ProposedSession,
+    others: Vec<ProposedSession>,
+) -> Result<Option<ProposedSession>, String> {
+    let pool = pool.inner();
+    let base = sidecar
+        .base_url()
+        .filter(|_| sidecar.is_ready())
+        .ok_or("SIDECAR_UNAVAILABLE")?;
+
+    let week_from = format!("{week_start}T00:00");
+    let week_to: String =
+        sqlx::query_as::<_, (String,)>("SELECT strftime('%Y-%m-%dT%H:%M', ?1, '+7 days')")
+            .bind(&week_from)
+            .fetch_one(pool)
+            .await
+            .map(|(s,)| s)
+            .map_err(|e| e.to_string())?;
+
+    let windows = sqlx::query_as::<_, (i64, String, String)>(
+        "SELECT weekday, start_time, end_time FROM study_windows ORDER BY weekday, start_time",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+
+    let mut busy = sqlx::query_as::<_, (String, String)>(
+        "SELECT start_at, end_at FROM calendar_events
+         WHERE start_at >= ?1 AND start_at < ?2 ORDER BY start_at",
+    )
+    .bind(&week_from)
+    .bind(&week_to)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    // The other pending proposals aren't persisted yet — pass them as occupied so
+    // a re-roll never hands back a slot another suggestion already holds.
+    for o in &others {
+        busy.push((o.start_at.clone(), o.end_at.clone()));
+    }
+
+    let session_minutes = preferred_session_minutes(pool).await;
+    let preferred_hour = preferred_study_hour(pool).await;
+    let avoid_slots = dismissed_slots(pool).await;
+
+    let body = serde_json::json!({
+        "week_start": week_start,
+        "windows": windows.iter().map(|(weekday, start_time, end_time)| serde_json::json!({
+            "weekday": weekday, "start_time": start_time, "end_time": end_time,
+        })).collect::<Vec<_>>(),
+        "busy": busy.iter().map(|(start_at, end_at)| serde_json::json!({
+            "start_at": start_at, "end_at": end_at,
+        })).collect::<Vec<_>>(),
+        "subject_id": session.subject_id,
+        "title": session.title,
+        "declined_start_at": session.start_at,
+        "session_minutes": session_minutes,
+        "preferred_hour": preferred_hour,
+        "avoid_slots": avoid_slots.iter().map(|(weekday, hour)| serde_json::json!({
+            "weekday": weekday, "hour": hour,
+        })).collect::<Vec<_>>(),
+    });
+
+    reqwest::Client::new()
+        .post(format!("{base}/resuggest-session"))
+        .header("X-Arbora-Token", sidecar.token())
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("SCHEDULE_FAILED: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("SCHEDULE_FAILED: {e}"))?
+        .json::<Option<ProposedSession>>()
         .await
         .map_err(|e| format!("SCHEDULE_FAILED: {e}"))
 }
@@ -260,6 +468,36 @@ pub async fn accept_schedule(
     moves: Vec<ProposedMove>,
 ) -> Result<(), String> {
     accept(pool.inner(), sessions, moves).await
+}
+
+/// Record that the user dismissed a proposed session: bank the (weekday, hour)
+/// it fell on so future proposals steer away from that time (the negative half
+/// of learning from the user's own choices). Best-effort and ordering-only — it
+/// writes no calendar event and changes no target; the accept gate stays the
+/// sole writer of real sessions (law #2). Weekday is stored in the planner's
+/// Monday=0 convention (SQLite `%w` is Sunday=0, hence the `+6 % 7` shift).
+pub(crate) async fn dismiss(pool: &SqlitePool, start_at: &str) -> Result<(), String> {
+    sqlx::query(
+        "INSERT INTO dismissed_slots (id, weekday, hour, dismissed_at)
+         VALUES (?1,
+                 (CAST(strftime('%w', ?2) AS INTEGER) + 6) % 7,
+                 CAST(strftime('%H', ?2) AS INTEGER),
+                 strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+    )
+    .bind(Uuid::new_v4().to_string())
+    .bind(start_at)
+    .execute(pool)
+    .await
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn dismiss_proposal(
+    pool: State<'_, SqlitePool>,
+    session: ProposedSession,
+) -> Result<(), String> {
+    dismiss(pool.inner(), &session.start_at).await
 }
 
 #[cfg(test)]
@@ -388,5 +626,70 @@ mod tests {
         let missed = missed_sessions(&pool, "2026-07-05T20:00").await.unwrap();
         assert_eq!(missed.len(), 1);
         assert_eq!(missed[0].event_id, "m1");
+    }
+
+    #[tokio::test]
+    async fn existing_credits_upcoming_only_and_length_falls_back() {
+        let pool = mem_pool().await;
+        // No user study history yet → calm 50-minute default, no learned hour.
+        assert_eq!(preferred_session_minutes(&pool).await, 50);
+        assert_eq!(preferred_study_hour(&pool).await, None);
+
+        // Upcoming user session this week (credited) …
+        sqlx::query(
+            "INSERT INTO calendar_events (id,subject_id,title,start_at,end_at,kind,status,origin,created_at)
+             VALUES ('up','s1','Study Bio','2026-07-08T18:00','2026-07-08T19:00','study','planned','user','t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        // … a missed one earlier the same week (excluded — it's rescheduled) …
+        sqlx::query(
+            "INSERT INTO calendar_events (id,subject_id,title,start_at,end_at,kind,status,origin,created_at)
+             VALUES ('miss','s1','Study Bio','2026-07-06T18:00','2026-07-06T18:50','study','planned','user','t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let now = "2026-07-07T09:00";
+        let rows = existing_sessions(&pool, "2026-07-06T00:00", "2026-07-13T00:00", now)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 1, "missed sessions are not credited");
+        assert_eq!(rows[0].start_at, "2026-07-08T18:00");
+
+        // Median of the user's own blocks (60 and 50 minutes) → the upper-middle.
+        assert_eq!(preferred_session_minutes(&pool).await, 60);
+        // Both user blocks start at 18:00 → that's the learned study hour.
+        assert_eq!(preferred_study_hour(&pool).await, Some(18));
+    }
+
+    #[tokio::test]
+    async fn dismiss_records_slot_and_gather_honours_recency() {
+        let pool = mem_pool().await;
+        assert!(
+            dismissed_slots(&pool).await.is_empty(),
+            "nothing dismissed yet"
+        );
+
+        // Monday 2026-07-06 18:00 → planner weekday 0 (Mon), hour 18.
+        dismiss(&pool, "2026-07-06T18:00").await.unwrap();
+        assert_eq!(dismissed_slots(&pool).await, vec![(0, 18)]);
+
+        // A dismissal older than the 28-day horizon is ignored, so a stale
+        // avoidance stops shaping the plan.
+        sqlx::query(
+            "INSERT INTO dismissed_slots (id,weekday,hour,dismissed_at)
+             VALUES ('old',2,9,'2000-01-01T00:00:00Z')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            dismissed_slots(&pool).await,
+            vec![(0, 18)],
+            "old dismissal excluded"
+        );
     }
 }

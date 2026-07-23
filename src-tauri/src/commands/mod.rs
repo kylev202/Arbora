@@ -4,6 +4,7 @@
 //! cross-cutting dev/liveness pings. The single typed seam on the UI side is
 //! `src/lib/ipc.ts` — keep the two in sync.
 
+pub mod alerts;
 pub mod assess;
 pub mod assignment;
 pub mod chat;

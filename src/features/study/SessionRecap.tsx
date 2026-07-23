@@ -135,9 +135,10 @@ export function SessionRecap({
                 key={p.start_at}
                 proposal={p}
                 onAccept={(times) => void acceptProposal(i, times)}
-                onDismiss={() =>
-                  setProposalStates((prev) => prev.map((s, j) => (j === i ? "dismissed" : s)))
-                }
+                onDismiss={() => {
+                  void api.dismissProposal(p).catch(() => {});
+                  setProposalStates((prev) => prev.map((s, j) => (j === i ? "dismissed" : s)));
+                }}
               />
             ) : null,
           )}

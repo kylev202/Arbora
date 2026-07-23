@@ -21,6 +21,7 @@ import type {
   ChatMessageResponse,
   ConceptEntry,
   Deadline,
+  DeadlineAlert,
   DiagramResponse,
   DeadlineType,
   Discipline,
@@ -451,6 +452,12 @@ export function createDeadline(
 /** Delete a deadline. */
 export function deleteDeadline(id: string): Promise<void> {
   return invoke<void>("delete_deadline", { id });
+}
+
+/** Future deadlines within `withinDays`, across all subjects, soonest first —
+ * feeds the calm app-wide deadline alert (ADR-0013). Pure read, writes nothing. */
+export function upcomingDeadlines(withinDays: number): Promise<DeadlineAlert[]> {
+  return invoke<DeadlineAlert[]>("upcoming_deadlines", { withinDays });
 }
 
 /** Grade-book items for a subject. */
@@ -1015,6 +1022,26 @@ export function acceptSchedule(
   moves: ProposedMove[],
 ): Promise<void> {
   return invoke<void>("accept_schedule", { sessions, moves });
+}
+
+/** Record that the user dismissed a proposed session, so the planner steers
+ * future proposals away from that time-of-day (workstream 3, ADR-0013).
+ * Best-effort and ordering-only — it writes no event and the accept gate stays
+ * the sole writer of real sessions (law #2). */
+export function dismissProposal(session: ProposedSession): Promise<void> {
+  return invoke<void>("dismiss_proposal", { session });
+}
+
+/** Offer a different time for one proposed `session` the user can't make.
+ * `others` are the other still-pending proposals, passed so the alternative
+ * never collides with them. Writes nothing (law #2); resolves to `null` when the
+ * week is fully booked and there's no other time to suggest. */
+export function resuggestSession(
+  session: ProposedSession,
+  weekStart: string,
+  others: ProposedSession[],
+): Promise<ProposedSession | null> {
+  return invoke<ProposedSession | null>("resuggest_session", { session, weekStart, others });
 }
 
 // ── Pet companion + Ollama lifecycle (redesign slice B) ────────────────────

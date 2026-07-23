@@ -66,6 +66,7 @@ export const api = {
   listDeadlines: ipc.listDeadlines,
   createDeadline: ipc.createDeadline,
   deleteDeadline: ipc.deleteDeadline,
+  upcomingDeadlines: ipc.upcomingDeadlines,
   listGrades: ipc.listGrades,
   createGrade: ipc.createGrade,
   deleteGrade: ipc.deleteGrade,
@@ -160,6 +161,8 @@ export const api = {
   // ── Redesign slice E — AI week scheduler (proposals via review) ──
   proposeSchedule: ipc.proposeSchedule,
   acceptSchedule: ipc.acceptSchedule,
+  dismissProposal: ipc.dismissProposal,
+  resuggestSession: ipc.resuggestSession,
 
   // ── Redesign slice F — learning path ──
   getSubjectPath: ipc.getSubjectPath,

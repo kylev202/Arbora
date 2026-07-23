@@ -33,3 +33,6 @@ between layers. Routine work does not need one.
 | [0009](./0009-week-walkthrough-journey.md) | Guided week journey — persisted overview + lesson notes, inline review, mixed practice | Accepted |
 | [0010](./0010-broaden-audience-comprehensive-study-platform.md) | Broaden positioning to a comprehensive study platform for all students | Accepted |
 | [0011](./0011-subject-aware-generation-and-math-grounding.md) | Subject-aware generation; synthesized maths grounded on prose + Law #2 review | Accepted |
+| [0012](./0012-source-figures-in-notes.md) | Source figures surfaced inline in generated notes | Accepted |
+| [0013](./0013-proactive-planning-and-deadline-alerts.md) | Proactive planning — priority-weighted scheduling and calm deadline alerts | Accepted (§alt amended by 0014) |
+| [0014](./0014-deadline-runup-backward-planning.md) | Deadline run-up backward-planning + bounded final-week exam volume bump | Accepted |

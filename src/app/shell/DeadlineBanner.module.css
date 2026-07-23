@@ -1,0 +1,66 @@
+/* Calm deadline alert — same floating-strip family as SidecarBanner, stacked a
+   little higher so the two never collide on the rare occasion both appear.
+   Earth gold, never red (ADR-0007): a glanceable nudge, not an alarm. */
+.banner {
+  position: fixed;
+  bottom: calc(var(--space-6) + 4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-banner);
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(560px, calc(100vw - var(--space-8)));
+  padding: var(--space-3) var(--space-4);
+
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--color-accent-warm) 40%, var(--glass-border));
+  background: color-mix(in srgb, var(--color-accent-warm) 12%, var(--glass-bg-strong));
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-md), var(--glass-highlight);
+
+  animation: deadline-rise var(--motion-slow) var(--ease-out) both;
+}
+
+.icon {
+  flex: none;
+  font-size: 1.15rem;
+  color: var(--color-accent-warm);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.subject {
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+.more {
+  color: var(--color-text-muted);
+}
+
+@keyframes deadline-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, var(--space-3));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

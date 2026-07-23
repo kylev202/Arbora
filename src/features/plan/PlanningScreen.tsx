@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CalendarBlank, Sparkle, Target, X } from "@phosphor-icons/react";
+import { CalendarBlank, CheckCircle, Sparkle, Target, X } from "@phosphor-icons/react";
 import { Button, EmptyState, IconButton, Tabs, type TabItem } from "../../components";
 import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { formatDate } from "../../lib/date";
-import type { SchedulePlan } from "../../lib/types";
+import type { SchedulePlan, SubjectCoverage } from "../../lib/types";
 import { ScheduleProposalCard } from "../calendar/ScheduleProposalCard";
 import { DeadlinesPanel } from "./DeadlinesPanel";
 import { TimelinePanel } from "../timeline/TimelinePanel";
@@ -69,6 +69,8 @@ function PlanPanel({ subjectId }: { subjectId: string }) {
   const [plan, setPlan] = useState<SchedulePlan | null>(null);
   const [planning, setPlanning] = useState(false);
   const [planNote, setPlanNote] = useState("");
+  const [coverage, setCoverage] = useState<SubjectCoverage | null>(null);
+  const [rerolling, setRerolling] = useState<number | null>(null);
 
   const focusItems = (focus.data ?? []).slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
@@ -77,21 +79,28 @@ function PlanPanel({ subjectId }: { subjectId: string }) {
     .sort((a, b) => a.start_at.localeCompare(b.start_at))
     .slice(0, 8);
 
+  const pending = plan?.sessions.length ?? 0;
+  const isCovered = coverage != null && coverage.scheduled >= coverage.needed;
+
   async function proposeWeek() {
     setPlanning(true);
     setPlanNote("");
     try {
       const result = await api.proposeSchedule(mondayISO());
       const mine = result.sessions.filter((s) => s.subject_id === subjectId || s.subject_id == null);
-      setPlan({ sessions: mine, moves: [] });
-      if (mine.length === 0) {
-        setPlanNote("Nothing new to suggest for this subject this week. Your plan looks covered.");
+      const cov = result.coverage.find((c) => c.subject_id === subjectId) ?? null;
+      setPlan({ ...result, sessions: mine, moves: [] });
+      setCoverage(cov);
+      if (mine.length === 0 && !(cov && cov.scheduled >= cov.needed)) {
+        // The planner falls back to your usual hours when no window fits, so
+        // nothing at all means the week itself has no free time left.
+        setPlanNote("Your week looks fully booked — no free time to place a session. Free up a slot on the calendar and try again.");
       }
     } catch (e) {
       setPlanNote(
         String(e).includes("SIDECAR_UNAVAILABLE")
           ? "AI sidecar is not ready. Wait a moment and try again."
-          : "Couldn't build a proposal. Set your study windows in Settings and try again.",
+          : "Couldn't build a proposal right now. Try again in a moment.",
       );
     } finally {
       setPlanning(false);
@@ -103,7 +112,37 @@ function PlanPanel({ subjectId }: { subjectId: string }) {
     const session = { ...plan.sessions[index], ...times };
     await api.acceptSchedule([session], []);
     setPlan({ ...plan, sessions: plan.sessions.filter((_, i) => i !== index) });
+    // Accepting one session moves it from "proposed" to "scheduled" — keep the
+    // coverage line honest so "✓ covered" appears the moment the target is met.
+    if (session.subject_id === subjectId) {
+      setCoverage((c) =>
+        c ? { ...c, scheduled: c.scheduled + 1, proposed: Math.max(0, c.proposed - 1) } : c,
+      );
+    }
     setReload((r) => r + 1);
+  }
+
+  // "Another time" — the user can't make this slot; ask the planner for a
+  // different one and swap just this card. The other pending cards go along as
+  // `others` so the alternative never lands on one of them. Nothing is written
+  // (law #2); a `null` means the week has no other free time.
+  async function anotherTime(index: number) {
+    if (!plan) return;
+    setRerolling(index);
+    setPlanNote("");
+    try {
+      const others = plan.sessions.filter((_, j) => j !== index);
+      const alt = await api.resuggestSession(plan.sessions[index], mondayISO(), others);
+      if (alt) {
+        setPlan({ ...plan, sessions: plan.sessions.map((s, j) => (j === index ? alt : s)) });
+      } else {
+        setPlanNote("No other free time this week — try freeing up a slot on the calendar.");
+      }
+    } catch {
+      setPlanNote("Couldn't find another time right now. Try again in a moment.");
+    } finally {
+      setRerolling(null);
+    }
   }
 
   return (
@@ -137,16 +176,38 @@ function PlanPanel({ subjectId }: { subjectId: string }) {
       <section className={styles.section} aria-label="Scheduled study sessions">
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Study sessions</h2>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<Sparkle weight="fill" />}
-            onClick={() => void proposeWeek()}
-            disabled={planning}
-          >
-            {planning ? "Planning…" : "Plan my week"}
-          </Button>
+          {/* Hide the button while proposals are pending (accept/dismiss first)
+              and once the subject's weekly target is met. */}
+          {pending === 0 && !isCovered && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Sparkle weight="fill" />}
+              onClick={() => void proposeWeek()}
+              disabled={planning}
+            >
+              {planning ? "Planning…" : coverage ? "Plan the rest" : "Plan my week"}
+            </Button>
+          )}
         </div>
+
+        {coverage && (
+          <p
+            className={`${styles.coverage} ${isCovered ? styles.coverageDone : ""}`}
+            role="status"
+          >
+            {isCovered ? (
+              <>
+                <CheckCircle weight="fill" aria-hidden="true" />
+                Your week is covered — {coverage.scheduled} of {coverage.needed} sessions planned.
+              </>
+            ) : (
+              <>
+                {coverage.scheduled} of {coverage.needed} sessions planned this week.
+              </>
+            )}
+          </p>
+        )}
 
         {upcoming.length === 0 ? (
           <EmptyState
@@ -187,10 +248,13 @@ function PlanPanel({ subjectId }: { subjectId: string }) {
               <ScheduleProposalCard
                 key={`${s.start_at}-${i}`}
                 proposal={s}
+                busy={rerolling === i}
                 onAccept={(times) => void acceptSession(i, times)}
-                onDismiss={() =>
-                  setPlan({ ...plan, sessions: plan.sessions.filter((_, j) => j !== i) })
-                }
+                onAnotherTime={() => void anotherTime(i)}
+                onDismiss={() => {
+                  void api.dismissProposal(s).catch(() => {});
+                  setPlan({ ...plan, sessions: plan.sessions.filter((_, j) => j !== i) });
+                }}
               />
             ))}
           </div>

@@ -57,6 +57,7 @@ export function CalendarScreen() {
   const [plan, setPlan] = useState<SchedulePlan | null>(null);
   const [planning, setPlanning] = useState(false);
   const [planNote, setPlanNote] = useState("");
+  const [rerolling, setRerolling] = useState<number | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -116,7 +117,7 @@ export function CalendarScreen() {
       setPlan(result);
       if (result.sessions.length === 0 && result.moves.length === 0) {
         setPlanNote(
-          "No suggestions for this week. Set your weekly study windows in Settings so the planner knows when you're free.",
+          "Your week looks fully booked — no free time to suggest a session. Free up a slot on the calendar and try again.",
         );
       }
     } catch (e) {
@@ -144,6 +145,28 @@ export function CalendarScreen() {
     await api.acceptSchedule([], [move]);
     setPlan({ ...plan, moves: plan.moves.filter((_, i) => i !== index) });
     setRefreshTick((n) => n + 1);
+  }
+
+  // "Another time" — re-roll one session to a different slot, passing the other
+  // pending sessions so the alternative never collides. Writes nothing (law #2).
+  async function anotherTime(index: number) {
+    if (!plan) return;
+    setRerolling(index);
+    setPlanNote("");
+    try {
+      const weekStart = toNaive(startOfWeek(anchor)).split("T")[0];
+      const others = plan.sessions.filter((_, j) => j !== index);
+      const alt = await api.resuggestSession(plan.sessions[index], weekStart, others);
+      if (alt) {
+        setPlan({ ...plan, sessions: plan.sessions.map((s, j) => (j === index ? alt : s)) });
+      } else {
+        setPlanNote("No other free time this week — try freeing up a slot on the calendar.");
+      }
+    } catch {
+      setPlanNote("Couldn't find another time right now. Try again in a moment.");
+    } finally {
+      setRerolling(null);
+    }
   }
 
   async function acceptAll() {
@@ -335,6 +358,8 @@ export function CalendarScreen() {
             <div className={styles.proposalsHeader}>
               <span className={styles.proposalsTitle}>
                 Suggested sessions: nothing is saved until you accept.
+                {plan.remaining > 0 &&
+                  " Some sessions didn't fit this week — free up a little time to plan the rest."}
               </span>
               <div className={styles.proposalsActions}>
                 <Button size="sm" variant="secondary" onClick={() => void acceptAll()}>
@@ -358,10 +383,13 @@ export function CalendarScreen() {
                 <ScheduleProposalCard
                   key={`s-${i}-${s.start_at}`}
                   proposal={s}
+                  busy={rerolling === i}
                   onAccept={(times) => void acceptSession(i, times)}
-                  onDismiss={() =>
-                    setPlan({ ...plan, sessions: plan.sessions.filter((_, j) => j !== i) })
-                  }
+                  onAnotherTime={() => void anotherTime(i)}
+                  onDismiss={() => {
+                    void api.dismissProposal(s).catch(() => {});
+                    setPlan({ ...plan, sessions: plan.sessions.filter((_, j) => j !== i) });
+                  }}
                 />
               ))}
             </div>
