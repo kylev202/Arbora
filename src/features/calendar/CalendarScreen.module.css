@@ -276,6 +276,12 @@
 .grid {
   display: flex;
   flex: 1;
+  /* Span the full day so the day-column dividers (.dayCol border-left) reach
+     the bottom. Without a definite height the flex parent stretches .grid only
+     to the visible height and clamps the columns, while the hour cells overflow
+     past it — leaving vertical dividers that stop partway down. 24h × 48px/hour
+     (matches .hourCell / .hourLabel); on taller viewports stretch still fills. */
+  min-height: calc(24 * 48px);
 }
 
 .dayCol {
