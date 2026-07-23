@@ -95,6 +95,37 @@
   gap: var(--space-4);
 }
 
+/* ── New-subject: term dates + syllabus upload ── */
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.syllabusHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.syllabusChosen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.syllabusName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .colors {
   border: none;
   margin: 0;

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Plus, Tree as TreeIcon } from "@phosphor-icons/react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { ArrowRight, FileArrowUp, Plus, Tree as TreeIcon, UploadSimple, X } from "@phosphor-icons/react";
 import {
   Button,
+  DatePicker,
   EmptyState,
   ForestTree,
+  IconButton,
   Input,
   Modal,
   RadioGroup,
@@ -15,11 +18,27 @@ import { useAsync } from "../../lib/useAsync";
 import { api } from "../../lib/api";
 import { getAchievementTree } from "../../lib/achievementTree";
 import { DISCIPLINES, type Discipline, type Subject } from "../../lib/types";
+import { ImportSyllabusModal } from "../outline/ImportSyllabusModal";
 import { SubjectCard } from "./SubjectCard";
 import { TodoPanel } from "./TodoPanel";
 import styles from "./HomeScreen.module.css";
 
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
+
+/** File types the new-subject syllabus picker accepts — mirrors ImportSyllabusModal. */
+const SYLLABUS_FILTERS = [
+  { name: "Syllabus", extensions: ["pdf", "docx", "pptx", "ppt", "txt", "md", "markdown"] },
+];
+
+/** Term length in weeks from a start/end date pair, matching the outline's week
+ *  derivation (week N starts term_start + (N-1)*7 days). Falls back to a 12-week
+ *  term when only a start date is given; clamped to the 1..53 outline bounds. */
+function weeksBetween(start: string, end: string | null): number {
+  if (!end) return 12;
+  const DAY = 86_400_000;
+  const diffDays = Math.floor((Date.parse(end) - Date.parse(start)) / DAY);
+  return Math.min(53, Math.max(1, Math.floor(diffDays / 7) + 1));
+}
 
 /** Discipline picker options — mirrors `DISCIPLINES`, shaped for `RadioGroup`. */
 const DISCIPLINE_OPTIONS = DISCIPLINES.map((d) => ({
@@ -47,6 +66,10 @@ export function HomeScreen() {
   const [creating, setCreating] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [deletingSubject, setDeletingSubject] = useState<Subject | null>(null);
+  // When a new subject is created with a syllabus, hand the chosen file to the
+  // review-before-trust import flow (staying on Home) before landing on it.
+  const [importSubject, setImportSubject] = useState<Subject | null>(null);
+  const [importFile, setImportFile] = useState<string | null>(null);
 
   // Local mirror of the loaded list so a fresh create shows up immediately
   // without re-fetching.
@@ -90,11 +113,27 @@ export function HomeScreen() {
     };
   }, [subjects]);
 
-  async function handleCreate(name: string, discipline: Discipline) {
+  async function handleCreate(opts: {
+    name: string;
+    syllabusPath: string | null;
+    startDate: string | null;
+    endDate: string | null;
+  }) {
     const color = SUBJECT_COLORS[subjects.length % SUBJECT_COLORS.length];
-    const created = await api.createSubject(name, color, discipline);
+    // Discipline defaults to 'general' server-side; it's set later via Edit.
+    const created = await api.createSubject(opts.name, color);
     setSubjects((prev) => [...prev, created]);
     setCreating(false);
+    if (opts.syllabusPath) {
+      // Review-before-trust: parse + review the syllabus, then land on the subject.
+      setImportFile(opts.syllabusPath);
+      setImportSubject(created);
+      return;
+    }
+    // No syllabus: persist the term straight from the start/end dates entered.
+    if (opts.startDate) {
+      await api.setOutline(created.id, opts.startDate, weeksBetween(opts.startDate, opts.endDate));
+    }
     // Land on the timeline: import a syllabus or lay out the weeks (§4.1).
     navigate(`/subject/${created.id}/overview`);
   }
@@ -194,6 +233,20 @@ export function HomeScreen() {
 
       <CreateSubjectModal open={creating} onClose={() => setCreating(false)} onCreate={handleCreate} />
 
+      <ImportSyllabusModal
+        open={importSubject !== null}
+        subjectId={importSubject?.id ?? ""}
+        initialFilePath={importFile ?? undefined}
+        onClose={() => {
+          const s = importSubject;
+          setImportSubject(null);
+          setImportFile(null);
+          // The subject exists whether or not the outline was committed — land on it.
+          if (s) navigate(`/subject/${s.id}/overview`);
+        }}
+        onCommitted={() => {}}
+      />
+
       <EditSubjectModal
         subject={editingSubject}
         onClose={() => setEditingSubject(null)}
@@ -245,30 +298,68 @@ function CreateSubjectModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreate: (name: string, discipline: Discipline) => void;
+  onCreate: (opts: {
+    name: string;
+    syllabusPath: string | null;
+    startDate: string | null;
+    endDate: string | null;
+  }) => void;
 }) {
   const [name, setName] = useState("");
-  const [discipline, setDiscipline] = useState<Discipline>("general");
+  const [syllabusPath, setSyllabusPath] = useState<string | null>(null);
+  const [syllabusName, setSyllabusName] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const trimmed = name.trim();
+  // ISO date strings sort lexicographically, so a string compare orders them.
+  const datesValid = !endDate || (!!startDate && endDate >= startDate);
+  const canCreate = !!trimmed && (syllabusPath !== null || datesValid);
+
+  function reset() {
+    setName("");
+    setSyllabusPath(null);
+    setSyllabusName("");
+    setStartDate("");
+    setEndDate("");
+  }
+
+  function close() {
+    reset();
+    onClose();
+  }
+
+  async function chooseSyllabus() {
+    const selected = await openDialog({ multiple: false, filters: SYLLABUS_FILTERS });
+    if (typeof selected !== "string") return; // cancelled
+    setSyllabusPath(selected);
+    setSyllabusName(selected.split(/[\\/]/).pop() ?? selected);
+  }
 
   function submit() {
-    if (trimmed) onCreate(trimmed, discipline);
-    setName("");
-    setDiscipline("general");
+    if (!canCreate) return;
+    // A syllabus supplies the term structure, so the manual dates are ignored.
+    onCreate({
+      name: trimmed,
+      syllabusPath,
+      startDate: syllabusPath ? null : startDate || null,
+      endDate: syllabusPath ? null : endDate || null,
+    });
+    reset();
   }
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title="New subject"
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={submit} disabled={!trimmed}>
+          <Button variant="primary" onClick={submit} disabled={!canCreate}>
             Create
           </Button>
         </>
@@ -288,12 +379,52 @@ function CreateSubjectModal({
           onChange={(e) => setName(e.target.value)}
           autoFocus
         />
-        <RadioGroup
-          legend="Subject type"
-          options={DISCIPLINE_OPTIONS}
-          value={discipline}
-          onChange={setDiscipline}
-        />
+
+        {syllabusPath ? (
+          <div className={styles.syllabusChosen}>
+            <FileArrowUp weight="fill" aria-hidden="true" />
+            <span className={styles.syllabusName}>{syllabusName}</span>
+            <IconButton
+              label="Remove syllabus"
+              icon={<X />}
+              size="sm"
+              onClick={() => {
+                setSyllabusPath(null);
+                setSyllabusName("");
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <div className={styles.dateRow}>
+              <DatePicker
+                label="Start date"
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="dd/mm/yyyy"
+              />
+              <DatePicker
+                label="End date"
+                value={endDate}
+                onChange={setEndDate}
+                min={startDate || undefined}
+                placeholder="dd/mm/yyyy"
+              />
+            </div>
+            <p className={styles.syllabusHint}>
+              Have a unit syllabus? Upload it and Arbora reads your weeks and deadlines from it — no
+              need to add it again later.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              icon={<UploadSimple weight="bold" />}
+              onClick={chooseSyllabus}
+            >
+              Upload syllabus
+            </Button>
+          </>
+        )}
       </form>
     </Modal>
   );

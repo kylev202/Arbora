@@ -41,11 +41,16 @@ export function ImportSyllabusModal({
   onClose,
   subjectId,
   onCommitted,
+  initialFilePath,
 }: {
   open: boolean;
   onClose: () => void;
   subjectId: string;
   onCommitted: () => void;
+  /** When set, the modal skips the picker and parses this file on open — used by
+   *  the "upload a syllabus while creating the subject" flow so the file chosen
+   *  there flows straight into review-before-trust. */
+  initialFilePath?: string;
 }) {
   const [phase, setPhase] = useState<Phase>("pick");
   const [fileName, setFileName] = useState("");
@@ -56,27 +61,14 @@ export function ImportSyllabusModal({
   const [unitInfo, setUnitInfo] = useState<ParsedUnitInfo>(EMPTY_UNIT_INFO);
   const [committing, setCommitting] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      setPhase("pick");
-      setFileName("");
-      setError("");
-      setTermStart("");
-      setWeeks([]);
-      setDeadlines([]);
-      setUnitInfo(EMPTY_UNIT_INFO);
-      setCommitting(false);
-    }
-  }, [open]);
-
-  async function choose() {
-    const selected = await openDialog({ multiple: false, filters: FILE_FILTERS });
-    if (typeof selected !== "string") return; // cancelled
-    setFileName(selected.split(/[\\/]/).pop() ?? selected);
+  // Parse a chosen syllabus into the (uncommitted) review state. Shared by the
+  // in-modal picker and the pre-seeded create-subject flow.
+  async function runParse(path: string) {
+    setFileName(path.split(/[\\/]/).pop() ?? path);
     setPhase("parsing");
     setError("");
     try {
-      const parsed = await api.parseOutlineFile(subjectId, selected);
+      const parsed = await api.parseOutlineFile(subjectId, path);
       setWeeks(parsed.weeks);
       setDeadlines(parsed.deadlines);
       setUnitInfo(parsed.unit_info ?? EMPTY_UNIT_INFO);
@@ -85,6 +77,26 @@ export function ImportSyllabusModal({
       setError(String(e));
       setPhase("error");
     }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    setFileName("");
+    setError("");
+    setTermStart("");
+    setWeeks([]);
+    setDeadlines([]);
+    setUnitInfo(EMPTY_UNIT_INFO);
+    setCommitting(false);
+    // Seeded with a file (from subject creation) → go straight to parsing.
+    if (initialFilePath) void runParse(initialFilePath);
+    else setPhase("pick");
+  }, [open, initialFilePath]);
+
+  async function choose() {
+    const selected = await openDialog({ multiple: false, filters: FILE_FILTERS });
+    if (typeof selected !== "string") return; // cancelled
+    void runParse(selected);
   }
 
   function patchWeek(i: number, patch: Partial<ParsedWeek>) {
