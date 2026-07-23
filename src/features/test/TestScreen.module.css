@@ -107,11 +107,12 @@
 }
 
 .option {
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
   background: var(--glass-bg-soft);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
+  box-shadow: var(--glass-highlight);
   text-align: left;
   font-size: var(--text-base);
   color: var(--color-text);
@@ -119,11 +120,13 @@
   transition:
     border-color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-out),
     transform var(--motion-base) var(--ease-spring);
 }
 .option:hover:not(:disabled) {
   border-color: var(--color-primary);
   transform: translateX(3px);
+  box-shadow: var(--glass-highlight), var(--shadow-sm);
 }
 .option:active:not(:disabled) {
   transform: scale(0.99);

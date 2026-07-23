@@ -18,17 +18,25 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+/* Compact: short-label groups (no descriptions) sit inline as pills, not a
+   stack of full-width boxes. Triggered automatically by RadioGroup. */
+.compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
 
 .option {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
+  padding: var(--space-3);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+  /* Frosted glass tile: translucent fill + a top-edge sheen. No own backdrop
+     blur — it sits inside an already-blurred modal/panel, and nesting blur
+     muddies the effect and costs paint; the translucency over that existing
+     blur is what reads as glass. */
+  background: var(--glass-bg-soft);
   box-shadow: var(--glass-highlight);
   cursor: pointer;
   transition:
@@ -38,15 +46,50 @@
     box-shadow var(--motion-base) var(--ease-out);
 }
 .option:hover {
-  border-color: var(--color-text-muted);
+  border-color: var(--color-primary);
   transform: translateY(-1px);
-  box-shadow: var(--glass-highlight), var(--shadow-sm);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
 }
 .checked,
 .checked:hover {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--glass-highlight), var(--shadow-glow);
+  transform: none;
+}
+
+/* ── Compact pills (short labels, no descriptions) ── */
+.compact .option {
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  border-color: var(--color-border-strong); /* pill edge is the only affordance */
+  background: var(--glass-bg-soft);
+  box-shadow: var(--glass-highlight);
+}
+.compact .option:hover {
+  transform: none;
+  box-shadow: var(--glass-highlight);
+  background: var(--glass-bg);
+}
+.compact .checked,
+.compact .checked:hover {
+  box-shadow: var(--glass-highlight);
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+.compact .dot {
+  display: none;
+}
+.compact .checked .label {
+  color: var(--color-primary-hover);
+  font-weight: var(--weight-semibold);
+}
+/* Dot carries focus for stacked cards; the pill itself carries it when compact. */
+.compact .option:has(.input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 /* Native input visually replaced by .dot but kept for a11y + focus. */
@@ -59,8 +102,8 @@
 
 .dot {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin-top: 2px;
   border: 2px solid var(--color-border-strong);
   border-radius: var(--radius-full);

@@ -33,10 +33,13 @@ export function RadioGroup<T extends string>({
   hideLegend,
 }: RadioGroupProps<T>) {
   const name = useId();
+  // Short-label groups (no descriptions) render as inline pills, not stacked
+  // full-width cards — keeps small choices like a deadline type compact.
+  const compact = options.every((opt) => !opt.description);
   return (
     <fieldset className={styles.group}>
       <legend className={hideLegend ? "sr-only" : styles.legend}>{legend}</legend>
-      <div className={styles.options}>
+      <div className={`${styles.options} ${compact ? styles.compact : ""}`}>
         {options.map((opt) => {
           const checked = opt.value === value;
           return (
