@@ -22,21 +22,35 @@
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
+  /* Two matched shadow layers (ring + canopy glow) so both interpolate
+     smoothly. At rest they're zero-size / transparent, so nothing shows. */
+  box-shadow:
+    0 0 0 0 var(--color-primary-soft),
+    0 2px 6px rgba(47, 125, 84, 0);
   transition:
     border-color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-base) var(--ease-out);
+    transform var(--motion-base) var(--ease-spring),
+    box-shadow var(--motion-base) var(--ease-spring);
 }
 .control::placeholder {
   color: var(--color-text-muted);
 }
-.control:hover {
+/* Hover invites the click: a whisper of lift, border warms toward primary. */
+.control:hover:not(:focus) {
   border-color: var(--color-text-muted);
+  transform: translateY(-1px);
 }
 .control:focus {
-  border-color: var(--color-primary);
-  /* Single thin primary ring — quiet, no glow or lift. */
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
-  /* focus-visible ring from global handles the outline */
+  border-color: var(--color-accent);
+  /* Click-in: the field floats up on a soft drop shadow with just a thin, light
+     halo — no chunky ring. The green border + halo ARE the focus indicator, so
+     we drop the global 2px focus-visible outline here (it read as a thick outer
+     line). Reduced-motion (tokens.css) drops the animation but keeps them. */
+  outline: none;
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1.5px rgba(85, 179, 120, 0.4),
+    0 12px 26px rgba(47, 125, 84, 0.18);
 }
 
 .textarea {
