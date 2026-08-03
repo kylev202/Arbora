@@ -15,8 +15,8 @@ type MaterialTab = "journey" | "flashcards" | "test" | "diagram" | "ask";
 /**
  * Self-paced materials for one week: Journey (the guided walkthrough — notes,
  * lessons, recall), Flashcards (Arbora's own in-app review loop), Test (varied
- * grounded practice tests), Diagram (flowchart of the week's topic), and Ask AI
- * (grounded chat). One material at a time — sub-tabs keep the page calm.
+ * grounded practice tests), Diagram (a mind map of the whole week's content), and
+ * Ask AI (grounded chat). One material at a time — sub-tabs keep the page calm.
  */
 export function WeekMaterials({ subjectId, week }: { subjectId: string; week: PathStage }) {
   const [tab, setTab] = useState<MaterialTab>("journey");
@@ -42,7 +42,7 @@ export function WeekMaterials({ subjectId, week }: { subjectId: string; week: Pa
           <FlashcardsPanel subjectId={subjectId} week={week} cards={cards.data ?? []} loading={cards.status === "loading"} />
         )}
         {tab === "test" && <TestLauncher subjectId={subjectId} week={week} />}
-        {tab === "diagram" && <DiagramPanel subjectId={subjectId} initialTopic={week.title} />}
+        {tab === "diagram" && <DiagramPanel subjectId={subjectId} weekId={week.week_id} />}
         {tab === "ask" && <ChatPanel subjectId={subjectId} />}
       </div>
     </div>

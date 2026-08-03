@@ -54,6 +54,8 @@ export function ImportSyllabusModal({
 }) {
   const [phase, setPhase] = useState<Phase>("pick");
   const [fileName, setFileName] = useState("");
+  /** Kept so the deep pass can re-read the same file after the fast commit. */
+  const [filePath, setFilePath] = useState("");
   const [error, setError] = useState("");
   const [termStart, setTermStart] = useState("");
   const [weeks, setWeeks] = useState<ParsedWeek[]>([]);
@@ -65,6 +67,7 @@ export function ImportSyllabusModal({
   // in-modal picker and the pre-seeded create-subject flow.
   async function runParse(path: string) {
     setFileName(path.split(/[\\/]/).pop() ?? path);
+    setFilePath(path);
     setPhase("parsing");
     setError("");
     try {
@@ -82,6 +85,7 @@ export function ImportSyllabusModal({
   useEffect(() => {
     if (!open) return;
     setFileName("");
+    setFilePath("");
     setError("");
     setTermStart("");
     setWeeks([]);
@@ -144,6 +148,11 @@ export function ImportSyllabusModal({
         cleanDeadlines,
         cleanInfo,
       );
+      // The weeks are saved; now read the same file for the rest of the plan
+      // (outcomes, mark map, weekly detail) in the background. It runs for
+      // minutes on the low preset, so it must not hold up this modal — and a
+      // failure here must not undo an import that already succeeded.
+      void api.startUnitPlan(subjectId, filePath).catch(() => {});
       onCommitted();
       onClose();
     } catch (e) {

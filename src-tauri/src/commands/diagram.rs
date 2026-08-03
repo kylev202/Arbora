@@ -1,8 +1,9 @@
-//! Mermaid diagram generation. `generate_diagram` fetches all indexed chunks for a
-//! subject, calls the sidecar `/diagram` endpoint (FAISS search + LLM generation),
-//! then joins returned source_ids with `sources` to attach titles. Diagrams are
-//! ephemeral visual aids — not persisted (law #2 doesn't apply here). Every citation
-//! is authoritative from chunk metadata, not model output (law #1).
+//! Week mind map generation. `generate_diagram` fetches the week's processed chunks,
+//! calls the sidecar `/diagram` endpoint (one grounded LLM call, no FAISS), then joins
+//! returned source_ids with `sources` to attach titles. The result is a hierarchical
+//! Mermaid mind map of everything in that week. Diagrams are ephemeral visual aids —
+//! not persisted (law #2 doesn't apply here). Every citation is authoritative from
+//! chunk metadata, not model output (law #1).
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -15,25 +16,45 @@ use crate::sidecar::Sidecar;
 
 #[derive(sqlx::FromRow)]
 struct ChunkRow {
-    faiss_id: i64,
     source_id: String,
     text: String,
     page: Option<i64>,
     timestamp_ms: Option<i64>,
 }
 
-async fn fetch_subject_chunks(
+/// The week's chunks in reading order, scoped to processed sources only — the
+/// same scoping the walkthrough uses, so the mind map covers exactly the week's
+/// material and nothing loose.
+async fn fetch_week_chunks(
     pool: &SqlitePool,
     subject_id: &str,
+    week_id: &str,
 ) -> Result<Vec<ChunkRow>, String> {
     sqlx::query_as::<_, ChunkRow>(
-        "SELECT faiss_id, source_id, text, page, timestamp_ms
-         FROM chunks WHERE subject_id = ?1 ORDER BY chunk_index",
+        "SELECT c.source_id, c.text, c.page, c.timestamp_ms
+         FROM chunks c JOIN sources s ON s.id = c.source_id
+         WHERE c.subject_id = ?1 AND s.week_id = ?2 AND s.ingest_state = 'processed'
+         ORDER BY s.id, c.chunk_index",
     )
     .bind(subject_id)
+    .bind(week_id)
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())
+}
+
+async fn fetch_week_title(pool: &SqlitePool, subject_id: &str, week_id: &str) -> String {
+    sqlx::query_as::<_, (Option<String>,)>(
+        "SELECT title FROM weeks WHERE id = ?1 AND subject_id = ?2",
+    )
+    .bind(week_id)
+    .bind(subject_id)
+    .fetch_optional(pool)
+    .await
+    .ok()
+    .flatten()
+    .and_then(|(t,)| t)
+    .unwrap_or_default()
 }
 
 async fn fetch_preset(pool: &SqlitePool) -> String {
@@ -111,9 +132,9 @@ pub async fn generate_diagram(
     pool: State<'_, SqlitePool>,
     sidecar: State<'_, Sidecar>,
     subject_id: String,
-    topic: String,
+    week_id: String,
 ) -> Result<DiagramResponse, String> {
-    let chunks = fetch_subject_chunks(pool.inner(), &subject_id).await?;
+    let chunks = fetch_week_chunks(pool.inner(), &subject_id, &week_id).await?;
     if chunks.is_empty() {
         return Err("NO_CHUNKS".to_string());
     }
@@ -123,12 +144,12 @@ pub async fn generate_diagram(
         .ok_or("SIDECAR_UNAVAILABLE")?;
     let token = sidecar.token().to_string();
     let preset = fetch_preset(pool.inner()).await;
+    let week_title = fetch_week_title(pool.inner(), &subject_id, &week_id).await;
 
     let chunk_json: Vec<_> = chunks
         .iter()
         .map(|c| {
             json!({
-                "faiss_id": c.faiss_id,
                 "source_id": c.source_id,
                 "text": c.text,
                 "page": c.page,
@@ -142,7 +163,7 @@ pub async fn generate_diagram(
         .header("X-Arbora-Token", &token)
         .json(&json!({
             "subject_id": subject_id,
-            "topic": topic,
+            "week_title": week_title,
             "chunks": chunk_json,
             "preset": preset,
         }))
@@ -204,8 +225,15 @@ mod tests {
         .await
         .unwrap();
         sqlx::query(
-            "INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,created_at) \
-             VALUES ('src1','s1','pdf','/a.pdf','Lecture Notes','processed','t')",
+            "INSERT INTO weeks (id,subject_id,week_number,title,created_at) \
+             VALUES ('w1','s1',1,'Cells','t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,week_id,created_at) \
+             VALUES ('src1','s1','pdf','/a.pdf','Lecture Notes','processed','w1','t')",
         )
         .execute(&pool)
         .await
@@ -214,7 +242,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fetch_chunks_returns_all_for_subject() {
+    async fn fetch_chunks_scoped_to_processed_week_sources() {
         let pool = seeded_pool().await;
         sqlx::query(
             "INSERT INTO chunks (id,source_id,subject_id,text,page,faiss_id,chunk_index) \
@@ -223,9 +251,32 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        let rows = fetch_subject_chunks(&pool, "s1").await.unwrap();
+        // A processed source with no week — must be excluded from the week map.
+        sqlx::query(
+            "INSERT INTO sources (id,subject_id,type,file_path,title,ingest_state,created_at) \
+             VALUES ('src2','s1','pdf','/b.pdf','Loose','processed','t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO chunks (id,source_id,subject_id,text,page,faiss_id,chunk_index) \
+             VALUES ('ch3','src2','s1','loose',1,2,0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let rows = fetch_week_chunks(&pool, "s1", "w1").await.unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].text, "hello");
+    }
+
+    #[tokio::test]
+    async fn week_title_lookup_and_fallback() {
+        let pool = seeded_pool().await;
+        assert_eq!(fetch_week_title(&pool, "s1", "w1").await, "Cells");
+        assert_eq!(fetch_week_title(&pool, "s1", "missing").await, "");
     }
 
     #[tokio::test]

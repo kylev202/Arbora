@@ -28,6 +28,8 @@ import { relativeDays } from "../../lib/date";
 import { getAchievementTree } from "../../lib/achievementTree";
 import type { Subject, Todo } from "../../lib/types";
 import { SourcesPanel } from "../workspace/SourcesPanel";
+import { UnitPlanBanner } from "../outline/UnitPlanBanner";
+import { UnitGlance } from "./UnitGlance";
 import styles from "./OverviewScreen.module.css";
 
 const SUBJECT_COLORS = ["#4A7C59", "#5A7D9A", "#C9A227", "#8A6BA3", "#B5524A", "#3F7E7C"];
@@ -45,6 +47,7 @@ export function OverviewScreen() {
   const subject = useAsync(() => api.getSubject(subjectId), [subjectId, reload]);
   const dash = useAsync(() => api.getSubjectDashboard(subjectId), [subjectId]);
   const review = useAsync(() => api.getReviewQueue(subjectId), [subjectId]);
+  const unitInfo = useAsync(() => api.getUnitInfo(subjectId), [subjectId, reload]);
 
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,6 +97,8 @@ export function OverviewScreen() {
         </div>
       </div>
 
+      <UnitPlanBanner subjectId={subjectId} onCommitted={() => setReload((r) => r + 1)} />
+
       {reviewCount > 0 && (
         <Link to={`/subject/${subjectId}/review`} className={styles.reviewBanner}>
           <span>
@@ -104,6 +109,8 @@ export function OverviewScreen() {
           </span>
         </Link>
       )}
+
+      {unitInfo.data && <UnitGlance info={unitInfo.data} />}
 
       {/* This week: what to learn now, or a clear CTA when empty. */}
       {week && (

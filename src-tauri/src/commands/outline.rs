@@ -18,6 +18,65 @@ use crate::sidecar::Sidecar;
 
 const MAX_WEEKS: i64 = 53; // a year of weeks — a generous upper bound
 
+/// The role the fast import writes its single coordinator under. Both commit
+/// paths key off it so a re-import replaces that one row, not the whole
+/// teaching team the deep plan found.
+pub(crate) const COORDINATOR_ROLE: &str = "Unit Coordinator";
+
+/// Pre-fill the grade book from an assessment the syllabus lists, so the
+/// what-if calculator works right away. Idempotent by (case-insensitive) name:
+/// a fresh name inserts score = NULL; an ungraded row gets its weight
+/// refreshed; a graded row is never touched. Shared by the fast import and the
+/// deep plan's mark map, which can find assessments the fast pass missed.
+pub(crate) async fn prefill_grade(
+    tx: &mut sqlx::SqliteConnection,
+    subject_id: &str,
+    name: &str,
+    weight_percent: f64,
+) -> Result<(), String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Ok(());
+    }
+    let weight = weight_percent.clamp(0.0, 100.0) / 100.0;
+    let existing: Option<(String, Option<f64>)> = sqlx::query_as(
+        "SELECT id, score FROM grades
+         WHERE subject_id = ?1 AND lower(trim(name)) = lower(trim(?2)) LIMIT 1",
+    )
+    .bind(subject_id)
+    .bind(name)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| e.to_string())?;
+    match existing {
+        None => {
+            sqlx::query(
+                "INSERT INTO grades (id, subject_id, name, category, score,
+                    max_score, weight, created_at)
+                 VALUES (?1, ?2, ?3, 'Assessment', NULL, 100, ?4,
+                    strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+            )
+            .bind(Uuid::new_v4().to_string())
+            .bind(subject_id)
+            .bind(name)
+            .bind(weight)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+        Some((id, None)) => {
+            sqlx::query("UPDATE grades SET weight = ?2 WHERE id = ?1")
+                .bind(&id)
+                .bind(weight)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        Some((_, Some(_))) => {}
+    }
+    Ok(())
+}
+
 // ── Wire shapes ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -28,6 +87,16 @@ pub struct Week {
     title: String,
     summary: String,
     start_date: Option<String>,
+    /// Weekly detail from the deep plan pass (`unit_plan.rs`); empty until one
+    /// is accepted, so a manually built outline is unaffected.
+    lecture: String,
+    lab: String,
+    assessment_note: String,
+    /// Not columns — filled from `week_items` after the row query.
+    #[sqlx(skip)]
+    focus: Vec<String>,
+    #[sqlx(skip)]
+    deliverables: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -130,36 +199,112 @@ pub struct UnitClass {
     attendance: String,
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct UnitOutcome {
+    id: String,
+    code: String,
+    text: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct UnitStaff {
+    id: String,
+    name: String,
+    role: String,
+    contact: String,
+    consultation: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct UnitAssessment {
+    id: String,
+    name: String,
+    weight_percent: f64,
+    due_text: String,
+    kind: String,
+    outcomes: String,
+}
+
+/// The "unit at a glance" the Overview screen renders. `unit_code` /
+/// `delivery_summary` / `classes` come from the fast import; the rest is filled
+/// by an accepted deep plan and stays empty otherwise.
 #[derive(Debug, Serialize)]
 pub struct UnitInfoView {
     unit_code: String,
-    coordinator_name: String,
-    coordinator_contact: String,
     delivery_summary: String,
+    aim: String,
+    assumed_knowledge: String,
+    platform: String,
+    credit_points: String,
     classes: Vec<UnitClass>,
+    outcomes: Vec<UnitOutcome>,
+    staff: Vec<UnitStaff>,
+    assessments: Vec<UnitAssessment>,
 }
 
-const WEEK_COLS: &str = "SELECT id, subject_id, week_number, title, summary, start_date FROM weeks";
+const WEEK_COLS: &str = "SELECT id, subject_id, week_number, title, summary, start_date,
+     lecture, lab, assessment_note FROM weeks";
 
 // ── DB layer (plain pool → unit-testable) ──────────────────────────────────
 
+/// Hang each week's focus points and deliverables off its row. One query for
+/// the whole set (`rows` is already scoped to a subject or a single week), then
+/// a linear fan-out — never a query per week.
+async fn attach_week_items(pool: &SqlitePool, weeks: &mut [Week]) -> Result<(), String> {
+    if weeks.is_empty() {
+        return Ok(());
+    }
+    let ids: Vec<&str> = weeks.iter().map(|w| w.id.as_str()).collect();
+    let placeholders = (1..=ids.len())
+        .map(|i| format!("?{i}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let sql = format!(
+        "SELECT week_id, kind, text FROM week_items
+         WHERE week_id IN ({placeholders}) ORDER BY kind, position"
+    );
+    let mut query = sqlx::query_as::<_, (String, String, String)>(&sql);
+    for id in &ids {
+        query = query.bind(*id);
+    }
+    let rows = query.fetch_all(pool).await.map_err(|e| e.to_string())?;
+
+    for (week_id, kind, text) in rows {
+        let Some(week) = weeks.iter_mut().find(|w| w.id == week_id) else {
+            continue;
+        };
+        match kind.as_str() {
+            "focus" => week.focus.push(text),
+            "deliverable" => week.deliverables.push(text),
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 async fn list_weeks(pool: &SqlitePool, subject_id: &str) -> Result<Vec<Week>, String> {
-    sqlx::query_as::<_, Week>(&format!(
+    let mut weeks = sqlx::query_as::<_, Week>(&format!(
         "{WEEK_COLS} WHERE subject_id = ?1 ORDER BY week_number"
     ))
     .bind(subject_id)
     .fetch_all(pool)
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    attach_week_items(pool, &mut weeks).await?;
+    Ok(weeks)
 }
 
 async fn fetch_week(pool: &SqlitePool, id: &str) -> Result<Week, String> {
-    sqlx::query_as::<_, Week>(&format!("{WEEK_COLS} WHERE id = ?1"))
+    let week = sqlx::query_as::<_, Week>(&format!("{WEEK_COLS} WHERE id = ?1"))
         .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| e.to_string())?
-        .ok_or_else(|| "WEEK_NOT_FOUND".to_string())
+        .ok_or_else(|| "WEEK_NOT_FOUND".to_string())?;
+    let mut one = [week];
+    attach_week_items(pool, &mut one).await?;
+    let [week] = one;
+    Ok(week)
 }
 
 async fn get_outline_db(pool: &SqlitePool, subject_id: &str) -> Result<Outline, String> {
@@ -341,24 +486,46 @@ async fn commit_parsed_outline_db(
         // syllabus the model couldn't read doesn't blank saved unit info.
         if !info.is_empty() {
             sqlx::query(
-                "INSERT INTO unit_info (subject_id, unit_code, coordinator_name,
-                    coordinator_contact, delivery_summary, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+                "INSERT INTO unit_info (subject_id, unit_code, delivery_summary, updated_at)
+                 VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
                  ON CONFLICT(subject_id) DO UPDATE SET
                     unit_code = excluded.unit_code,
-                    coordinator_name = excluded.coordinator_name,
-                    coordinator_contact = excluded.coordinator_contact,
                     delivery_summary = excluded.delivery_summary,
                     updated_at = excluded.updated_at",
             )
             .bind(subject_id)
             .bind(info.unit_code.trim())
-            .bind(info.coordinator_name.trim())
-            .bind(info.coordinator_contact.trim())
             .bind(info.delivery_summary.trim())
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+
+            // The coordinator is one row of the staff table (which the deep plan
+            // fills properly). Replace only the coordinator row so a re-import
+            // can't wipe the lecturers and tutors a deep plan already found.
+            if !info.coordinator_name.trim().is_empty()
+                || !info.coordinator_contact.trim().is_empty()
+            {
+                sqlx::query("DELETE FROM unit_staff WHERE subject_id = ?1 AND role = ?2")
+                    .bind(subject_id)
+                    .bind(COORDINATOR_ROLE)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "INSERT INTO unit_staff (id, subject_id, name, role, contact,
+                        consultation, position, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, '', 0, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
+                )
+                .bind(Uuid::new_v4().to_string())
+                .bind(subject_id)
+                .bind(info.coordinator_name.trim())
+                .bind(COORDINATOR_ROLE)
+                .bind(info.coordinator_contact.trim())
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
 
             // Classes are display-only and nothing references them — replace.
             sqlx::query("DELETE FROM unit_classes WHERE subject_id = ?1")
@@ -385,51 +552,8 @@ async fn commit_parsed_outline_db(
             }
         }
 
-        // Pre-fill the grade book from the assessment overview so the what-if
-        // calculator works right away. Idempotent by (case-insensitive) name:
-        // a fresh name inserts score=NULL; an ungraded row gets its weight
-        // refreshed; a graded row is never touched.
         for a in &info.assessments {
-            let name = a.name.trim();
-            if name.is_empty() {
-                continue;
-            }
-            let weight = a.weight_percent.clamp(0.0, 100.0) / 100.0;
-            let existing: Option<(String, Option<f64>)> = sqlx::query_as(
-                "SELECT id, score FROM grades
-                 WHERE subject_id = ?1 AND lower(trim(name)) = lower(trim(?2)) LIMIT 1",
-            )
-            .bind(subject_id)
-            .bind(name)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-            match existing {
-                None => {
-                    sqlx::query(
-                        "INSERT INTO grades (id, subject_id, name, category, score,
-                            max_score, weight, created_at)
-                         VALUES (?1, ?2, ?3, 'Assessment', NULL, 100, ?4,
-                            strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
-                    )
-                    .bind(Uuid::new_v4().to_string())
-                    .bind(subject_id)
-                    .bind(name)
-                    .bind(weight)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                }
-                Some((id, None)) => {
-                    sqlx::query("UPDATE grades SET weight = ?2 WHERE id = ?1")
-                        .bind(&id)
-                        .bind(weight)
-                        .execute(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
-                Some((_, Some(_))) => {}
-            }
+            prefill_grade(&mut tx, subject_id, &a.name, a.weight_percent).await?;
         }
     }
 
@@ -441,15 +565,16 @@ async fn get_unit_info_db(
     pool: &SqlitePool,
     subject_id: &str,
 ) -> Result<Option<UnitInfoView>, String> {
-    let row: Option<(String, String, String, String)> = sqlx::query_as(
-        "SELECT unit_code, coordinator_name, coordinator_contact, delivery_summary
+    let row: Option<(String, String, String, String, String, String)> = sqlx::query_as(
+        "SELECT unit_code, delivery_summary, aim, assumed_knowledge, platform, credit_points
          FROM unit_info WHERE subject_id = ?1",
     )
     .bind(subject_id)
     .fetch_optional(pool)
     .await
     .map_err(|e| e.to_string())?;
-    let Some((unit_code, coordinator_name, coordinator_contact, delivery_summary)) = row else {
+    let Some((unit_code, delivery_summary, aim, assumed_knowledge, platform, credit_points)) = row
+    else {
         return Ok(None);
     };
     let classes = sqlx::query_as::<_, UnitClass>(
@@ -460,12 +585,40 @@ async fn get_unit_info_db(
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
+    let outcomes = sqlx::query_as::<_, UnitOutcome>(
+        "SELECT id, code, text FROM unit_outcomes WHERE subject_id = ?1 ORDER BY position",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    let staff = sqlx::query_as::<_, UnitStaff>(
+        "SELECT id, name, role, contact, consultation FROM unit_staff
+         WHERE subject_id = ?1 ORDER BY position",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
+    let assessments = sqlx::query_as::<_, UnitAssessment>(
+        "SELECT id, name, weight_percent, due_text, kind, outcomes FROM unit_assessments
+         WHERE subject_id = ?1 ORDER BY position",
+    )
+    .bind(subject_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| e.to_string())?;
     Ok(Some(UnitInfoView {
         unit_code,
-        coordinator_name,
-        coordinator_contact,
         delivery_summary,
+        aim,
+        assumed_knowledge,
+        platform,
+        credit_points,
         classes,
+        outcomes,
+        staff,
+        assessments,
     }))
 }
 
@@ -968,6 +1121,11 @@ mod tests {
         assert_eq!(stored.unit_code, "BIOL101");
         assert_eq!(stored.classes.len(), 1);
         assert_eq!(stored.classes[0].attendance, "hurdle requirement");
+        // The coordinator is row 0 of the staff table, not a column of its own.
+        assert_eq!(stored.staff.len(), 1);
+        assert_eq!(stored.staff[0].name, "Dr Ada Chen");
+        assert_eq!(stored.staff[0].role, COORDINATOR_ROLE);
+        assert_eq!(stored.staff[0].contact, "ada@uni.edu");
 
         // Assessments landed in the grade book, score empty, weight %→fraction.
         let grades: Vec<(String, Option<f64>, f64)> = sqlx::query_as(
@@ -1051,6 +1209,34 @@ mod tests {
         let stored = get_unit_info_db(&pool, "s").await.unwrap().unwrap();
         assert_eq!(stored.unit_code, "BIOL101");
         assert_eq!(stored.classes.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn reimport_replaces_the_coordinator_but_keeps_other_staff() {
+        let pool = mem_pool().await;
+        commit_parsed_outline_db(&pool, "s", None, &[], &[], Some(&punit("BIOL101", vec![])))
+            .await
+            .unwrap();
+        // A deep plan later adds a tutor alongside the coordinator.
+        sqlx::query(
+            "INSERT INTO unit_staff (id,subject_id,name,role,contact,consultation,position,created_at)
+             VALUES ('t','s','Sam Tutor','Tutor','sam@uni.edu','',1,'t')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let mut updated = punit("BIOL101", vec![]);
+        updated.coordinator_name = "Prof Blake".into();
+        commit_parsed_outline_db(&pool, "s", None, &[], &[], Some(&updated))
+            .await
+            .unwrap();
+
+        let staff = get_unit_info_db(&pool, "s").await.unwrap().unwrap().staff;
+        let names: Vec<&str> = staff.iter().map(|s| s.name.as_str()).collect();
+        assert!(names.contains(&"Prof Blake"), "coordinator was replaced");
+        assert!(names.contains(&"Sam Tutor"), "other staff survived");
+        assert_eq!(staff.len(), 2, "no duplicate coordinator row");
     }
 
     #[tokio::test]

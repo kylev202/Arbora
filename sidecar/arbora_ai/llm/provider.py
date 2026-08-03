@@ -32,6 +32,29 @@ class LLMSchemaError(LLMError):
     """The model output could not be parsed/validated as required."""
 
 
+# Ollama's structured-output grammar builder (through 0.18.x) fails to load the
+# model when a string carries a large `maxLength` — it raises "failed to load
+# model vocabulary required for format" (qwen3 breaks above ~2000). These bounds
+# are validation sanity limits, not generation guidance: the caller re-validates
+# with Pydantic and retries, so we drop them from the grammar the model is
+# constrained by while keeping them on the model.
+_GRAMMAR_UNSAFE_KEYS = ("minLength", "maxLength")
+
+
+def _grammar_safe_schema(node: object) -> object:
+    """Recursively strip grammar-unsafe keys from a JSON Schema so Ollama can
+    build a decoding grammar from it. Returns a new tree; input is untouched."""
+    if isinstance(node, dict):
+        return {
+            k: _grammar_safe_schema(v)
+            for k, v in node.items()
+            if k not in _GRAMMAR_UNSAFE_KEYS
+        }
+    if isinstance(node, list):
+        return [_grammar_safe_schema(v) for v in node]
+    return node
+
+
 class LLMProvider(ABC):
     """The only abstraction generate/* and rag/* are allowed to call."""
 
@@ -64,7 +87,9 @@ class OllamaProvider(LLMProvider):
 
     def generate(self, prompt: str, schema: dict | None = None, temperature: float = 0.1) -> dict:
         # `format` as a JSON Schema = constrained decoding; "json" = free JSON.
-        fmt = schema if schema is not None else "json"
+        # Sanitize the schema first: Ollama can't build a grammar for large string
+        # length bounds (see _grammar_safe_schema).
+        fmt = _grammar_safe_schema(schema) if schema is not None else "json"
         # think=False: thinking models (e.g. Qwen3) otherwise spend their budget
         # on suppressed reasoning under the grammar and return an EMPTY answer.
         # We want fast, structured generation here, not chain-of-thought. Ignored

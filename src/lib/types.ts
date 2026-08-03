@@ -224,6 +224,13 @@ export type Week = {
   title: string;
   summary: string;
   start_date: string | null;
+  /** Weekly detail from an accepted deep plan; all empty until one is accepted. */
+  lecture: string;
+  lab: string;
+  /** What the syllabus says is due/held that week, e.g. "Quiz 2". */
+  assessment_note: string;
+  focus: string[];
+  deliverables: string[];
 };
 
 /** The subject's semester structure. `week_count` is null until an outline is set. */
@@ -298,12 +305,93 @@ export type UnitClass = {
   attendance: string;
 };
 
+export type UnitOutcome = { id: string; code: string; text: string };
+
+export type UnitStaff = {
+  id: string;
+  name: string;
+  role: string;
+  contact: string;
+  consultation: string;
+};
+
+/** One row of the mark map. Richer than the grade book: it keeps the syllabus's
+ *  own wording for when it's due, whether it's group work, and what it maps to. */
+export type UnitAssessment = {
+  id: string;
+  name: string;
+  /** 0 = the syllabus didn't state a weighting. */
+  weight_percent: number;
+  due_text: string;
+  kind: string;
+  outcomes: string;
+};
+
 export type UnitInfo = {
   unit_code: string;
-  coordinator_name: string;
-  coordinator_contact: string;
   delivery_summary: string;
+  /** Filled by an accepted deep plan; empty after a fast import alone. */
+  aim: string;
+  assumed_knowledge: string;
+  platform: string;
+  credit_points: string;
   classes: UnitClass[];
+  outcomes: UnitOutcome[];
+  staff: UnitStaff[];
+  assessments: UnitAssessment[];
+};
+
+// ── Deep unit plan (background pass after import) ─────────────────────────
+/** The uncommitted deep plan, as extracted from the syllabus. Nothing here is
+ *  written until the user accepts it in the review gate (ADR-0006). */
+export type PlanOutcome = { code: string; text: string };
+
+export type PlanStaff = {
+  name: string;
+  role: string;
+  contact: string;
+  consultation: string;
+};
+
+export type PlanEssentials = {
+  aim: string;
+  assumed_knowledge: string;
+  platform: string;
+  credit_points: string;
+  outcomes: PlanOutcome[];
+  staff: PlanStaff[];
+};
+
+export type PlanAssessment = {
+  name: string;
+  weight_percent: number;
+  due_text: string;
+  kind: string;
+  outcomes: string;
+};
+
+export type PlanWeekDetail = {
+  week_number: number;
+  lecture: string;
+  lab: string;
+  assessment_note: string;
+  focus: string[];
+  deliverables: string[];
+};
+
+export type UnitPlan = {
+  essentials: PlanEssentials;
+  assessments: PlanAssessment[];
+  week_details: PlanWeekDetail[];
+};
+
+/** `running` while the background pass works, `ready` when there's something to
+ *  review, `error` when nothing usable came back. `plan` is null unless ready. */
+export type UnitPlanDraft = {
+  state: "running" | "ready" | "error";
+  plan: UnitPlan | null;
+  error: string;
+  updated_at: string;
 };
 
 // ── Planning ─────────────────────────────────────────────────────────────

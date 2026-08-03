@@ -84,6 +84,14 @@ export const api = {
   commitParsedOutline: ipc.commitParsedOutline,
   getUnitInfo: ipc.getUnitInfo,
 
+  // ── Deep unit plan (background pass after import) ──
+  startUnitPlan: ipc.startUnitPlan,
+  getUnitPlanDraft: ipc.getUnitPlanDraft,
+  commitUnitPlan: ipc.commitUnitPlan,
+  dismissUnitPlanDraft: ipc.dismissUnitPlanDraft,
+  onUnitPlanReady: ipc.onUnitPlanReady,
+  onUnitPlanError: ipc.onUnitPlanError,
+
   // ── Assignment spec + rubric ──
   parseAssignmentSpec: ipc.parseAssignmentSpec,
   parseRubric: ipc.parseRubric,

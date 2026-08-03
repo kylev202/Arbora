@@ -64,6 +64,8 @@ import type {
   Todo,
   TodoRepeat,
   UnitInfo,
+  UnitPlan,
+  UnitPlanDraft,
   UserNote,
   UserProfile,
   Week,
@@ -570,6 +572,44 @@ export function commitParsedOutline(
 /** Stored unit info for a subject, or null when none was ever imported. */
 export function getUnitInfo(subjectId: string): Promise<UnitInfo | null> {
   return invoke<UnitInfo | null>("get_unit_info", { subjectId });
+}
+
+// ── Deep unit plan (background pass) ────────────────────────────────────────
+
+/** Start the deep pass over a syllabus the user just imported: unit essentials,
+ * the mark map, and per-week detail. Returns as soon as the job is queued —
+ * completion arrives as a `unitplan:ready` / `unitplan:error` event, and the
+ * result waits in the draft either way. Rejects with `SIDECAR_UNAVAILABLE`. */
+export function startUnitPlan(subjectId: string, filePath: string): Promise<void> {
+  return invoke<void>("start_unit_plan", { subjectId, filePath });
+}
+
+/** The staged deep plan for a subject, or null when there's no draft. */
+export function getUnitPlanDraft(subjectId: string): Promise<UnitPlanDraft | null> {
+  return invoke<UnitPlanDraft | null>("get_unit_plan_draft", { subjectId });
+}
+
+/** Accept the reviewed plan — send what the user edited, not the stored draft.
+ * Writes every section in one transaction and clears the draft. */
+export function commitUnitPlan(subjectId: string, plan: UnitPlan): Promise<void> {
+  return invoke<void>("commit_unit_plan", { subjectId, plan });
+}
+
+/** Throw the draft away without writing anything. */
+export function dismissUnitPlanDraft(subjectId: string): Promise<void> {
+  return invoke<void>("dismiss_unit_plan_draft", { subjectId });
+}
+
+export type UnitPlanReady = { subject_id: string };
+export type UnitPlanError = { subject_id: string; error: string };
+
+/** Fires when the background deep pass has staged a plan to review. */
+export function onUnitPlanReady(handler: (e: UnitPlanReady) => void): Promise<UnlistenFn> {
+  return listen<UnitPlanReady>("unitplan:ready", (e) => handler(e.payload));
+}
+
+export function onUnitPlanError(handler: (e: UnitPlanError) => void): Promise<UnlistenFn> {
+  return listen<UnitPlanError>("unitplan:error", (e) => handler(e.payload));
 }
 
 // ── Assignment spec + rubric ────────────────────────────────────────────────
@@ -1097,6 +1137,7 @@ export function onOllamaInstallError(handler: (error: string) => void): Promise<
   return listen<{ error: string }>("ollama-install:error", (e) => handler(e.payload.error));
 }
 
-export function generateDiagram(subjectId: string, topic: string): Promise<DiagramResponse> {
-  return invoke<DiagramResponse>("generate_diagram", { subjectId, topic });
+/** A grounded hierarchical mind map of everything in one week's material. */
+export function generateDiagram(subjectId: string, weekId: string): Promise<DiagramResponse> {
+  return invoke<DiagramResponse>("generate_diagram", { subjectId, weekId });
 }

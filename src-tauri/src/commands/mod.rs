@@ -29,6 +29,7 @@ pub mod sources;
 pub mod study;
 pub mod subjects;
 pub mod todos;
+pub mod unit_plan;
 pub mod walkthrough;
 
 use serde::Serialize;

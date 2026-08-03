@@ -50,8 +50,14 @@ from .planner import (
     resuggest_session,
 )
 from .assignment import extract_rubric, extract_spec
-from .outline import extract_outline, extract_unit_info, syllabus_to_text
-from .schemas.output import OutlineParseResult, RubricExtraction, SourceRef, SpecExtraction
+from .outline import extract_outline, extract_unit_info, extract_unit_plan, syllabus_to_text
+from .schemas.output import (
+    OutlineParseResult,
+    RubricExtraction,
+    SourceRef,
+    SpecExtraction,
+    UnitPlanResult,
+)
 from .srs import compute_next
 
 # Marker line Rust scans stdout for to learn the chosen port.
@@ -264,6 +270,22 @@ class ParseOutlineRequest(BaseModel):
     preset: str = "medium"  # resolves the local model when llm_config has none
 
 
+class PlanWeekRef(BaseModel):
+    """A week the fast pass already extracted, echoed back so the deep pass
+    expands the schedule the user confirmed instead of re-deriving it."""
+
+    week_number: int
+    title: str = ""
+
+
+class ParseUnitPlanRequest(BaseModel):
+    subject_id: str
+    file_path: str
+    weeks: list[PlanWeekRef] = []
+    llm_config: dict = {}
+    preset: str = "medium"
+
+
 class ParseAssignmentRequest(BaseModel):
     subject_id: str
     file_path: str
@@ -337,7 +359,6 @@ class ChatResponse(BaseModel):
 
 
 class DiagramChunk(BaseModel):
-    faiss_id: int
     source_id: str
     text: str
     page: int | None = None
@@ -346,10 +367,9 @@ class DiagramChunk(BaseModel):
 
 class DiagramRequest(BaseModel):
     subject_id: str
-    topic: str
+    week_title: str = ""
     chunks: list[DiagramChunk]
     preset: str = "medium"
-    k: int = 8
 
 
 class DiagramResponse(BaseModel):
@@ -678,6 +698,30 @@ def create_app() -> FastAPI:
             weeks=outline.weeks, deadlines=outline.deadlines, unit_info=unit_info
         )
 
+    @app.post("/parse-unit-plan", response_model=UnitPlanResult, dependencies=guarded)
+    def parse_unit_plan(req: ParseUnitPlanRequest) -> UnitPlanResult:
+        # The deep pass behind the fast /parse-outline: unit essentials, the
+        # mark map, and per-week detail. Synchronous but *long* (several
+        # constrained calls) — the core runs it on a background task after the
+        # fast outline commits and stages the result for review, so nothing here
+        # blocks the user. Individual passes degrade to empty rather than
+        # failing the request; only an unreadable file or a dead model is fatal.
+        cfg = dict(req.llm_config)
+        cfg.setdefault("provider", "ollama")
+        if cfg["provider"] == "ollama":
+            cfg.setdefault("model", default_model(req.preset))
+        try:
+            text = syllabus_to_text(req.file_path)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        try:
+            provider = get_provider(cfg)
+        except LLMUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=f"model unavailable: {exc}") from exc
+        return extract_unit_plan(
+            provider, text, [(w.week_number, w.title) for w in req.weeks]
+        )
+
     # ── Assignment spec + rubric extraction ────────────────────────────────
     # Same contract as /parse-outline: synchronous, on-device, returns the
     # structured-but-uncommitted result for the user to review (ADR-0006).
@@ -758,18 +802,16 @@ def create_app() -> FastAPI:
 
     @app.post("/diagram", response_model=DiagramResponse, dependencies=guarded)
     def diagram(req: DiagramRequest) -> DiagramResponse:
-        # Synchronous: one embedding + FAISS search + one LLM call.
+        # Synchronous: one LLM call over the week's (already-scoped) chunks.
+        # A mind map of the whole week — no topic query, no FAISS search.
         # Diagrams are visual study aids, not deck items — no review gate (law #2).
         cfg: dict = {"provider": "ollama", "model": default_model(req.preset)}
         chunks = [c.model_dump() for c in req.chunks]
         try:
             title, mermaid_code, source_refs = generate_diagram(
-                topic=req.topic,
-                subject_id=req.subject_id,
                 chunks=chunks,
                 provider=get_provider(cfg),
-                data_dir=_data_dir(),
-                k=req.k,
+                week_title=req.week_title,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc

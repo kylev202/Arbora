@@ -78,6 +78,8 @@ export function WeekCard({
       </span>
       {week.summary && <p className={styles.summary}>{week.summary}</p>}
 
+      <WeekPlan week={week} />
+
       {deadlines.length > 0 && (
         <ul className={styles.deadlines}>
           {deadlines.map((d) => (
@@ -113,5 +115,66 @@ export function WeekCard({
         <p className={styles.noMaterials}>No materials yet</p>
       )}
     </li>
+  );
+}
+
+/**
+ * The week's plan detail, as read out of the syllabus by the deep pass: what the
+ * lecture and lab cover, what's due, what to be able to do by the end of it, and
+ * what to have finished. Renders nothing until a plan is accepted, so a manually
+ * built outline looks exactly as it did before.
+ */
+function WeekPlan({ week }: { week: Week }) {
+  const hasRows = week.lecture || week.lab || week.assessment_note;
+  const hasLists = week.focus.length > 0 || week.deliverables.length > 0;
+  if (!hasRows && !hasLists) return null;
+
+  return (
+    <div className={styles.plan}>
+      {hasRows && (
+        <dl className={styles.planRows}>
+          {week.lecture && (
+            <div className={styles.planRow}>
+              <dt>Lecture</dt>
+              <dd>{week.lecture}</dd>
+            </div>
+          )}
+          {week.lab && (
+            <div className={styles.planRow}>
+              <dt>Lab</dt>
+              <dd>{week.lab}</dd>
+            </div>
+          )}
+          {week.assessment_note && (
+            <div className={styles.planRow}>
+              <dt>Due</dt>
+              <dd className={styles.planDue}>{week.assessment_note}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
+      {week.focus.length > 0 && (
+        <div className={styles.planList}>
+          <h4 className={styles.planListTitle}>Focus this week</h4>
+          <ul>
+            {week.focus.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {week.deliverables.length > 0 && (
+        <div className={styles.planList}>
+          <h4 className={styles.planListTitle}>By the end of the week</h4>
+          <ul>
+            {week.deliverables.map((d, i) => (
+              <li key={i}>{d}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

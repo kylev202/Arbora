@@ -306,6 +306,86 @@ class OutlineParseResult(OutlineExtraction):
     unit_info: UnitInfoExtraction = Field(default_factory=UnitInfoExtraction)
 
 
+# ── Deep unit plan (/parse-unit-plan) ───────────────────────────────────────
+# The rest of what a unit outline actually carries — the aim and learning
+# outcomes, the teaching team, the assessment mark map, and per-week detail —
+# extracted in a background pass after the fast import commits. Same posture as
+# above: only what the syllabus states, everything defaulted so any single pass
+# can degrade to empty, nothing written until the user accepts the draft.
+#
+# `focus` / `deliverables` are the one derived field pair: they restate what a
+# week's own stated topics require as study targets. They must stay inside the
+# week's stated vocabulary — no services, tools, or facts the syllabus never
+# names (law #1 in spirit; see the prompts in outline/plan.py).
+
+PlanItem = Annotated[str, Field(min_length=1, max_length=300)]
+
+
+class OutcomeExtraction(BaseModel):
+    code: str = Field(default="", max_length=20)  # 'ULO1' / 'CLO2' / ''
+    text: str = Field(min_length=1, max_length=500)
+
+
+class StaffExtraction(BaseModel):
+    name: str = Field(default="", max_length=120)
+    role: str = Field(default="", max_length=120)  # Coordinator / Lecturer / Tutor
+    contact: str = Field(default="", max_length=200)
+    consultation: str = Field(default="", max_length=200)  # 'Mon 14:00–15:00'
+
+
+class UnitEssentialsExtraction(BaseModel):
+    """§1 'unit at a glance' — pass 1 of the deep plan."""
+
+    aim: str = Field(default="", max_length=1200)
+    assumed_knowledge: str = Field(default="", max_length=800)
+    platform: str = Field(default="", max_length=300)  # tools/labs the unit runs on
+    credit_points: str = Field(default="", max_length=40)  # verbatim, e.g. '12.5 CP'
+    outcomes: list[OutcomeExtraction] = Field(default_factory=list)
+    staff: list[StaffExtraction] = Field(default_factory=list)
+
+
+class MarkMapRow(BaseModel):
+    """One row of the §3 mark map — richer than `AssessmentExtraction`, which
+    only feeds the grade book."""
+
+    name: str = Field(min_length=1, max_length=200)
+    weight_percent: float = Field(default=0, ge=0, le=100)  # 0 = not stated
+    due_text: str = Field(default="", max_length=120)  # verbatim
+    kind: str = Field(default="", max_length=80)  # 'Individual' / 'Group of 3–4'
+    outcomes: str = Field(default="", max_length=120)  # 'ULO1, ULO3' as written
+
+
+class MarkMapExtraction(BaseModel):
+    """§3 mark map — pass 2 of the deep plan."""
+
+    assessments: list[MarkMapRow] = Field(default_factory=list)
+
+
+class WeekDetailExtraction(BaseModel):
+    """§4 per-week detail — pass 3, run in batches of a few weeks per call so a
+    small model never has to hold the whole semester in one response."""
+
+    week_number: int = Field(ge=1, le=53)
+    lecture: str = Field(default="", max_length=400)
+    lab: str = Field(default="", max_length=400)
+    assessment_note: str = Field(default="", max_length=300)  # what's due that week
+    focus: list[PlanItem] = Field(default_factory=list)
+    deliverables: list[PlanItem] = Field(default_factory=list)
+
+
+class WeekDetailBatch(BaseModel):
+    weeks: list[WeekDetailExtraction] = Field(default_factory=list)
+
+
+class UnitPlanResult(BaseModel):
+    """Full /parse-unit-plan response. Every part defaults to empty: a pass that
+    fails degrades rather than losing the passes that succeeded."""
+
+    essentials: UnitEssentialsExtraction = Field(default_factory=UnitEssentialsExtraction)
+    assessments: list[MarkMapRow] = Field(default_factory=list)
+    week_details: list[WeekDetailExtraction] = Field(default_factory=list)
+
+
 # ── Assignment spec + rubric extraction ──────────────────────────────────────
 # Same review-before-commit posture as the outline (ADR-0006): extracted from
 # the user's own uploaded file, every row editable, nothing written until the

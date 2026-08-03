@@ -8,5 +8,11 @@ reviewed result.
 """
 
 from .extract import extract_outline, extract_unit_info, syllabus_to_text
+from .plan import extract_unit_plan
 
-__all__ = ["extract_outline", "extract_unit_info", "syllabus_to_text"]
+__all__ = [
+    "extract_outline",
+    "extract_unit_info",
+    "extract_unit_plan",
+    "syllabus_to_text",
+]
